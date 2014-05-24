@@ -214,6 +214,9 @@ TControlDesc& TMQTTNinjaBridgeHandler::GetOrAddControlDesc(const string& device_
 
 void TMQTTNinjaBridgeHandler::OnMessage(const struct mosquitto_message *message)
 {
+    // ignore zero-length payload
+    if (message->payload == 0) return;
+
     string topic = message->topic;
     string payload = static_cast<const char *>(message->payload);
     const vector<string>& tokens = StringSplit(topic, '/');
