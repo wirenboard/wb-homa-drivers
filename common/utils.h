@@ -8,9 +8,16 @@ using namespace std;
 
 
 
-bool has_suffix(const std::string &str, const std::string &suffix);
-bool starts_with(const string& str, const string& prefix);
-std::vector<std::string> split(const std::string &s, char delim);
+bool StringHasSuffix(const std::string &str, const std::string &suffix);
+bool StringStartsWith(const string& str, const string& prefix);
+std::vector<std::string> StringSplit(const std::string &s, char delim);
+std::vector<std::string> StringSplit(const std::string &s, const std::string& delim);
+
+std::string StringReplace(std::string subject, const std::string& search,
+                          const std::string& replace);
+
+
+void StringUpper(std::string& str);
 
 
 class TBaseException : public std::exception

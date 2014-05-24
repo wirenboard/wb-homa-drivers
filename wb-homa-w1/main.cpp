@@ -5,6 +5,8 @@
 #include <sstream>
 
 #include "dirent.h"
+#include <getopt.h>
+
 // This is the JSON header
 #include "jsoncpp/json/json.h"
 
@@ -58,7 +60,7 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
         while ((ent = readdir (dir)) != NULL) {
             printf ("%s\n", ent->d_name);
             entry_name = ent->d_name;
-            if (starts_with(entry_name, "28-")) {
+            if (StringStartsWith(entry_name, "28-")) {
                 Channels.emplace_back(entry_name);
             }
         }
@@ -84,22 +86,12 @@ void TMQTTOnewireHandler::OnConnect(int rc)
         string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
         Publish(NULL, path, "1-wire Thermometers", 0, true);
 
+        for (const TSysfsOnewireDevice& device: Channels) {
+            Publish(NULL, GetChannelTopic(device) + "/meta/type", "temperature", 0, true);
+        }
 
-		//~ /* Only attempt to Subscribe on a successful connect. */
-        //~ string prefix = string("/devices/") + MQTTConfig.Id + "/";
-//~
-        //~ // Meta
-        //~ Publish(NULL, prefix + "meta/name", MQTTConfig.DeviceName, 0, true);
-        //~ for (TChannelDesc& channel_desc : Channels) {
-            //~ auto & gpio_desc = channel_desc.first;
-//~
-            //~ string control_prefix = prefix + "controls/" + gpio_desc.Name;
-//~
-            //~ Publish(NULL, control_prefix + "/meta/type", "switch", 0, true);
-//~
-            //~ Subscribe(NULL, control_prefix + "/on");
-//~
-        //~ }
+
+
 	}
 }
 
@@ -123,7 +115,6 @@ void TMQTTOnewireHandler::UpdateChannelValues() {
         auto result = device.ReadTemperature();
         if (result.Defined()) {
             Publish(NULL, GetChannelTopic(device), to_string(*result), 0, true); // Publish current value (make retained)
-            Publish(NULL, GetChannelTopic(device) + "/meta/type", "text", 0, true);
         }
 
     }
@@ -154,11 +145,11 @@ int main(int argc, char *argv[])
     mqtt_config.Port = 1883;
 
     int c;
-    int digit_optind = 0;
-    int aopt = 0, bopt = 0;
-    char *copt = 0, *dopt = 0;
+    //~ int digit_optind = 0;
+    //~ int aopt = 0, bopt = 0;
+    //~ char *copt = 0, *dopt = 0;
     while ( (c = getopt(argc, argv, "c:h:p:")) != -1) {
-        int this_option_optind = optind ? optind : 1;
+        //~ int this_option_optind = optind ? optind : 1;
         switch (c) {
         //~ case 'c':
             //~ printf ("option c with value '%s'\n", optarg);

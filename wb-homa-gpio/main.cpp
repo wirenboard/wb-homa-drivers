@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <getopt.h>
+
 // This is the JSON header
 #include "jsoncpp/json/json.h"
 
@@ -124,7 +126,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
     string payload = static_cast<const char *>(message->payload);
 
 
-    const vector<string>& tokens = split(topic, '/');
+    const vector<string>& tokens = StringSplit(topic, '/');
 
     if (  (tokens.size() == 6) &&
           (tokens[0] == "") && (tokens[1] == "devices") &&
@@ -189,11 +191,11 @@ int main(int argc, char *argv[])
 
 
     int c;
-    int digit_optind = 0;
-    int aopt = 0, bopt = 0;
-    char *copt = 0, *dopt = 0;
+    //~ int digit_optind = 0;
+    //~ int aopt = 0, bopt = 0;
+    //~ char *copt = 0, *dopt = 0;
     while ( (c = getopt(argc, argv, "c:h:p:")) != -1) {
-        int this_option_optind = optind ? optind : 1;
+        //~ int this_option_optind = optind ? optind : 1;
         switch (c) {
         case 'c':
             printf ("option c with value '%s'\n", optarg);
@@ -289,10 +291,6 @@ int main(int argc, char *argv[])
             // update current values
 
             mqtt_handler->UpdateChannelValues();
-
-
-
-
         }
 	}
 
