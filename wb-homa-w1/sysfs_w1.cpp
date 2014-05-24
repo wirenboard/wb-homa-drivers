@@ -4,6 +4,11 @@
 #include <sstream>
 #include "sysfs_w1.h"
 
+bool operator== (const TSysfsOnewireDevice & first, const TSysfsOnewireDevice & second)
+{
+    return first.DeviceName == second.DeviceName;
+}
+
 
 TSysfsOnewireDevice::TSysfsOnewireDevice(const string& device_name)
     : DeviceName(device_name)

@@ -33,6 +33,7 @@ class TMQTTOnewireHandler : public TMQTTWrapper
 		void OnSubscribe(int mid, int qos_count, const int *granted_qos);
 
         inline string GetChannelTopic(const TSysfsOnewireDevice& device);
+        void RescanBus();
 
         void UpdateChannelValues();
     private:
@@ -43,14 +44,46 @@ class TMQTTOnewireHandler : public TMQTTWrapper
 
 
 
-
-
-
 TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqtt_config)
     : TMQTTWrapper(mqtt_config)
 {
 	Connect();
 
+};
+
+void TMQTTOnewireHandler::OnConnect(int rc)
+{
+	printf("Connected with code %d.\n", rc);
+	if(rc == 0){
+                // Meta
+        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
+        Publish(NULL, path, "1-wire Thermometers", 0, true);
+
+        RescanBus();
+	}
+}
+
+template<typename T>
+void UnorderedVectorDifference(const vector<T> &first, const vector<T>& second, vector<T> & result)
+{
+    for (auto & el_first: first) {
+        bool found = false;
+        for (auto & el_second: second) {
+            if (el_first == el_second) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            result.push_back(el_first);
+        }
+    }
+}
+
+void TMQTTOnewireHandler::RescanBus()
+{
+    vector<TSysfsOnewireDevice> current_channels;
 
     DIR *dir;
     struct dirent *ent;
@@ -61,38 +94,32 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
             printf ("%s\n", ent->d_name);
             entry_name = ent->d_name;
             if (StringStartsWith(entry_name, "28-")) {
-                Channels.emplace_back(entry_name);
+                    current_channels.emplace_back(entry_name);
             }
         }
         closedir (dir);
     } else {
-        /* could not open directory */
-        //~ perror ("");
-        //~ return EXIT_FAILURE;
+        cerr << "ERROR: could not open directory " << SysfsOnewireDevicesPath << endl;
     }
 
+    vector<TSysfsOnewireDevice> new_channels;
+    UnorderedVectorDifference(current_channels, Channels, new_channels);
 
-    //~ Channels.emplace_back("28-000004a76ec4");
-    //~ Channels.emplace_back("28-000004d11d72");
-
-};
-
-void TMQTTOnewireHandler::OnConnect(int rc)
-{
-	printf("Connected with code %d.\n", rc);
-	if(rc == 0){
-
-                // Meta
-        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-        Publish(NULL, path, "1-wire Thermometers", 0, true);
-
-        for (const TSysfsOnewireDevice& device: Channels) {
-            Publish(NULL, GetChannelTopic(device) + "/meta/type", "temperature", 0, true);
-        }
+    vector<TSysfsOnewireDevice> absent_channels;
+    UnorderedVectorDifference(Channels, current_channels, absent_channels);
 
 
+    Channels.swap(current_channels);
 
-	}
+    for (const TSysfsOnewireDevice& device: new_channels) {
+        Publish(NULL, GetChannelTopic(device) + "/meta/type", "temperature", 0, true);
+    }
+
+    //delete retained messages for absent channels
+    for (const TSysfsOnewireDevice& device: absent_channels) {
+        Publish(NULL, GetChannelTopic(device) + "/meta/type", "", 0, true);
+        Publish(NULL, GetChannelTopic(device), "", 0, true);
+    }
 }
 
 void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
@@ -118,21 +145,6 @@ void TMQTTOnewireHandler::UpdateChannelValues() {
         }
 
     }
-    //~ for (TChannelDesc& channel_desc : Channels) {
-        //~ auto & gpio_desc = channel_desc.first;
-        //~ auto & gpio_handler = channel_desc.second;
-//~
-        //~ // vv order matters
-        //~ int cached = gpio_handler.GetCachedValue();
-        //~ int value = gpio_handler.GetValue();
-//~
-        //~ if (value >= 0) {
-            //~ if ( (cached < 0) || (cached != value)) {
-                //~ Publish(NULL, GetChannelTopic(gpio_desc), to_string(value), 0, true); // Publish current value (make retained)
-            //~ }
-        //~ }
-    //~ }
-//~
 }
 
 
@@ -169,15 +181,6 @@ int main(int argc, char *argv[])
             printf ("?? getopt returned character code 0%o ??\n", c);
         }
     }
-    //~ if (optind < argc) {
-        //~ printf ("non-option ARGV-elements: ");
-        //~ while (optind < argc)
-            //~ printf ("%s ", argv[optind++]);
-        //~ printf ("\n");
-    //~ }
-
-
-
 	mosqpp::lib_init();
 
     mqtt_config.Id = "wb-w1";
@@ -191,6 +194,7 @@ int main(int argc, char *argv[])
 			mqtt_handler->reconnect();
 		} else {
             // update current values
+            mqtt_handler->RescanBus();
             mqtt_handler->UpdateChannelValues();
         }
 	}

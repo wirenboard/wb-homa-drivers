@@ -23,6 +23,7 @@ public:
 
     TMaybe<float> ReadTemperature() const;
 
+    friend bool operator== (const TSysfsOnewireDevice & first, const TSysfsOnewireDevice & second);
 private:
     string DeviceName;
     TOnewireFamilyType Family;
