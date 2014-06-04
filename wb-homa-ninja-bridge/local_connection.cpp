@@ -153,10 +153,40 @@ void TMQTTNinjaBridgeHandler::OnConnect(int rc)
 
         Subscribe(NULL, "/devices/+/controls/+");
         Subscribe(NULL, "/devices/+/controls/+/meta/type");
+        Subscribe(NULL, "/devices/+/controls/+/meta/export");
 
 	}
 }
 
+
+void TMQTTNinjaBridgeHandler::OnCloudConnect(int rc)
+{
+	printf("Connected to cloud with code %d.\n", rc);
+
+	if(rc == 0) {
+        PublishStatus("Connected");
+
+        // Send data of all controls known so far
+        for (auto & item : ControlsCache) {
+            SendDeviceDataToCloud(item.second);
+        }
+
+    } else {
+        PublishStatus("Connection error " + to_string(rc));
+    }
+
+}
+
+void TMQTTNinjaBridgeHandler::SendDeviceDataToCloud(const TControlDesc& control_desc)
+{
+    // ...unless exporting was explicitly disabled
+    if (not control_desc.Export) return;
+
+
+    if (NinjaCloudMqttHandler) {
+        NinjaCloudMqttHandler->SendDeviceData(control_desc);
+    }
+}
 
 
 void TMQTTNinjaBridgeHandler::WaitForActivation()
@@ -228,11 +258,21 @@ void TMQTTNinjaBridgeHandler::OnMessage(const struct mosquitto_message *message)
         const string& control_id = tokens[4];
 
         TControlDesc & control = GetOrAddControlDesc(device_id, control_id);
-        control.DeviceId = device_id;
-        control.Id = control_id;
         control.Type = payload;
-        control.Id = control_id;
     }
+
+    if (mosquitto_topic_matches_sub("/devices/+/controls/+/meta/export", message->topic, &match) != MOSQ_ERR_SUCCESS) return;
+    if (match) {
+        const string& device_id = tokens[2];
+        const string& control_id = tokens[4];
+
+        TControlDesc & control = GetOrAddControlDesc(device_id, control_id);
+        control.DeviceId = device_id;
+
+        // control exporting is enabled by default
+        control.Export = (payload == "0") ? false : true;
+    }
+
 
     if (mosquitto_topic_matches_sub("/devices/+/controls/+", message->topic, &match) != MOSQ_ERR_SUCCESS) return;
     if (match) {
@@ -244,10 +284,7 @@ void TMQTTNinjaBridgeHandler::OnMessage(const struct mosquitto_message *message)
             control.Value = payload;
             //~ cout << "upd for " << control.DeviceId << ":" << control.Id << ":" << control.Type << "=" << control.Value << endl;
 
-
-            if (NinjaCloudMqttHandler) {
-                NinjaCloudMqttHandler->SendDeviceData(control);
-            }
+            SendDeviceDataToCloud(control);
         }
     }
 }

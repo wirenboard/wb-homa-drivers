@@ -46,9 +46,16 @@ TMQTTNinjaCloudHandler::TMQTTNinjaCloudHandler(const TMQTTNinjaCloudHandler::TCo
 void TMQTTNinjaCloudHandler::OnConnect(int rc)
 {
 	printf("cloud connect with code %d.\n", rc);
+
+    Parent->OnCloudConnect(rc);
+
     if (rc == 0) {
         Subscribe(NULL, CommandsReceiveTopic);
+
+
     }
+
+
 }
 
 void TMQTTNinjaCloudHandler::OnMessage(const struct mosquitto_message *message)
@@ -168,8 +175,10 @@ TMaybe<pair<const string, const string>> TMQTTNinjaCloudHandler::ParseGUID(const
 
 void TMQTTNinjaCloudHandler::SendDeviceData(const TControlDesc& control_desc)
 {
-    int vid = 0;
-    int did = 2000;
+    int vid;
+    int did;
+
+    // vid=0, did=2000 - sandbox device
 
     if (control_desc.Type == "switch") {
         vid = 0;
@@ -177,7 +186,10 @@ void TMQTTNinjaCloudHandler::SendDeviceData(const TControlDesc& control_desc)
     } else if (control_desc.Type == "temperature") {
         vid = 0;
         did = 9;
-    };
+    } else {
+        // unsupported device type
+        return ;
+    }
 
 
     const string name = control_desc.DeviceId + " " + control_desc.Id;

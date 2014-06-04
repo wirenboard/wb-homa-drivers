@@ -24,6 +24,7 @@ struct TControlDesc
     string DeviceId;
     string Type;
     string Value;
+    bool Export = true;
 };
 
 class TMQTTNinjaBridgeHandler : public TMQTTWrapper
@@ -38,6 +39,10 @@ class TMQTTNinjaBridgeHandler : public TMQTTWrapper
 		void OnConnect(int rc);
 		void OnMessage(const struct mosquitto_message *message);
 		void OnSubscribe(int mid, int qos_count, const int *granted_qos);
+
+
+		void OnCloudConnect(int rc);
+        void SendDeviceDataToCloud(const TControlDesc& control_desc);
 
 
         //~ inline string GetChannelTopic(const TSysfsOnewireDevice& device);
@@ -73,6 +78,6 @@ class TMQTTNinjaBridgeHandler : public TMQTTWrapper
 
         unique_ptr<TMQTTNinjaCloudHandler> NinjaCloudMqttHandler;
 
-        map<pair<const string,const string>, TControlDesc> ControlsCache;
+        map<pair<const string,const string>, TControlDesc> ControlsCache; //(device_id, control_id) => desc
 
 };
