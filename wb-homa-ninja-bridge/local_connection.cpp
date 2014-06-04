@@ -145,6 +145,7 @@ void TMQTTNinjaBridgeHandler::OnConnect(int rc)
 	if(rc == 0){
         string prefix = string("/devices/") + MQTTConfig.Id;
         Publish(NULL, prefix + "/meta/name", "NinjaBlocks bridge", 0, true);
+        Publish(NULL, prefix + "/meta/room", "System", 0, true);
 
         Publish(NULL, prefix + "/controls/block id", BlockId, 0, true);
         Publish(NULL, prefix + "/controls/block id/meta/type", "text", 0, true);
