@@ -30,7 +30,7 @@ TMQTTNinjaCloudHandler::TMQTTNinjaCloudHandler(const TMQTTNinjaCloudHandler::TCo
     , Parent(parent)
 
 {
-    username_pw_set("de4183317824e9daafed74439b9d1eef5ba1ccd4");
+    username_pw_set(Token.c_str());
     tls_set("/etc/ssl/certs/ca-certificates.crt");
     tls_insecure_set(true);
     tls_opts_set(0);
