@@ -14,6 +14,8 @@ COMMON_DIR=common
 
 GPIO_DIR=wb-homa-gpio
 GPIO_BIN=wb-homa-gpio
+MODBUS_DIR=wb-homa-modbus
+MODBUS_BIN=wb-homa-modbus
 W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
 
@@ -27,7 +29,7 @@ COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 .PHONY: all clean
 
 
-all : $(GPIO_DIR)/$(GPIO_BIN) $(W1_DIR)/$(W1_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -44,6 +46,13 @@ $(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o  $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@
+
+# Modbus
+$(MODBUS_DIR)/main.o : $(MODBUS_DIR)/main.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o  $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # W1
@@ -84,12 +93,15 @@ $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o  $(NINJABRIDGE
 clean :
 	-rm -f $(COMMON_DIR)/*.o
 	-rm -f $(GPIO_DIR)/*.o $(GPIO_DIR)/$(GPIO_BIN)
+	-rm -f $(MODBUS_DIR)/*.o $(MODBUS_DIR)/$(MODBUS_BIN)
 	-rm -f $(W1_DIR)/*.o $(W1_DIR)/$(W1_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
 install: all
 	install -m 0644  $(GPIO_DIR)/config.json $(DESTDIR)/etc/wb-homa-gpio.conf
 	install -m 0755  $(GPIO_DIR)/$(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
+	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf
+	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
 
