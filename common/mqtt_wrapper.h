@@ -42,6 +42,8 @@ class TMQTTWrapper : public mosqpp::mosquittopp
         int LoopFor(int duration, int timeout = 60);
 
         inline int LoopForever(int timeout=-1, int max_packets=1) { return this->loop_forever(timeout, max_packets);};
+        void StartLoop() { loop_start(); }
+        void StopLoop() { disconnect(); loop_stop(); }
 
         //~ using mosqpp::mosquittopp::subscribe;
 		int Subscribe(int *mid, const string& sub, int qos=0);
