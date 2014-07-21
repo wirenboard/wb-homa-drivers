@@ -16,6 +16,7 @@ GPIO_DIR=wb-homa-gpio
 GPIO_BIN=wb-homa-gpio
 MODBUS_DIR=wb-homa-modbus
 MODBUS_BIN=wb-homa-modbus
+MODBUS_LIBS=-lmodbus
 W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
 
@@ -52,8 +53,11 @@ $(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o  $(COMMON_
 $(MODBUS_DIR)/main.o : $(MODBUS_DIR)/main.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o  $(COMMON_O)
-	${CXX} $^ ${LDFLAGS} -o $@
+$(MODBUS_DIR)/modbus_client.o : $(MODBUS_DIR)/modbus_client.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_DIR)/modbus_client.o $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@ $(MODBUS_LIBS)
 
 # W1
 W1_H=$(W1_DIR)/sysfs_w1.h
