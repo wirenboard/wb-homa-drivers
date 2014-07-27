@@ -53,6 +53,7 @@ class TMQTTWrapper : public mosqpp::mosquittopp
 		virtual void OnMessage(const struct mosquitto_message *message)=0;
 		virtual void OnSubscribe(int mid, int qos_count, const int *granted_qos)=0 ;
 
+        string Id() const { return MQTTConfig.Id; }
     protected:
         const TConfig& MQTTConfig;
 };
