@@ -1,7 +1,3 @@
-// TBD: make it possible to specify sysfs prefix
-// TBD: proper error handling (exceptions)
-// TBD: test with non-pre-exported gpios
-// TBD: ensure proper slashes in sysfs dir
 #include <string>
 #include <algorithm>
 #include <fstream>
@@ -40,7 +36,7 @@ namespace {
         std::string locase_name = name;
         std::transform(locase_name.begin(), locase_name.end(), locase_name.begin(), ::tolower);
         for (ChannelName* name_item = channel_names; name_item->n >= 0; ++name_item) {
-            if (name == name_item->name) {
+            if (locase_name == name_item->name) {
                 std::cout << "name: " << name << "; name_item->name: " << name_item->name << "; n: " << name_item->n << std::endl;
                 return name_item->n;
             }
@@ -54,7 +50,8 @@ TSysfsADC::TSysfsADC(const std::string& sysfs_dir)
 
 TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
 {
-    return TSysfsADCChannel(this, GetChannelIndex(channel_name));
+    // TBD: should pass chain_alias also (to be used instead of Name for the channel)
+    return TSysfsADCChannel(this, GetChannelIndex(channel_name), channel_name);
 }
 
 int TSysfsADC::GetValue(int index)

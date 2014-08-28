@@ -35,10 +35,13 @@ private:
 class TSysfsADCChannel
 {
 public:
-    int GetValue() { return Owner->GetValue(Index); }
+    int GetValue() const { return Owner->GetValue(Index); }
+    const std::string& GetName() const { return Name; }
 private:
-    TSysfsADCChannel(TSysfsADC* owner, int index): Owner(owner), Index(index) {}
+    TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name)
+        : Owner(owner), Index(index), Name(name) {}
     TSysfsADC* Owner;
     int Index;
+    std::string Name;
     friend class TSysfsADC;
 };
