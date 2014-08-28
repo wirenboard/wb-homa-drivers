@@ -19,6 +19,8 @@ MODBUS_BIN=wb-homa-modbus
 MODBUS_LIBS=-lmodbus
 W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
+ADC_DIR=wb-homa-adc
+ADC_BIN=wb-homa-adc
 
 NINJABRIDGE_DIR=wb-homa-ninja-bridge
 NINJABRIDGE_BIN=wb-homa-ninja-bridge
@@ -30,7 +32,7 @@ COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 .PHONY: all clean
 
 
-all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -68,8 +70,19 @@ $(W1_DIR)/main.o : $(W1_DIR)/main.cpp $(COMMON_H) $(W1_H)
 $(W1_DIR)/sysfs_w1.o : $(W1_DIR)/sysfs_w1.cpp $(COMMON_H) $(W1_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-
 $(W1_DIR)/$(W1_BIN) : $(W1_DIR)/main.o $(W1_DIR)/sysfs_w1.o $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@
+
+# ADC
+ADC_H=$(ADC_DIR)/sysfs_adc.h
+
+$(ADC_DIR)/main.o : $(ADC_DIR)/main.cpp $(COMMON_H) $(ADC_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(ADC_DIR)/sysfs_adc.o : $(ADC_DIR)/sysfs_adc.cpp $(COMMON_H) $(ADC_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
@@ -99,6 +112,7 @@ clean :
 	-rm -f $(GPIO_DIR)/*.o $(GPIO_DIR)/$(GPIO_BIN)
 	-rm -f $(MODBUS_DIR)/*.o $(MODBUS_DIR)/$(MODBUS_BIN)
 	-rm -f $(W1_DIR)/*.o $(W1_DIR)/$(W1_BIN)
+	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
 install: all
@@ -107,6 +121,7 @@ install: all
 	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
+	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
 
 	install -m 0755  initscripts/wb-homa-gpio $(DESTDIR)/etc/init.d/wb-homa-gpio
