@@ -29,6 +29,9 @@ private:
     void SetMuxABC(int n);
     bool Initialized;
     std::string SysfsDir;
+    int GpioMuxA;
+    int GpioMuxB;
+    int GpioMuxC;
     friend class TSysfsADCChannel;
 };
 

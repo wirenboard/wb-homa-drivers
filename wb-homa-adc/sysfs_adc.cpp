@@ -6,10 +6,6 @@
 #include "sysfs_adc.h"
 
 namespace {
-	const int WB_GPIO_MUX_A = 34;
-	const int WB_GPIO_MUX_B = 33;
-	const int WB_GPIO_MUX_C = 32;
-
     struct ChannelName {
         int n;
         const char* name;
@@ -54,10 +50,27 @@ namespace {
         }
         throw TSysfsADCException("invalid channel name " + name);
     }
+
+    int GetGPIOFromEnv(const std::string& name)
+    {
+        char* s = getenv(name.c_str());
+        if (!s)
+            throw TSysfsADCException("Environment variable not set: " + name);
+        try {
+            return std::stoi(s);
+        } catch (const std::logic_error&) {
+            throw TSysfsADCException("Invalid value of environment variable '" + name + "': " + s);
+        }
+    }
 };
 
 TSysfsADC::TSysfsADC(const std::string& sysfs_dir)
-    : Initialized(false), SysfsDir(sysfs_dir) {}
+    : Initialized(false), SysfsDir(sysfs_dir)
+{
+    GpioMuxA = GetGPIOFromEnv("WB_GPIO_MUX_A");
+    GpioMuxB = GetGPIOFromEnv("WB_GPIO_MUX_B");
+    GpioMuxC = GetGPIOFromEnv("WB_GPIO_MUX_C");
+}
 
 TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
 {
@@ -82,9 +95,9 @@ void TSysfsADC::InitMux()
 {
     if (Initialized)
         return;
-    InitGPIO(WB_GPIO_MUX_A);
-    InitGPIO(WB_GPIO_MUX_B);
-    InitGPIO(WB_GPIO_MUX_C);
+    InitGPIO(GpioMuxA);
+    InitGPIO(GpioMuxB);
+    InitGPIO(GpioMuxC);
     Initialized = true;
 }
 
@@ -122,7 +135,7 @@ void TSysfsADC::SetMuxABC(int n)
 {
     InitMux();
     std::cout << "n: " << n << std::endl;
-    SetGPIOValue(WB_GPIO_MUX_A, n & 1);
-    SetGPIOValue(WB_GPIO_MUX_B, n & 2);
-    SetGPIOValue(WB_GPIO_MUX_C, n & 4);
+    SetGPIOValue(GpioMuxA, n & 1);
+    SetGPIOValue(GpioMuxB, n & 2);
+    SetGPIOValue(GpioMuxC, n & 4);
 }
