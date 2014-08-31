@@ -16,6 +16,16 @@ namespace {
     };
 
     ChannelName channel_names[] = {
+        {0, "adc0"},
+        {1, "adc1"},
+        {2, "adc2"},
+        {3, "adc3"},
+        {4, "adc4"},
+        {5, "adc5"},
+        {6, "adc6"},
+        {7, "adc7"},
+#if 0
+        // later
         {0, "a1"},
         {0, "adc1"},
         {1, "a2"},
@@ -28,6 +38,7 @@ namespace {
         {5, "r4"},
         {6, "r2"},
         {7, "r3"},
+#endif
         {-1, 0}
     };
 

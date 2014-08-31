@@ -43,10 +43,10 @@ private:
 TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config)
     : TMQTTWrapper(mqtt_config), ADC(GetSysfsPrefix())
 {
-    Channels.push_back(ADC.GetChannel("R1"));
-    Channels.push_back(ADC.GetChannel("R2"));
-    Channels.push_back(ADC.GetChannel("R3"));
-    Channels.push_back(ADC.GetChannel("R4"));
+    Channels.push_back(ADC.GetChannel("ADC4"));
+    Channels.push_back(ADC.GetChannel("ADC5"));
+    Channels.push_back(ADC.GetChannel("ADC6"));
+    Channels.push_back(ADC.GetChannel("ADC7"));
 
 	Connect();
 }
