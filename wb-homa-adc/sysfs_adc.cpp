@@ -82,9 +82,9 @@ void TSysfsADC::InitGPIO(int gpio)
     std::string gpio_direction_path = GPIOPath(gpio, "/direction");
     std::ofstream setdirgpio(gpio_direction_path);
     if (!setdirgpio) {
-        std::ofstream exportgpio(GPIOPath(gpio, "/export"));
+        std::ofstream exportgpio(SysfsDir + "/class/gpio/export");
         if (!exportgpio)
-            throw TSysfsADCException("unable to export GPIO");
+            throw TSysfsADCException("unable to export GPIO " + std::to_string(gpio));
         exportgpio << gpio << std::endl;
         setdirgpio.clear();
         setdirgpio.open(gpio_direction_path);
@@ -98,7 +98,7 @@ void TSysfsADC::SetGPIOValue(int gpio, int value)
 {
     std::ofstream setvalgpio(GPIOPath(gpio, "/value"));
     if (!setvalgpio)
-        throw TSysfsADCException("unable to set gpio value");
+        throw TSysfsADCException("unable to set value of gpio " + std::to_string(gpio));
     setvalgpio << value << std::endl;
 }
 
