@@ -122,9 +122,11 @@ install: all
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
+	install -m 0755  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
 
 	install -m 0755  initscripts/wb-homa-gpio $(DESTDIR)/etc/init.d/wb-homa-gpio
 	install -m 0755  initscripts/wb-homa-w1 $(DESTDIR)/etc/init.d/wb-homa-w1
 	install -m 0755  initscripts/wb-homa-ninja-bridge $(DESTDIR)/etc/init.d/wb-homa-ninja-bridge
 	install -m 0755  initscripts/wb-homa-modbus $(DESTDIR)/etc/init.d/wb-homa-modbus
+	install -m 0755  initscripts/wb-homa-adc $(DESTDIR)/etc/init.d/wb-homa-adc

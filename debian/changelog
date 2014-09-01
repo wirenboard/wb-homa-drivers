@@ -1,3 +1,9 @@
+wb-homa-drivers (1.2) wheezy; urgency=low
+
+  * ADC support
+
+ -- Ivan Shvedunov <ivan4th@gmail.com>  Wed, 01 Sep 2014 16:27:41 +0400
+
 wb-homa-drivers (1.1) wheezy; urgency=low
 
   * Modbus support

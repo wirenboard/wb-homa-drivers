@@ -11,3 +11,6 @@ invoke-rc.d wb-homa-ninja-bridge start
 
 update-rc.d wb-homa-modbus defaults
 invoke-rc.d wb-homa-modbus start || true
+
+update-rc.d wb-homa-adc defaults
+invoke-rc.d wb-homa-adc start
