@@ -113,11 +113,10 @@ namespace {
 
         // Report failures and their locations in the document.
         if(not parsedSuccess)
-            // FIXME (rename exception class?)
-            throw TSysfsADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
+            throw TADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
 
         if (!root.isObject())
-            throw TSysfsADCException("Bad config file (the root is not an object)");
+            throw TADCException("Bad config file (the root is not an object)");
 
         if (root.isMember("device_name"))
             config.DeviceName = root["device_name"].asString();
@@ -125,7 +124,7 @@ namespace {
         if (root.isMember("averaging_window")) {
             config.AveragingWindow = root["averaging_window"].asInt();
             if (config.AveragingWindow < 1)
-                throw TSysfsADCException("bad averaging window");
+                throw TADCException("bad averaging window");
         }
 
         if (root.isMember("min_switch_interval_ms"))

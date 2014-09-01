@@ -5,9 +5,9 @@
 
 class TSysfsADCChannel;
 
-class TSysfsADCException: public std::exception {
+class TADCException: public std::exception {
 public:
-    TSysfsADCException(std::string _message): message(_message) {}
+    TADCException(std::string _message): message(_message) {}
     const char* what () const throw ()
     {
         return ("ADC error: " + message).c_str();

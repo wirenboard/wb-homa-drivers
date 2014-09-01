@@ -51,18 +51,18 @@ namespace {
                 return name_item->n;
             }
         }
-        throw TSysfsADCException("invalid channel name " + name);
+        throw TADCException("invalid channel name " + name);
     }
 
     int GetGPIOFromEnv(const std::string& name)
     {
         char* s = getenv(name.c_str());
         if (!s)
-            throw TSysfsADCException("Environment variable not set: " + name);
+            throw TADCException("Environment variable not set: " + name);
         try {
             return std::stoi(s);
         } catch (const std::logic_error&) {
-            throw TSysfsADCException("Invalid value of environment variable '" + name + "': " + s);
+            throw TADCException("Invalid value of environment variable '" + name + "': " + s);
         }
     }
 };
@@ -92,7 +92,7 @@ int TSysfsADC::GetValue(int index)
     std::ifstream getvaladc(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw");
 
     if (getvaladc < 0)
-        throw TSysfsADCException("unable to read ADC value");
+        throw TADCException("unable to read ADC value");
 
     int val;
     getvaladc >> val;
@@ -116,12 +116,12 @@ void TSysfsADC::InitGPIO(int gpio)
     if (!setdirgpio) {
         std::ofstream exportgpio(SysfsDir + "/class/gpio/export");
         if (!exportgpio)
-            throw TSysfsADCException("unable to export GPIO " + std::to_string(gpio));
+            throw TADCException("unable to export GPIO " + std::to_string(gpio));
         exportgpio << gpio << std::endl;
         setdirgpio.clear();
         setdirgpio.open(gpio_direction_path);
         if (!setdirgpio)
-            throw TSysfsADCException("unable to set GPIO direction");
+            throw TADCException("unable to set GPIO direction");
     }
     setdirgpio << "out";
 }
@@ -130,7 +130,7 @@ void TSysfsADC::SetGPIOValue(int gpio, int value)
 {
     std::ofstream setvalgpio(GPIOPath(gpio, "/value"));
     if (!setvalgpio)
-        throw TSysfsADCException("unable to set value of gpio " + std::to_string(gpio));
+        throw TADCException("unable to set value of gpio " + std::to_string(gpio));
     setvalgpio << value << std::endl;
 }
 
@@ -146,7 +146,7 @@ void TSysfsADC::MaybeWaitBeforeSwitching()
 
     struct timespec tp;
     if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp) < 0)
-        throw TSysfsADCException("unable to get timer value");
+        throw TADCException("unable to get timer value");
 
     if (CurrentMuxInput >= 0) { // no delays before the first switch
         double elapsed_ms = (tp.tv_sec - PrevSwitchTS.tv_sec) * 1000 +
