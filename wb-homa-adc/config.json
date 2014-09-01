@@ -1,0 +1,5 @@
+// Configuration options
+{
+    "device_name" : "ADCs",
+    "averaging_window": 10
+}

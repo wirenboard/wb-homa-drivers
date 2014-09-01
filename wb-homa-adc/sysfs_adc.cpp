@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 #include "sysfs_adc.h"
 
@@ -64,8 +65,9 @@ namespace {
     }
 };
 
-TSysfsADC::TSysfsADC(const std::string& sysfs_dir)
-    : Initialized(false), SysfsDir(sysfs_dir)
+TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window)
+    : AveragingWindow(averaging_window), Initialized(false), SysfsDir(sysfs_dir),
+      CurrentMuxInput(-1)
 {
     GpioMuxA = GetGPIOFromEnv("WB_GPIO_MUX_A");
     GpioMuxB = GetGPIOFromEnv("WB_GPIO_MUX_B");
@@ -134,8 +136,56 @@ std::string TSysfsADC::GPIOPath(int gpio, const std::string& suffix) const
 void TSysfsADC::SetMuxABC(int n)
 {
     InitMux();
+    if (CurrentMuxInput == n)
+        return;
     std::cout << "n: " << n << std::endl;
     SetGPIOValue(GpioMuxA, n & 1);
     SetGPIOValue(GpioMuxB, n & 2);
     SetGPIOValue(GpioMuxC, n & 4);
+    CurrentMuxInput = n;
+}
+
+struct TSysfsADCChannelPrivate {
+    ~TSysfsADCChannelPrivate() { if (Buffer) delete[] Buffer; }
+    TSysfsADC* Owner;
+    int Index;
+    std::string Name;
+    int* Buffer = 0;
+    double Sum = 0;
+    bool Ready = false;
+    int Pos = 0;
+};
+
+TSysfsADCChannel::TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name)
+    : d(new TSysfsADCChannelPrivate())
+{
+    d->Owner = owner;
+    d->Index = index;
+    d->Name = name;
+    d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
+}
+
+int TSysfsADCChannel::GetValue()
+{
+    if (!d->Ready) {
+        for (int i = 0; i < d->Owner->AveragingWindow; ++i) {
+            int v = d->Owner->GetValue(d->Index);
+            d->Buffer[i] = v;
+            d->Sum += v;
+        }
+        d->Ready = true;
+    } else {
+        int v = d->Owner->GetValue(d->Index);
+        d->Sum -= d->Buffer[d->Pos];
+        d->Sum += v;
+        d->Buffer[d->Pos++] = v;
+        d->Pos %= d->Owner->AveragingWindow;
+    }
+
+    return round(d->Sum / d->Owner->AveragingWindow);
+}
+
+const std::string& TSysfsADCChannel::GetName() const
+{
+    return d->Name;
 }

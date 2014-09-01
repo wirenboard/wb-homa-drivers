@@ -3,12 +3,16 @@
 // TBD: test with non-pre-exported gpios
 // TBD: ensure proper slashes in sysfs dir
 // TBD: config, channel names & types
+// TBD: averaging
 // TBD: debug mode in config
 // TBD: poll interval
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <getopt.h>
+
+#include "jsoncpp/json/json.h"
 
 #include <mosquittopp.h>
 
@@ -24,10 +28,16 @@ namespace {
     }
 }
 
+struct THandlerConfig
+{
+    int AveragingWindow = 10;
+    std::string DeviceName = "ADCs";
+};
+
 class TMQTTADCHandler : public TMQTTWrapper
 {
 public:
-    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config);
+    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
 
     void OnConnect(int rc);
     void OnMessage(const struct mosquitto_message *message);
@@ -36,12 +46,13 @@ public:
     std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
     void UpdateChannelValues();
 private:
+    THandlerConfig Config;
     TSysfsADC ADC;
     vector<TSysfsADCChannel> Channels;
 };
 
-TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config)
-    : TMQTTWrapper(mqtt_config), ADC(GetSysfsPrefix())
+TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
+    : TMQTTWrapper(mqtt_config), Config(handler_config), ADC(GetSysfsPrefix(), handler_config.AveragingWindow)
 {
     Channels.push_back(ADC.GetChannel("ADC4"));
     Channels.push_back(ADC.GetChannel("ADC5"));
@@ -59,7 +70,7 @@ void TMQTTADCHandler::OnConnect(int rc)
         return;
 
     string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-    Publish(NULL, path, "ADC", 0, true);
+    Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
 
     for (auto channel : Channels) {
         std::string topic = GetChannelTopic(channel);
@@ -92,10 +103,41 @@ void TMQTTADCHandler::UpdateChannelValues()
     }
 }
 
+namespace {
+    void LoadConfig(const std::string& file_name, THandlerConfig& config)
+    {
+        ifstream config_file (file_name);
+        if (config_file.fail())
+            return; // just use defaults
+
+        Json::Value root;
+        Json::Reader reader;
+        bool parsedSuccess = reader.parse(config_file, root, false);
+
+        // Report failures and their locations in the document.
+        if(not parsedSuccess)
+            // FIXME (rename exception class?)
+            throw TSysfsADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
+
+        if (!root.isObject())
+            throw TSysfsADCException("Bad config file (the root is not an object)");
+
+        if (root.isMember("device_name"))
+            config.DeviceName = root["device_name"].asString();
+
+        if (root.isMember("averaging_window")) {
+            config.AveragingWindow = root["averaging_window"].asInt();
+            if (config.AveragingWindow < 1)
+                throw TSysfsADCException("bad averaging window");
+        }
+    }
+};
+
 int main(int argc, char **argv)
 {
 	class TMQTTADCHandler* mqtt_handler;
 	int rc;
+    string config_fname;
     TMQTTADCHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
@@ -107,6 +149,9 @@ int main(int argc, char **argv)
     while ( (c = getopt(argc, argv, "c:h:p:")) != -1) {
         //~ int this_option_optind = optind ? optind : 1;
         switch (c) {
+        case 'c':
+            config_fname = optarg;
+            break;
         //~ case 'c':
             //~ printf ("option c with value '%s'\n", optarg);
             //~ config_fname = optarg;
@@ -127,9 +172,12 @@ int main(int argc, char **argv)
     }
 	mosqpp::lib_init();
 
-    mqtt_config.Id = "wb-adc";
+    THandlerConfig config;
+    if (!config_fname.empty())
+        LoadConfig(config_fname, config);
 
-	mqtt_handler = new TMQTTADCHandler(mqtt_config);
+    mqtt_config.Id = "wb-adc";
+	mqtt_handler = new TMQTTADCHandler(mqtt_config, config);
 
 	while(1){
 		rc = mqtt_handler->loop();
