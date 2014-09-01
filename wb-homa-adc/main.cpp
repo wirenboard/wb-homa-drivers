@@ -71,9 +71,11 @@ void TMQTTADCHandler::OnConnect(int rc)
     string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
     Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
 
+    int n = 0;
     for (auto channel : Channels) {
         std::string topic = GetChannelTopic(channel);
         Publish(NULL, topic + "/meta/type", "text", 0, true);
+        Publish(NULL, topic + "/meta/order", std::to_string(n++), 0, true);
     }
 }
 
