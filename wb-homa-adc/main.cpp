@@ -1,11 +1,5 @@
-// TBD: make it possible to specify sysfs prefix
 // TBD: proper error handling (exceptions)
-// TBD: test with non-pre-exported gpios
-// TBD: ensure proper slashes in sysfs dir
-// TBD: config, channel names & types
-// TBD: averaging
 // TBD: debug mode in config
-// TBD: poll interval
 
 #include <cstdlib>
 #include <fstream>
@@ -30,8 +24,9 @@ namespace {
 
 struct THandlerConfig
 {
-    int AveragingWindow = 10;
     std::string DeviceName = "ADCs";
+    int AveragingWindow = 10;
+    int MinSwitchIntervalMs = 0;
 };
 
 class TMQTTADCHandler : public TMQTTWrapper
@@ -52,7 +47,9 @@ private:
 };
 
 TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
-    : TMQTTWrapper(mqtt_config), Config(handler_config), ADC(GetSysfsPrefix(), handler_config.AveragingWindow)
+    : TMQTTWrapper(mqtt_config),
+      Config(handler_config),
+      ADC(GetSysfsPrefix(), handler_config.AveragingWindow, handler_config.MinSwitchIntervalMs)
 {
     Channels.push_back(ADC.GetChannel("ADC4"));
     Channels.push_back(ADC.GetChannel("ADC5"));
@@ -130,6 +127,9 @@ namespace {
             if (config.AveragingWindow < 1)
                 throw TSysfsADCException("bad averaging window");
         }
+
+        if (root.isMember("min_switch_interval_ms"))
+            config.MinSwitchIntervalMs = root["min_switch_interval_ms"].asInt();
     }
 };
 

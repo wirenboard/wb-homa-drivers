@@ -19,7 +19,8 @@ private:
 class TSysfsADC
 {
 public:
-    TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10);
+    TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10,
+              int min_switch_interval_ms = 0);
     TSysfsADCChannel GetChannel(const std::string& channel_name);
 private:
     int GetValue(int index);
@@ -27,11 +28,14 @@ private:
     void InitGPIO(int gpio);
     void SetGPIOValue(int gpio, int value);
     std::string GPIOPath(int gpio, const std::string& suffix) const;
+    void MaybeWaitBeforeSwitching();
     void SetMuxABC(int n);
     int AveragingWindow;
+    int MinSwitchIntervalMs;
     bool Initialized;
     std::string SysfsDir;
     int CurrentMuxInput;
+    struct timespec PrevSwitchTS;
     int GpioMuxA;
     int GpioMuxB;
     int GpioMuxC;

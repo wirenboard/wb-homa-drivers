@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <ctime>
+#include <unistd.h>
 
 #include "sysfs_adc.h"
 
@@ -65,8 +67,12 @@ namespace {
     }
 };
 
-TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window)
-    : AveragingWindow(averaging_window), Initialized(false), SysfsDir(sysfs_dir),
+TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
+                     int min_switch_interval_ms)
+    : AveragingWindow(averaging_window),
+      MinSwitchIntervalMs(min_switch_interval_ms),
+      Initialized(false),
+      SysfsDir(sysfs_dir),
       CurrentMuxInput(-1)
 {
     GpioMuxA = GetGPIOFromEnv("WB_GPIO_MUX_A");
@@ -133,11 +139,33 @@ std::string TSysfsADC::GPIOPath(int gpio, const std::string& suffix) const
     return std::string(SysfsDir + "/class/gpio/gpio") + std::to_string(gpio) + suffix;
 }
 
+void TSysfsADC::MaybeWaitBeforeSwitching()
+{
+    if (MinSwitchIntervalMs <= 0)
+        return;
+
+    struct timespec tp;
+    if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp) < 0)
+        throw TSysfsADCException("unable to get timer value");
+
+    if (CurrentMuxInput >= 0) { // no delays before the first switch
+        double elapsed_ms = (tp.tv_sec - PrevSwitchTS.tv_sec) * 1000 +
+            (tp.tv_nsec - PrevSwitchTS.tv_nsec) / 1000000;
+        std::cout << "elapsed: " << elapsed_ms << std::endl;
+        if (elapsed_ms < MinSwitchIntervalMs) {
+            std::cout << "usleep: " << (MinSwitchIntervalMs - (int)elapsed_ms) * 1000 << std::endl;
+            usleep((MinSwitchIntervalMs - (int)elapsed_ms) * 1000);
+        }
+    }
+    PrevSwitchTS = tp;
+}
+
 void TSysfsADC::SetMuxABC(int n)
 {
     InitMux();
     if (CurrentMuxInput == n)
         return;
+    MaybeWaitBeforeSwitching();
     std::cout << "n: " << n << std::endl;
     SetGPIOValue(GpioMuxA, n & 1);
     SetGPIOValue(GpioMuxB, n & 2);
