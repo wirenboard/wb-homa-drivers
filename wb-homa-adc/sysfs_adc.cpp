@@ -59,7 +59,7 @@ namespace {
             throw TADCException("Environment variable not set: " + name);
         try {
             return std::stoi(s);
-        } catch (const std::logic_error&) {
+        } catch (std::exception) {
             throw TADCException("Invalid value of environment variable '" + name + "': " + s);
         }
     }
