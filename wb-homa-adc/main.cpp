@@ -1,4 +1,3 @@
-// TBD: proper error handling (exceptions)
 // TBD: debug mode in config
 
 #include <cstdlib>
@@ -124,7 +123,7 @@ namespace {
         if (root.isMember("averaging_window")) {
             config.AveragingWindow = root["averaging_window"].asInt();
             if (config.AveragingWindow < 1)
-                throw TADCException("bad averaging window");
+                throw TADCException("bad averaging window specified in the config");
         }
 
         if (root.isMember("min_switch_interval_ms"))
@@ -171,23 +170,28 @@ int main(int argc, char **argv)
     }
 	mosqpp::lib_init();
 
-    THandlerConfig config;
-    if (!config_fname.empty())
-        LoadConfig(config_fname, config);
+    try {
+        THandlerConfig config;
+        if (!config_fname.empty())
+            LoadConfig(config_fname, config);
 
-    mqtt_config.Id = "wb-adc";
-	mqtt_handler = new TMQTTADCHandler(mqtt_config, config);
+        mqtt_config.Id = "wb-adc";
+        mqtt_handler = new TMQTTADCHandler(mqtt_config, config);
 
-	while(1){
-		rc = mqtt_handler->loop();
-        //~ cout << "break in a loop! " << rc << endl;
-		if(rc != 0) {
-			mqtt_handler->reconnect();
-		} else {
-            // update current values
-            mqtt_handler->UpdateChannelValues();
+        while(1){
+            rc = mqtt_handler->loop();
+            //~ cout << "break in a loop! " << rc << endl;
+            if(rc != 0) {
+                mqtt_handler->reconnect();
+            } else {
+                // update current values
+                mqtt_handler->UpdateChannelValues();
+            }
         }
-	}
+    } catch (const TADCException& e) {
+        cerr << "FATAL: " << e.what() << endl;
+        return 1;
+    }
 
 	mosqpp::lib_cleanup();
 
