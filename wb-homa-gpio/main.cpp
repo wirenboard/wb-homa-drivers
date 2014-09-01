@@ -17,18 +17,17 @@
 
 using namespace std;
 
+enum class TGpioDirection {
+    Input,
+    Output
+};
 
 struct TGpioDesc
 {
     int Gpio;
-    bool Inverted;
-    string Name;
-
-    TGpioDesc()
-        : Inverted(false)
-        , Name("")
-    {};
-
+    bool Inverted = false;
+    string Name = "";
+    TGpioDirection Direction = TGpioDirection::Output;
 };
 
 class THandlerConfig
@@ -77,7 +76,10 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         TSysfsGpio gpio_handler(gpio_desc.Gpio, gpio_desc.Inverted);
         gpio_handler.Export();
         if (gpio_handler.IsExported()) {
-            gpio_handler.SetOutput();
+            if (gpio_desc.Direction == TGpioDirection::Input)
+                gpio_handler.SetInput();
+            else
+                gpio_handler.SetOutput();
             Channels.push_back(make_pair(gpio_desc, gpio_handler));
         } else {
             cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
@@ -99,16 +101,17 @@ void TMQTTGpioHandler::OnConnect(int rc)
         Publish(NULL, prefix + "/meta/name", Config.DeviceName, 0, true);
 
 
-        for (TChannelDesc& channel_desc : Channels) {
-            auto & gpio_desc = channel_desc.first;
+        for (const auto& channel_desc : Channels) {
+            const auto& gpio_desc = channel_desc.first;
 
             //~ cout << "GPIO: " << gpio_desc.Name << endl;
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
 
             Publish(NULL, control_prefix + "/meta/type", "switch", 0, true);
-
-            Subscribe(NULL, control_prefix + "/on");
-
+            if (gpio_desc.Direction == TGpioDirection::Input)
+                Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
+            else
+                Subscribe(NULL, control_prefix + "/on");
         }
 
 //~ /devices/293723-demo/controls/Demo-Switch 0
@@ -134,7 +137,10 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
           (tokens[5] == "on") )
     {
         for (TChannelDesc& channel_desc : Channels) {
-            auto & gpio_desc = channel_desc.first;
+            const auto& gpio_desc = channel_desc.first;
+            if (gpio_desc.Direction != TGpioDirection::Output)
+                continue;
+
             if (tokens[4] == gpio_desc.Name) {
                 auto & gpio_handler = channel_desc.second;
 
@@ -143,8 +149,6 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                     // echo, retained
                     Publish(NULL, GetChannelTopic(gpio_desc), payload, 0, true);
                 }
-
-
             }
         }
     }
@@ -162,17 +166,20 @@ string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) {
 
 void TMQTTGpioHandler::UpdateChannelValues() {
     for (TChannelDesc& channel_desc : Channels) {
-        auto & gpio_desc = channel_desc.first;
-        auto & gpio_handler = channel_desc.second;
+        const auto& gpio_desc = channel_desc.first;
+        auto& gpio_handler = channel_desc.second;
 
         // vv order matters
         int cached = gpio_handler.GetCachedValue();
         int value = gpio_handler.GetValue();
 
         if (value >= 0) {
-            if ( (cached < 0) || (cached != value)) {
+            // Buggy GPIO driver may yield any non-zero number instead of 1,
+            // so make sure it's either 1 or 0 here.
+            // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
+            value = !!value;
+            if ((cached < 0) || (cached != value))
                 Publish(NULL, GetChannelTopic(gpio_desc), to_string(value), 0, true); // Publish current value (make retained)
-            }
         }
     }
 
@@ -258,17 +265,21 @@ int main(int argc, char *argv[])
 
          // Let's extract the array contained
          // in the root object
-        const Json::Value array = root["channels"];
+        const auto& array = root["channels"];
 
          // Iterate over sequence elements and
          // print its values
         for(unsigned int index=0; index<array.size();
              ++index)
         {
+            const auto& item = array[index];
             TGpioDesc gpio_desc;
-            gpio_desc.Gpio = array[index]["gpio"].asInt();
-            gpio_desc.Name = array[index]["name"].asString();
-            //~ gpio_desc.Inverted = array[index]["inverted"].asString();
+            gpio_desc.Gpio = item["gpio"].asInt();
+            gpio_desc.Name = item["name"].asString();
+            if (item.isMember("inverted"))
+                gpio_desc.Inverted = item["inverted"].asBool();
+            if (item.isMember("direction") && item["direction"].asString() == "input")
+                gpio_desc.Direction = TGpioDirection::Input;
 
             handler_config.AddGpio(gpio_desc);
 
