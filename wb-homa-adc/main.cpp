@@ -1,5 +1,3 @@
-// TBD: debug mode in config
-
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
