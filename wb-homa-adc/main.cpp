@@ -54,10 +54,8 @@ TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, co
           handler_config.MinSwitchIntervalMs,
           handler_config.Debug)
 {
-    Channels.push_back(ADC.GetChannel("ADC4"));
-    Channels.push_back(ADC.GetChannel("ADC5"));
-    Channels.push_back(ADC.GetChannel("ADC6"));
-    Channels.push_back(ADC.GetChannel("ADC7"));
+    for (int i = 0; i < 8; ++i)
+        Channels.push_back(ADC.GetChannel("ADC" + std::to_string(i)));
 
 	Connect();
 }
