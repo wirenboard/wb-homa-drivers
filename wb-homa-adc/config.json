@@ -2,5 +2,6 @@
 {
     "device_name" : "ADCs",
     "averaging_window": 10,
-    "min_switch_interval_ms": 10
+    "min_switch_interval_ms": 10,
+    "debug": false
 }

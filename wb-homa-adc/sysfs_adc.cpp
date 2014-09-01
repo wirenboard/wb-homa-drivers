@@ -46,10 +46,8 @@ namespace {
         std::string locase_name = name;
         std::transform(locase_name.begin(), locase_name.end(), locase_name.begin(), ::tolower);
         for (ChannelName* name_item = channel_names; name_item->n >= 0; ++name_item) {
-            if (locase_name == name_item->name) {
-                std::cout << "name: " << name << "; name_item->name: " << name_item->name << "; n: " << name_item->n << std::endl;
+            if (locase_name == name_item->name)
                 return name_item->n;
-            }
         }
         throw TADCException("invalid channel name " + name);
     }
@@ -68,9 +66,10 @@ namespace {
 };
 
 TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
-                     int min_switch_interval_ms)
+                     int min_switch_interval_ms, bool debug)
     : AveragingWindow(averaging_window),
       MinSwitchIntervalMs(min_switch_interval_ms),
+      Debug(debug),
       Initialized(false),
       SysfsDir(sysfs_dir),
       CurrentMuxInput(-1)
@@ -151,9 +150,12 @@ void TSysfsADC::MaybeWaitBeforeSwitching()
     if (CurrentMuxInput >= 0) { // no delays before the first switch
         double elapsed_ms = (tp.tv_sec - PrevSwitchTS.tv_sec) * 1000 +
             (tp.tv_nsec - PrevSwitchTS.tv_nsec) / 1000000;
-        std::cout << "elapsed: " << elapsed_ms << std::endl;
+        if (Debug)
+            std::cerr << "elapsed: " << elapsed_ms << std::endl;
         if (elapsed_ms < MinSwitchIntervalMs) {
-            std::cout << "usleep: " << (MinSwitchIntervalMs - (int)elapsed_ms) * 1000 << std::endl;
+            if (Debug)
+                std::cerr << "usleep: " << (MinSwitchIntervalMs - (int)elapsed_ms) * 1000 <<
+                    std::endl;
             usleep((MinSwitchIntervalMs - (int)elapsed_ms) * 1000);
         }
     }
@@ -166,7 +168,8 @@ void TSysfsADC::SetMuxABC(int n)
     if (CurrentMuxInput == n)
         return;
     MaybeWaitBeforeSwitching();
-    std::cout << "n: " << n << std::endl;
+    if (Debug)
+        std::cerr << "SetMuxABC: " << n << std::endl;
     SetGPIOValue(GpioMuxA, n & 1);
     SetGPIOValue(GpioMuxB, n & 2);
     SetGPIOValue(GpioMuxC, n & 4);

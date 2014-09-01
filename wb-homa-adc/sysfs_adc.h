@@ -20,7 +20,7 @@ class TSysfsADC
 {
 public:
     TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10,
-              int min_switch_interval_ms = 0);
+              int min_switch_interval_ms = 0, bool debug = false);
     TSysfsADCChannel GetChannel(const std::string& channel_name);
 private:
     int GetValue(int index);
@@ -32,6 +32,7 @@ private:
     void SetMuxABC(int n);
     int AveragingWindow;
     int MinSwitchIntervalMs;
+    bool Debug;
     bool Initialized;
     std::string SysfsDir;
     int CurrentMuxInput;

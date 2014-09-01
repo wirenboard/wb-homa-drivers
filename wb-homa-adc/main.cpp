@@ -24,6 +24,7 @@ namespace {
 struct THandlerConfig
 {
     std::string DeviceName = "ADCs";
+    bool Debug = false;
     int AveragingWindow = 10;
     int MinSwitchIntervalMs = 0;
 };
@@ -48,7 +49,10 @@ private:
 TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
     : TMQTTWrapper(mqtt_config),
       Config(handler_config),
-      ADC(GetSysfsPrefix(), handler_config.AveragingWindow, handler_config.MinSwitchIntervalMs)
+      ADC(GetSysfsPrefix(),
+          handler_config.AveragingWindow,
+          handler_config.MinSwitchIntervalMs,
+          handler_config.Debug)
 {
     Channels.push_back(ADC.GetChannel("ADC4"));
     Channels.push_back(ADC.GetChannel("ADC5"));
@@ -60,7 +64,8 @@ TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, co
 
 void TMQTTADCHandler::OnConnect(int rc)
 {
-    cerr << "Connected with code " << rc << endl;
+    if (Config.Debug)
+        std::cerr << "Connected with code " << rc << std::endl;
 
     if(rc != 0)
         return;
@@ -81,7 +86,8 @@ void TMQTTADCHandler::OnMessage(const struct mosquitto_message *)
 
 void TMQTTADCHandler::OnSubscribe(int, int, const int *)
 {
-    std::cerr << "Subscription succeeded." << std::endl;
+    if (Config.Debug)
+        std::cerr << "Subscription succeeded." << std::endl;
 }
 
 std::string TMQTTADCHandler::GetChannelTopic(const TSysfsADCChannel& channel) const
@@ -94,7 +100,8 @@ void TMQTTADCHandler::UpdateChannelValues()
 {
     for (auto channel : Channels) {
         int value = channel.GetValue();
-        std::cout << "channel: " << channel.GetName() << " value: " << value << std::endl;
+        if (Config.Debug)
+            std::cerr << "channel: " << channel.GetName() << " value: " << value << std::endl;
         Publish(NULL, GetChannelTopic(channel), to_string(value), 0, true);
     }
 }
@@ -117,6 +124,9 @@ namespace {
         if (!root.isObject())
             throw TADCException("Bad config file (the root is not an object)");
 
+        if (root.isMember("debug"))
+            config.Debug = root["debug"].asBool();
+
         if (root.isMember("device_name"))
             config.DeviceName = root["device_name"].asString();
 
@@ -136,6 +146,7 @@ int main(int argc, char **argv)
 	class TMQTTADCHandler* mqtt_handler;
 	int rc;
     string config_fname;
+    bool debug = false;
     TMQTTADCHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
@@ -144,9 +155,12 @@ int main(int argc, char **argv)
     //~ int digit_optind = 0;
     //~ int aopt = 0, bopt = 0;
     //~ char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "c:h:p:")) != -1) {
+    while ( (c = getopt(argc, argv, "dc:h:p:")) != -1) {
         //~ int this_option_optind = optind ? optind : 1;
         switch (c) {
+        case 'd':
+            debug = true;
+            break;
         case 'c':
             config_fname = optarg;
             break;
@@ -155,11 +169,9 @@ int main(int argc, char **argv)
             //~ config_fname = optarg;
             //~ break;
         case 'p':
-            printf ("option p with value '%s'\n", optarg);
             mqtt_config.Port = stoi(optarg);
             break;
         case 'h':
-            printf ("option h with value '%s'\n", optarg);
             mqtt_config.Host = optarg;
             break;
         case '?':
@@ -175,21 +187,19 @@ int main(int argc, char **argv)
         if (!config_fname.empty())
             LoadConfig(config_fname, config);
 
+        config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
         mqtt_handler = new TMQTTADCHandler(mqtt_config, config);
 
         while(1){
             rc = mqtt_handler->loop();
-            //~ cout << "break in a loop! " << rc << endl;
-            if(rc != 0) {
+            if(rc != 0)
                 mqtt_handler->reconnect();
-            } else {
-                // update current values
+            else // update current values
                 mqtt_handler->UpdateChannelValues();
-            }
         }
     } catch (const TADCException& e) {
-        cerr << "FATAL: " << e.what() << endl;
+        std::cerr << "FATAL: " << e.what() << std::endl;
         return 1;
     }
 
