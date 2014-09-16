@@ -88,14 +88,21 @@ TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
 int TSysfsADC::GetValue(int index)
 {
     SetMuxABC(index);
-    std::ifstream getvaladc(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw");
+    for (;;) {
+        try {
+            std::ifstream getvaladc(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw");
 
-    if (getvaladc < 0)
-        throw TADCException("unable to read ADC value");
+            if (getvaladc < 0)
+                throw TADCException("unable to read ADC value");
 
-    int val;
-    getvaladc >> val;
-    return val;
+            int val;
+            getvaladc >> val;
+            return val;
+        } catch (const std::ios_base::failure& e) {
+            std::cerr << "warning: error getting GPIO value (" <<
+                e.what() << ", retrying..." << std::endl;
+        }
+    }
 }
 
 void TSysfsADC::InitMux()
