@@ -99,7 +99,7 @@ int TSysfsADC::GetValue(int index)
             getvaladc >> val;
             return val;
         } catch (const std::ios_base::failure& e) {
-            std::cerr << "warning: error getting GPIO value (" <<
+            std::cerr << "warning: error getting ADC value (" <<
                 e.what() << ", retrying..." << std::endl;
         }
     }
