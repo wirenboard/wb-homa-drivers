@@ -88,7 +88,9 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
 
 
 	Connect();
-};
+}
+
+TMQTTGpioHandler::~TMQTTGpioHandler() {}
 
 void TMQTTGpioHandler::OnConnect(int rc)
 {

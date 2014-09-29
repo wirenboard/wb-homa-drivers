@@ -64,11 +64,11 @@ $(MODBUS_DIR)/modbus_config.o : $(MODBUS_DIR)/modbus_config.cpp $(COMMON_H)
 $(MODBUS_DIR)/modbus_port.o : $(MODBUS_DIR)/modbus_port.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/modbus_handler.o : $(MODBUS_DIR)/modbus_handler.cpp $(COMMON_H)
+$(MODBUS_DIR)/modbus_observer.o : $(MODBUS_DIR)/modbus_observer.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_DIR)/modbus_client.o \
-  $(MODBUS_DIR)/modbus_config.o $(MODBUS_DIR)/modbus_port.o $(MODBUS_DIR)/modbus_handler.o \
+  $(MODBUS_DIR)/modbus_config.o $(MODBUS_DIR)/modbus_port.o $(MODBUS_DIR)/modbus_observer.o \
   $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@ $(MODBUS_LIBS)
 

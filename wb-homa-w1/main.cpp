@@ -49,7 +49,9 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
 {
 	Connect();
 
-};
+}
+
+TMQTTOnewireHandler::~TMQTTOnewireHandler() {}
 
 void TMQTTOnewireHandler::OnConnect(int rc)
 {

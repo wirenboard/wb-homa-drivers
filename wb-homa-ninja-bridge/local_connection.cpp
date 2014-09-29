@@ -30,7 +30,7 @@ TMQTTNinjaBridgeHandler::TMQTTNinjaBridgeHandler(const TMQTTNinjaBridgeHandler::
 	Connect();
 };
 
-
+TMQTTNinjaBridgeHandler::~TMQTTNinjaBridgeHandler() {}
 
 
 void TMQTTNinjaBridgeHandler::ReadBlockId()
