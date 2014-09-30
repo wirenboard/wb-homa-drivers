@@ -1,6 +1,8 @@
 #include <fstream>
 #include <string.h>
 #include <libgen.h>
+#include <errno.h>
+#include <stdio.h>
 
 #include "testlog.h"
 
@@ -8,9 +10,14 @@ TLoggedFixture::~TLoggedFixture() {}
 
 void TLoggedFixture::TearDown()
 {
-    if (IsOk())
-        return;
     std::string file_name = GetFileName(".out");
+    if (IsOk()) {
+        if (remove(file_name.c_str()) < 0) {
+            if (errno != ENOENT)
+                FAIL() << "failed to remove .out file: " << file_name;
+        }
+        return;
+    }
     std::ofstream f(file_name);
     if (!f.is_open())
         FAIL() << "cannot create file for failing logged test: " << file_name;
