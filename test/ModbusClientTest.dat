@@ -1,0 +1,11 @@
+>>> AddSlave(1)
+Connect()
+SetSlave(1)
+ReadCoils(1, 1, <ptr>): 0x00
+Modbus Callback: <1:coil: 1> becomes 0
+USleep(1000000)
+SetSlave(1)
+ReadCoils(1, 1, <ptr>): 0x01
+Modbus Callback: <1:coil: 1> becomes 1
+USleep(1000000)
+Disconnect()
