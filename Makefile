@@ -138,6 +138,7 @@ clean :
 	-rm -f $(W1_DIR)/*.o $(W1_DIR)/$(W1_BIN)
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
 
 install: all
 	install -m 0644  $(GPIO_DIR)/config.json $(DESTDIR)/etc/wb-homa-gpio.conf

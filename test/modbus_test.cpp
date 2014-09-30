@@ -197,7 +197,6 @@ PFakeSlave TFakeModbusConnector::AddSlave(int slave)
 
 class ModbusClientTest: public TLoggedFixture
 { 
-    LOGGED_FIXTURE(ModbusClientTest)
 protected:
     void SetUp();
     void TearDown();
@@ -242,9 +241,6 @@ int main(int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
-// command:
-// g++ -Wall -std=c++0x modbus_test.cpp testlog.cpp ../wb-homa-modbus/modbus_client.cpp -o modbus_test -lgtest -lpthread -lmodbus && ./modbus_test || ./abt.sh show
-// TBD: add support for 'make test'
 // TBD: replace direct usleep() call with call to a TModbusContext.USleep()
 // TBD: specify per-slave register ranges
 

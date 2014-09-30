@@ -49,17 +49,8 @@ public:
     }
 
     void TearDown();
-protected:
-    virtual std::string SourceFileName() const = 0;
-    virtual std::string FixtureName() const = 0;
 private:
     bool IsOk();
     std::string GetFileName(const std::string& suffix = "") const;
     std::stringstream Contents;
 };
-
-#define LOGGED_FIXTURE(Name) \
-    protected: \
-    std::string SourceFileName() const { return __FILE__; } \
-    std::string FixtureName() const { return #Name; } \
-    private:

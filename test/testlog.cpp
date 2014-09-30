@@ -23,7 +23,7 @@ void TLoggedFixture::TearDown()
         FAIL() << "cannot create file for failing logged test: " << file_name;
     else {
         f << Contents.str();
-        ADD_FAILURE() << "test diff: " << FixtureName();
+        ADD_FAILURE() << "test diff: " << GetFileName();
     }
 }
 
@@ -40,8 +40,13 @@ bool TLoggedFixture::IsOk()
 
 std::string TLoggedFixture::GetFileName(const std::string& suffix) const
 {
-    char* s = strdup(SourceFileName().c_str());
-    std::string result = std::string(dirname(s)) + "/" + FixtureName() + ".dat" + suffix;
+    const ::testing::TestInfo* const test_info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
+
+    char* s = strdup(__FILE__);
+    std::string result = std::string(dirname(s)) + "/" +
+        test_info->test_case_name() + "." + test_info->name() +
+        ".dat" + suffix;
     free(s);
     return result;
 }
