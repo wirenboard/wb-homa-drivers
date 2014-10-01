@@ -62,7 +62,7 @@ public:
         std::stringstream s;
         s << "read " << nb << " " << Name << "(s) @ " << addr;
         if (nb) {
-            s << ": ";
+            s << ":";
             while (nb--) {
                 int v = (*this)[addr++];
                 s << " 0x" << std::hex << std::setw(StrWidth()) << std::setfill('0') << (int)v;

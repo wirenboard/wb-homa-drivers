@@ -97,3 +97,41 @@ TEST_F(ModbusClientTest, Write)
         EXPECT_EQ(4242, Slave->Holding[20]);
     }
 }
+
+TEST_F(ModbusClientTest, S8)
+{
+    TModbusRegister holding20(1, TModbusRegister::HOLDING_REGISTER, 20, TModbusRegister::S8);
+    TModbusRegister input30(1, TModbusRegister::INPUT_REGISTER, 30, TModbusRegister::S8);
+    ModbusClient->AddRegister(holding20);
+    ModbusClient->AddRegister(input30);
+
+    Note() << "server -> client: 10, 20";
+    Slave->Holding[20] = 10;
+    Slave->Input[30] = 20;
+    Note() << "Cycle()";
+    ModbusClient->Cycle();
+    EXPECT_EQ(10, ModbusClient->GetRawValue(holding20));
+    EXPECT_EQ(20, ModbusClient->GetRawValue(input30));
+
+    Note() << "server -> client: -2, -3";
+    Slave->Holding[20] = 254;
+    Slave->Input[30] = 253;
+    Note() << "Cycle()";
+    ModbusClient->Cycle();
+    EXPECT_EQ(-2, ModbusClient->GetRawValue(holding20));
+    EXPECT_EQ(-3, ModbusClient->GetRawValue(input30));
+
+    Note() << "client -> server: 10";
+    ModbusClient->SetTextValue(holding20, "10");
+    Note() << "Cycle()";
+    ModbusClient->Cycle();
+    EXPECT_EQ(10, ModbusClient->GetRawValue(holding20));
+    EXPECT_EQ(10, Slave->Holding[20]);
+
+    Note() << "client -> server: -2";
+    ModbusClient->SetTextValue(holding20, "-2");
+    Note() << "Cycle()";
+    ModbusClient->Cycle();
+    EXPECT_EQ(-2, ModbusClient->GetRawValue(holding20));
+    EXPECT_EQ(254, Slave->Holding[20]);
+}
