@@ -235,12 +235,6 @@ TEST_F(ModbusClientTest, Init)
     EXPECT_EQ(1, ModbusClient->GetRawValue(TModbusRegister(1, TModbusRegister::COIL, 1)));
 }
 
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
-
 // TBD: replace direct usleep() call with call to a TModbusContext.USleep()
 // TBD: specify per-slave register ranges
 
