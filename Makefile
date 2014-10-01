@@ -136,7 +136,11 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
 
 test: $(TEST_DIR)/$(TEST_BIN)
-	$(TEST_DIR)/$(TEST_BIN) || $(TEST_DIR)/abt.sh show
+	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
+          if [ $$? = 180 ]; then \
+            echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
+            exit 1; \
+          else $(TEST_DIR)/abt.sh show; fi
 
 clean :
 	-rm -f $(COMMON_DIR)/*.o
