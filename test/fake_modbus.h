@@ -42,16 +42,20 @@ public:
         // It always should contain at least one value
         // so that operator[] can always return some
         // reference, even in the case of erroneous access.
-        values = new T[std::min(1, Range.Size())]();
+        values = new T[std::max(1, Range.Size())]();
     }
+
     ~TRegisterSet() {
-        delete values;
+        delete[] values;
     }
+
     T& operator[] (int index) {
-        return values[Range.ValidateIndex(Name, index)];
+        return values[Range.ValidateIndex(Name, index) - Range.Start];
     }
+
     const T& operator[] (int index) const {
-        return values[Range.ValidateIndex(Name, index)];
+        return values[Range.ValidateIndex(Name, index) - Range.Start];
+    }
     }
 private:
     std::string Name;
