@@ -65,13 +65,29 @@ public:
             s << ": ";
             while (nb--) {
                 int v = (*this)[addr++];
-                s << " 0x" << std::hex << std::setw(2) << std::setfill('0') << (int)v;
+                s << " 0x" << std::hex << std::setw(StrWidth()) << std::setfill('0') << (int)v;
                 *dest++ = v;
             }
         }
         fixture.Emit() << s.str();
     }
+
+    void WriteRegs(TLoggedFixture& fixture, int addr, int nb, const T* src) {
+        ASSERT_GT(nb, 0);
+        std::stringstream s;
+        s << "write " << nb << " " << Name << "(s) @ " << addr;
+        if (nb) {
+            s << ": ";
+            while (nb--) {
+                int v = *src++;
+                s << " 0x" << std::hex << std::setw(StrWidth()) << std::setfill('0') << (int)v;
+                (*this)[addr++] = v;
+            }
+        }
+        fixture.Emit() << s.str();
+    }
 private:
+    int StrWidth() const { return sizeof(T) * 2; }
     std::string Name;
     TRegisterRange Range;
     T* values;

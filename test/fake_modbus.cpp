@@ -63,7 +63,9 @@ void TFakeModbusContext::ReadCoils(int addr, int nb, uint8_t *dest)
 
 void TFakeModbusContext::WriteCoil(int addr, int value)
 {
-    FAIL() << "TBD WriteCoil " << addr << " " << value;
+    ASSERT_TRUE(!!CurrentSlave);
+    ASSERT_TRUE(value == 0 || value == 1);
+    CurrentSlave->Coils[addr] = value;
 }
 
 void TFakeModbusContext::ReadDisceteInputs(int addr, int nb, uint8_t *dest)
@@ -82,7 +84,9 @@ void TFakeModbusContext::ReadHoldingRegisters(int addr, int nb, uint16_t *dest)
 
 void TFakeModbusContext::WriteHoldingRegisters(int addr, int nb, const uint16_t *data)
 {
-    FAIL() << "TBD WriteHoldingRegisters " << addr << " " << nb << " " << data;
+    ASSERT_LE(nb, MODBUS_MAX_READ_REGISTERS);
+    ASSERT_TRUE(!!CurrentSlave);
+    CurrentSlave->Holding.WriteRegs(Fixture, addr, nb, data);
 }
 
 void TFakeModbusContext::ReadInputRegisters(int addr, int nb, uint16_t *dest)
