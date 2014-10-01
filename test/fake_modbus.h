@@ -18,7 +18,7 @@ struct TRegisterRange {
     {
         if (index < Start || index > End) {
             ADD_FAILURE() << name << " index is out of range: " << index <<
-                " (must be " << Start << ".." << End << ")";
+                " (must be " << Start << " <= addr < " << End << ")";
             return Start;
         }
         return index;
