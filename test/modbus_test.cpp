@@ -1,5 +1,6 @@
 #include <map>
 #include <memory>
+#include <algorithm>
 #include <cassert>
 #include <gtest/gtest.h>
 #include <modbus/modbus.h> // for constants such as MODBUS_MAX_READ_BITS
@@ -7,12 +8,73 @@
 #include "testlog.h"
 #include "../wb-homa-modbus/modbus_client.h"
 
+struct TRegisterRange {
+    TRegisterRange(int start = 0, int end = 0)
+        : Start(start), End(end)
+    {
+        assert(End >= Start);
+        assert(End - Start <= 65536);
+    }
+
+    int ValidateIndex(const std::string& name, int index) const
+    {
+        if (index < Start || index > End) {
+            ADD_FAILURE() << name << " index is out of range: " << index <<
+                " (must be " << Start << ".." << End << ")";
+            return Start;
+        }
+        return index;
+    }
+
+    int Size() const
+    {
+        return End - Start;
+    }
+
+    int Start, End;
+};
+
+template<typename T>
+class TRegisterSet {
+public:
+    TRegisterSet(const std::string& name, const TRegisterRange& range)
+        : Name(name), Range(range)
+    {
+        // Allocate zero-filled array of values.
+        // It always should contain at least one value
+        // so that operator[] can always return some
+        // reference, even in the case of erroneous access.
+        values = new T[std::min(1, Range.Size())]();
+    }
+    ~TRegisterSet() {
+        delete values;
+    }
+    T& operator[] (int index) {
+        return values[Range.ValidateIndex(Name, index)];
+    }
+    const T& operator[] (int index) const {
+        return values[Range.ValidateIndex(Name, index)];
+    }
+private:
+    std::string Name;
+    TRegisterRange Range;
+    T* values;
+};
+
 struct TFakeSlave
 {
-    uint8_t Coils[65536];
-    uint8_t Discrete[65536];
-    uint16_t Holding[65536];
-    uint16_t Input[65536];
+    TFakeSlave(const TRegisterRange& coil_range = TRegisterRange(),
+               const TRegisterRange& discrete_range = TRegisterRange(),
+               const TRegisterRange& holding_range = TRegisterRange(),
+               const TRegisterRange& input_range = TRegisterRange())
+        : Coils("coil", coil_range),
+          Discrete("discrete input", discrete_range),
+          Holding("holding register", holding_range),
+          Input("input register", input_range) {}
+    TRegisterSet<uint8_t> Coils;
+    TRegisterSet<uint8_t> Discrete;
+    TRegisterSet<uint16_t> Holding;
+    TRegisterSet<uint16_t> Input;
 };
 
 typedef std::shared_ptr<TFakeSlave> PFakeSlave;
@@ -23,7 +85,7 @@ public:
     void Connect();
     void Disconnect();
     void SetDebug(bool debug);
-    void SetSlave(int slave);
+    void SetSlave(int slave_addr);
     void ReadCoils(int addr, int nb, uint8_t *dest);
     void WriteCoil(int addr, int value);
     void ReadDisceteInputs(int addr, int nb, uint8_t *dest);
@@ -37,8 +99,8 @@ public:
         ASSERT_EQ(Debug, debug);
     }
 
-    PFakeSlave GetSlave(int slave);
-    PFakeSlave AddSlave(int slave);
+    PFakeSlave GetSlave(int slave_addr);
+    PFakeSlave AddSlave(int slave_addr, PFakeSlave slave);
 
 private:
     friend class TFakeModbusConnector;
@@ -51,34 +113,34 @@ private:
     PFakeSlave CurrentSlave;
 };
 
+typedef std::shared_ptr<TFakeModbusContext> PFakeModbusContext;
+
 void TFakeModbusContext::USleep(int usec)
 {
     Fixture.Emit() << "USleep(" << usec << ")";
 }
 
-PFakeSlave TFakeModbusContext::GetSlave(int slave)
+PFakeSlave TFakeModbusContext::GetSlave(int slave_addr)
 {
-    auto it = Slaves.find(slave);
+    auto it = Slaves.find(slave_addr);
     if (it == Slaves.end()) {
-        ADD_FAILURE() << "GetSlave(): slave not found, auto-creating: " << slave;
-        return AddSlave(slave);
+        ADD_FAILURE() << "GetSlave(): slave not found, auto-creating: " << slave_addr;
+        return AddSlave(slave_addr, PFakeSlave(new TFakeSlave));
     }
     return it->second;
 }
 
-PFakeSlave TFakeModbusContext::AddSlave(int slave)
+PFakeSlave TFakeModbusContext::AddSlave(int slave_addr, PFakeSlave slave)
 {
-    Fixture.Note() << "AddSlave(" << slave << ")";
-    auto it = Slaves.find(slave);
+    Fixture.Note() << "AddSlave(" << slave_addr << ")";
+    auto it = Slaves.find(slave_addr);
     if (it != Slaves.end()) {
-        ADD_FAILURE() << "AddSlave(): slave already present: " << slave;
+        ADD_FAILURE() << "AddSlave(): slave already present: " << slave_addr;
         return it->second;
     }
 
-    PFakeSlave fake_slave(new TFakeSlave());
-    memset(fake_slave.get(), 0, sizeof(TFakeSlave));
-    Slaves[slave] = fake_slave;
-    return fake_slave;
+    Slaves[slave_addr] = slave;
+    return slave;
 }
 
 void TFakeModbusContext::Connect()
@@ -112,12 +174,12 @@ void TFakeModbusContext::ReadCoils(int addr, int nb, uint8_t *dest)
     ASSERT_GT(nb, 0);
     ASSERT_LE(nb, MODBUS_MAX_READ_BITS);
     ASSERT_TRUE(!!CurrentSlave);
-    uint8_t* src = CurrentSlave->Coils + addr;
     std::stringstream s;
     s << "ReadCoils(" << addr << ", " << nb << ", <ptr>):";
     while (nb--) {
-        s << " 0x" << std::hex << std::setw(2) << std::setfill('0') << (int)*src;
-        *dest++ = *src++;
+        int v = CurrentSlave->Coils[addr++];
+        s << " 0x" << std::hex << std::setw(2) << std::setfill('0') << (int)v;
+        *dest++ = v;
     }
     Fixture.Emit() << s.str();
 }
@@ -154,14 +216,21 @@ public:
                          TLoggedFixture& fixture)
         : ExpectedSettings(expected_settings), Fixture(fixture) {}
     PModbusContext CreateContext(const TModbusConnectionSettings& settings);
-    PModbusContext GetContext() const;
-    PFakeSlave GetSlave(int slave);
-    PFakeSlave AddSlave(int slave);
+    PFakeModbusContext GetContext() const;
+    PFakeSlave GetSlave(int slave_addr);
+    PFakeSlave AddSlave(int slave_addr, PFakeSlave slave);
+    PFakeSlave AddSlave(int slave_addr,
+                        const TRegisterRange& coil_range = TRegisterRange(),
+                        const TRegisterRange& discrete_range = TRegisterRange(),
+                        const TRegisterRange& holding_range = TRegisterRange(),
+                        const TRegisterRange& input_range = TRegisterRange());
 private:
     TModbusConnectionSettings ExpectedSettings;
     TLoggedFixture& Fixture;
-    PModbusContext Context;
+    PFakeModbusContext Context;
 };
+
+typedef std::shared_ptr<TFakeModbusConnector> PFakeModbusConnector;
 
 PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettings& settings)
 {
@@ -171,28 +240,39 @@ PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettin
     EXPECT_EQ(ExpectedSettings.Parity, settings.Parity);
     EXPECT_EQ(ExpectedSettings.DataBits, settings.DataBits);
     EXPECT_EQ(ExpectedSettings.StopBits, settings.StopBits);
-    Context = PModbusContext(new TFakeModbusContext(Fixture));
+    Context = PFakeModbusContext(new TFakeModbusContext(Fixture));
     return Context;
 }
 
-PModbusContext TFakeModbusConnector::GetContext() const
+PFakeModbusContext TFakeModbusConnector::GetContext() const
 {
     if (!Context) {
         ADD_FAILURE() << "no modbus context created";
-        return PModbusContext(new TFakeModbusContext(Fixture));
+        return PFakeModbusContext(new TFakeModbusContext(Fixture));
     }
 
     return Context;
 }
 
-PFakeSlave TFakeModbusConnector::GetSlave(int slave)
+PFakeSlave TFakeModbusConnector::GetSlave(int slave_addr)
 {
-    return static_cast<TFakeModbusContext*>(GetContext().get())->GetSlave(slave);
+    return GetContext()->GetSlave(slave_addr);
 }
 
-PFakeSlave TFakeModbusConnector::AddSlave(int slave)
+PFakeSlave TFakeModbusConnector::AddSlave(int slave_addr, PFakeSlave slave)
 {
-    return static_cast<TFakeModbusContext*>(GetContext().get())->AddSlave(slave);
+    return GetContext()->AddSlave(slave_addr, slave);
+}
+
+PFakeSlave TFakeModbusConnector::AddSlave(int slave_addr,
+                                          const TRegisterRange& coil_range,
+                                          const TRegisterRange& discrete_range,
+                                          const TRegisterRange& holding_range,
+                                          const TRegisterRange& input_range)
+{
+    return AddSlave(slave_addr,
+                    PFakeSlave(new TFakeSlave(coil_range, discrete_range,
+                                              holding_range, input_range)));
 }
 
 class ModbusClientTest: public TLoggedFixture
@@ -200,15 +280,20 @@ class ModbusClientTest: public TLoggedFixture
 protected:
     void SetUp();
     void TearDown();
-    PModbusConnector Connector;
+    PFakeModbusConnector Connector;
     PModbusClient ModbusClient;
 };
 
 void ModbusClientTest::SetUp()
 {
     TModbusConnectionSettings settings("/dev/ttyWhatever", 115200, 'N', 8, 1);
-    Connector = PModbusConnector(new TFakeModbusConnector(settings, *this));
+    Connector = PFakeModbusConnector(new TFakeModbusConnector(settings, *this));
     ModbusClient = PModbusClient(new TModbusClient(settings, Connector));
+    ModbusClient->SetCallback([this](const TModbusRegister& reg) {
+            Emit() << "Modbus Callback: " << reg.ToString() << " becomes " << 
+                ModbusClient->GetTextValue(reg);
+        });
+    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::COIL, 1));
 }
 
 void ModbusClientTest::TearDown()
@@ -218,14 +303,9 @@ void ModbusClientTest::TearDown()
     TLoggedFixture::TearDown();
 }
 
-TEST_F(ModbusClientTest, Init)
+TEST_F(ModbusClientTest, Poll)
 {
-    PFakeSlave slave = static_cast<TFakeModbusConnector*>(Connector.get())->AddSlave(1);
-    ModbusClient->SetCallback([this](const TModbusRegister& reg) {
-            Emit() << "Modbus Callback: " << reg.ToString() << " becomes " << 
-                ModbusClient->GetTextValue(reg);
-        });
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::COIL, 1));
+    PFakeSlave slave = Connector->AddSlave(1, TRegisterRange(0, 10));
 
     ModbusClient->Connect();
     ModbusClient->Cycle();
@@ -235,6 +315,4 @@ TEST_F(ModbusClientTest, Init)
     EXPECT_EQ(1, ModbusClient->GetRawValue(TModbusRegister(1, TModbusRegister::COIL, 1)));
 }
 
-// TBD: replace direct usleep() call with call to a TModbusContext.USleep()
-// TBD: specify per-slave register ranges
-
+// TBD: move TFakeModbusConnector & co. into fake_modbus.cpp
