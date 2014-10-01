@@ -56,17 +56,9 @@ void TFakeModbusContext::SetSlave(int slave)
 
 void TFakeModbusContext::ReadCoils(int addr, int nb, uint8_t *dest)
 {
-    ASSERT_GT(nb, 0);
     ASSERT_LE(nb, MODBUS_MAX_READ_BITS);
     ASSERT_TRUE(!!CurrentSlave);
-    std::stringstream s;
-    s << "ReadCoils(" << addr << ", " << nb << ", <ptr>):";
-    while (nb--) {
-        int v = CurrentSlave->Coils[addr++];
-        s << " 0x" << std::hex << std::setw(2) << std::setfill('0') << (int)v;
-        *dest++ = v;
-    }
-    Fixture.Emit() << s.str();
+    CurrentSlave->Coils.ReadRegs(Fixture, addr, nb, dest);
 }
 
 void TFakeModbusContext::WriteCoil(int addr, int value)
@@ -76,12 +68,16 @@ void TFakeModbusContext::WriteCoil(int addr, int value)
 
 void TFakeModbusContext::ReadDisceteInputs(int addr, int nb, uint8_t *dest)
 {
-    FAIL() << "TBD ReadDisceteInputs " << addr << " " << nb << " " << dest;
+    ASSERT_LE(nb, MODBUS_MAX_READ_BITS);
+    ASSERT_TRUE(!!CurrentSlave);
+    CurrentSlave->Discrete.ReadRegs(Fixture, addr, nb, dest);
 }
 
 void TFakeModbusContext::ReadHoldingRegisters(int addr, int nb, uint16_t *dest)
 {
-    FAIL() << "TBD ReadHoldingRegisters " << addr << " " << nb << " " << dest;
+    ASSERT_LE(nb, MODBUS_MAX_READ_REGISTERS);
+    ASSERT_TRUE(!!CurrentSlave);
+    CurrentSlave->Holding.ReadRegs(Fixture, addr, nb, dest);
 }
 
 void TFakeModbusContext::WriteHoldingRegisters(int addr, int nb, const uint16_t *data)
@@ -91,7 +87,9 @@ void TFakeModbusContext::WriteHoldingRegisters(int addr, int nb, const uint16_t 
 
 void TFakeModbusContext::ReadInputRegisters(int addr, int nb, uint16_t *dest)
 {
-    FAIL() << "TBD ReadInputRegisters " << addr << " " << nb << " " << dest;
+    ASSERT_LE(nb, MODBUS_MAX_READ_REGISTERS);
+    ASSERT_TRUE(!!CurrentSlave);
+    CurrentSlave->Input.ReadRegs(Fixture, addr, nb, dest);
 }
 
 PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettings& settings)

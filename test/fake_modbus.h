@@ -56,6 +56,20 @@ public:
     const T& operator[] (int index) const {
         return values[Range.ValidateIndex(Name, index) - Range.Start];
     }
+
+    void ReadRegs(TLoggedFixture& fixture, int addr, int nb, T* dest) {
+        ASSERT_GT(nb, 0);
+        std::stringstream s;
+        s << "read " << nb << " " << Name << "(s) @ " << addr;
+        if (nb) {
+            s << ": ";
+            while (nb--) {
+                int v = (*this)[addr++];
+                s << " 0x" << std::hex << std::setw(2) << std::setfill('0') << (int)v;
+                *dest++ = v;
+            }
+        }
+        fixture.Emit() << s.str();
     }
 private:
     std::string Name;
