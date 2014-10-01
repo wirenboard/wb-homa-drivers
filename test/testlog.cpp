@@ -6,6 +6,8 @@
 
 #include "testlog.h"
 
+std::string TLoggedFixture::BaseDir = ".";
+
 TLoggedFixture::~TLoggedFixture() {}
 
 void TLoggedFixture::TearDown()
@@ -42,11 +44,15 @@ std::string TLoggedFixture::GetFileName(const std::string& suffix) const
 {
     const ::testing::TestInfo* const test_info =
         ::testing::UnitTest::GetInstance()->current_test_info();
-
-    char* s = strdup(__FILE__);
-    std::string result = std::string(dirname(s)) + "/" +
+    std::string result = BaseDir + "/" +
         test_info->test_case_name() + "." + test_info->name() +
         ".dat" + suffix;
-    free(s);
     return result;
+}
+
+void TLoggedFixture::SetExecutableName(const std::string& file_name)
+{
+    char* s = strdup(file_name.c_str());
+    BaseDir = dirname(s);
+    free(s);
 }

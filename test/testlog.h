@@ -49,8 +49,11 @@ public:
     }
 
     void TearDown();
+    static void SetExecutableName(const std::string& file_name);
+
 private:
     bool IsOk();
     std::string GetFileName(const std::string& suffix = "") const;
     std::stringstream Contents;
+    static std::string BaseDir;
 };
