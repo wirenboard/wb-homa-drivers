@@ -42,11 +42,17 @@ void ModbusClientTest::TearDown()
 
 TEST_F(ModbusClientTest, Poll)
 {
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::COIL, 0));
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::COIL, 1));
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::DISCRETE_INPUT, 10));
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::HOLDING_REGISTER, 22));
-    ModbusClient->AddRegister(TModbusRegister(1, TModbusRegister::INPUT_REGISTER, 33));
+    TModbusRegister coil0(1, TModbusRegister::COIL, 0);
+    TModbusRegister coil1(1, TModbusRegister::COIL, 1);
+    TModbusRegister discrete10(1, TModbusRegister::DISCRETE_INPUT, 10);
+    TModbusRegister holding22(1, TModbusRegister::HOLDING_REGISTER, 22);
+    TModbusRegister input33(1, TModbusRegister::INPUT_REGISTER, 33);
+
+    ModbusClient->AddRegister(coil0);
+    ModbusClient->AddRegister(coil1);
+    ModbusClient->AddRegister(discrete10);
+    ModbusClient->AddRegister(holding22);
+    ModbusClient->AddRegister(input33);
 
     ModbusClient->Connect();
 
@@ -61,16 +67,11 @@ TEST_F(ModbusClientTest, Poll)
     Note() << "Cycle()";
     ModbusClient->Cycle();
 
-    EXPECT_EQ(0, ModbusClient->GetRawValue(
-        TModbusRegister(1, TModbusRegister::COIL, 0)));
-    EXPECT_EQ(1, ModbusClient->GetRawValue(
-        TModbusRegister(1, TModbusRegister::COIL, 1)));
-    EXPECT_EQ(1, ModbusClient->GetRawValue(
-        TModbusRegister(1, TModbusRegister::DISCRETE_INPUT, 10)));
-    EXPECT_EQ(4242, ModbusClient->GetRawValue(
-        TModbusRegister(1, TModbusRegister::HOLDING_REGISTER, 22)));
-    EXPECT_EQ(42000, ModbusClient->GetRawValue(
-        TModbusRegister(1, TModbusRegister::INPUT_REGISTER, 33)));
+    EXPECT_EQ(0, ModbusClient->GetRawValue(coil0));
+    EXPECT_EQ(1, ModbusClient->GetRawValue(coil1));
+    EXPECT_EQ(1, ModbusClient->GetRawValue(discrete10));
+    EXPECT_EQ(4242, ModbusClient->GetRawValue(holding22));
+    EXPECT_EQ(42000, ModbusClient->GetRawValue(input33));
 }
 
 TEST_F(ModbusClientTest, Write)
