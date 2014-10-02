@@ -265,6 +265,20 @@ TEST_F(TModbusDeviceTest, DDL24)
 
     Note() << "ModbusLoopOnce()";
     modbus_observer->ModbusLoopOnce();
+
+    MQTTClient->DoPublish(true, 0, "/devices/ddl24/controls/RGB/on", "10;20;30");
+
+    Note() << "ModbusLoopOnce()";
+    modbus_observer->ModbusLoopOnce();
+    ASSERT_EQ(10, slave->Holding[4]);
+    ASSERT_EQ(20, slave->Holding[5]);
+    ASSERT_EQ(30, slave->Holding[6]);
+
+    slave->Holding[4] = 32;
+    slave->Holding[5] = 64;
+    slave->Holding[6] = 128;
+    Note() << "ModbusLoopOnce() after slave update";
+    modbus_observer->ModbusLoopOnce();
 }
 
 // TBD: the code must check mosquitto return values
