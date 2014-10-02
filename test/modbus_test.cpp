@@ -19,14 +19,14 @@ protected:
 
 void ModbusClientTest::SetUp()
 {
-    TModbusConnectionSettings settings("/dev/ttyWhatever", 115200, 'N', 8, 1);
-    Connector = PFakeModbusConnector(new TFakeModbusConnector(settings, *this));
+    TModbusConnectionSettings settings(TFakeModbusConnector::PORT0, 115200, 'N', 8, 1);
+    Connector = PFakeModbusConnector(new TFakeModbusConnector(*this));
     ModbusClient = PModbusClient(new TModbusClient(settings, Connector));
     ModbusClient->SetCallback([this](const TModbusRegister& reg) {
             Emit() << "Modbus Callback: " << reg.ToString() << " becomes " << 
                 ModbusClient->GetTextValue(reg);
         });
-    Slave = Connector->AddSlave(1,
+    Slave = Connector->AddSlave(TFakeModbusConnector::PORT0, 1,
                                 TRegisterRange(0, 10),
                                 TRegisterRange(10, 20),
                                 TRegisterRange(20, 30),
@@ -135,3 +135,5 @@ TEST_F(ModbusClientTest, S8)
     EXPECT_EQ(-2, ModbusClient->GetRawValue(holding20));
     EXPECT_EQ(254, Slave->Holding[20]);
 }
+
+// TBD: the code must check mosquitto return values

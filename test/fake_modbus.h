@@ -150,22 +150,23 @@ typedef std::shared_ptr<TFakeModbusContext> PFakeModbusContext;
 class TFakeModbusConnector: public TModbusConnector
 {
 public:
-    TFakeModbusConnector(const TModbusConnectionSettings& expected_settings,
-                         TLoggedFixture& fixture)
-        : ExpectedSettings(expected_settings), Fixture(fixture) {}
+    TFakeModbusConnector(TLoggedFixture& fixture)
+        : Fixture(fixture) {}
     PModbusContext CreateContext(const TModbusConnectionSettings& settings);
-    PFakeModbusContext GetContext() const;
-    PFakeSlave GetSlave(int slave_addr);
-    PFakeSlave AddSlave(int slave_addr, PFakeSlave slave);
-    PFakeSlave AddSlave(int slave_addr,
+    PFakeModbusContext GetContext(const std::string& device);
+    PFakeSlave GetSlave(const std::string& device, int slave_addr);
+    PFakeSlave AddSlave(const std::string& device, int slave_addr, PFakeSlave slave);
+    PFakeSlave AddSlave(const std::string& device, int slave_addr,
                         const TRegisterRange& coil_range = TRegisterRange(),
                         const TRegisterRange& discrete_range = TRegisterRange(),
                         const TRegisterRange& holding_range = TRegisterRange(),
                         const TRegisterRange& input_range = TRegisterRange());
+
+    static const char* PORT0;
+    static const char* PORT1;
 private:
-    TModbusConnectionSettings ExpectedSettings;
     TLoggedFixture& Fixture;
-    PFakeModbusContext Context;
+    std::map<std::string, PFakeModbusContext> Contexts;
 };
 
 typedef std::shared_ptr<TFakeModbusConnector> PFakeModbusConnector;

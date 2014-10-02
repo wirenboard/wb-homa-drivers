@@ -96,45 +96,53 @@ void TFakeModbusContext::ReadInputRegisters(int addr, int nb, uint16_t *dest)
     CurrentSlave->Input.ReadRegs(Fixture, addr, nb, dest);
 }
 
+const char* TFakeModbusConnector::PORT0 = "/dev/ttyNSC0";
+const char* TFakeModbusConnector::PORT1 = "/dev/ttyNSC1";
+
 PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettings& settings)
 {
-    EXPECT_FALSE(Context);
-    EXPECT_EQ(ExpectedSettings.Device, settings.Device);
-    EXPECT_EQ(ExpectedSettings.BaudRate, settings.BaudRate);
-    EXPECT_EQ(ExpectedSettings.Parity, settings.Parity);
-    EXPECT_EQ(ExpectedSettings.DataBits, settings.DataBits);
-    EXPECT_EQ(ExpectedSettings.StopBits, settings.StopBits);
-    Context = PFakeModbusContext(new TFakeModbusContext(Fixture));
-    return Context;
+    Fixture.Emit() << "CreateContext(): " << settings.Device << " " << settings.BaudRate <<
+        " " << settings.DataBits << " " << settings.Parity << settings.StopBits;
+    if (Contexts.count(settings.Device)) {
+        ADD_FAILURE() << "context already created for serial port: " << settings.Device;
+        return Contexts[settings.Device];
+    }
+    PFakeModbusContext context = PFakeModbusContext(new TFakeModbusContext(Fixture));
+    Contexts[settings.Device] = context;
+    return context;
 }
 
-PFakeModbusContext TFakeModbusConnector::GetContext() const
+PFakeModbusContext TFakeModbusConnector::GetContext(const std::string& device)
 {
-    if (!Context) {
-        ADD_FAILURE() << "no modbus context created";
-        return PFakeModbusContext(new TFakeModbusContext(Fixture));
+    auto it = Contexts.find(device);
+    if (it == Contexts.end()) {
+        ADD_FAILURE() << "context not found for serial port: " << device;
+        TModbusConnectionSettings settings;
+        settings.Device = device;
+        CreateContext(settings);
     }
 
-    return Context;
+    return Contexts[device];
 }
 
-PFakeSlave TFakeModbusConnector::GetSlave(int slave_addr)
+PFakeSlave TFakeModbusConnector::GetSlave(const std::string& device, int slave_addr)
 {
-    return GetContext()->GetSlave(slave_addr);
+    return GetContext(device)->GetSlave(slave_addr);
 }
 
-PFakeSlave TFakeModbusConnector::AddSlave(int slave_addr, PFakeSlave slave)
+PFakeSlave TFakeModbusConnector::AddSlave(const std::string& device, int slave_addr, PFakeSlave slave)
 {
-    return GetContext()->AddSlave(slave_addr, slave);
+    return GetContext(device)->AddSlave(slave_addr, slave);
 }
 
-PFakeSlave TFakeModbusConnector::AddSlave(int slave_addr,
+PFakeSlave TFakeModbusConnector::AddSlave(const std::string& device,
+                                          int slave_addr,
                                           const TRegisterRange& coil_range,
                                           const TRegisterRange& discrete_range,
                                           const TRegisterRange& holding_range,
                                           const TRegisterRange& input_range)
 {
-    return AddSlave(slave_addr,
+    return AddSlave(device, slave_addr,
                     PFakeSlave(new TFakeSlave(coil_range, discrete_range,
                                               holding_range, input_range)));
 }
