@@ -24,11 +24,9 @@ Subscribe: /devices/ddl24/controls/Voltage/on (QoS 0)
 Connect()
 SetSlave(23)
 read 1 holding register(s) @ 4: 0x0000
-Publish: /devices/ddl24/controls/RGB: '0;0;0' (QoS 0, retained)
 USleep(10000)
 SetSlave(23)
 read 1 holding register(s) @ 5: 0x0000
-Publish: /devices/ddl24/controls/RGB: '0;0;0' (QoS 0, retained)
 USleep(10000)
 SetSlave(23)
 read 1 holding register(s) @ 6: 0x0000
