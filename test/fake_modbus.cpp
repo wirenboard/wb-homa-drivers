@@ -102,26 +102,19 @@ const char* TFakeModbusConnector::PORT1 = "/dev/ttyNSC1";
 PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettings& settings)
 {
     Fixture.Emit() << "CreateContext(): " << settings;
-    if (Contexts.count(settings.Device)) {
-        ADD_FAILURE() << "context already created for serial port: " << settings.Device;
-        return Contexts[settings.Device];
-    }
-    PFakeModbusContext context = PFakeModbusContext(new TFakeModbusContext(Fixture));
-    Contexts[settings.Device] = context;
-    return context;
+    return GetContext(settings.Device);
 }
 
 PFakeModbusContext TFakeModbusConnector::GetContext(const std::string& device)
 {
+    // FIXME: should not allow content re-creation, etc.
     auto it = Contexts.find(device);
-    if (it == Contexts.end()) {
-        ADD_FAILURE() << "context not found for serial port: " << device;
-        TModbusConnectionSettings settings;
-        settings.Device = device;
-        CreateContext(settings);
-    }
+    if (it != Contexts.end())
+        return it->second;
 
-    return Contexts[device];
+    PFakeModbusContext context = PFakeModbusContext(new TFakeModbusContext(Fixture));
+    Contexts[device] = context;
+    return context;
 }
 
 PFakeSlave TFakeModbusConnector::GetSlave(const std::string& device, int slave_addr)

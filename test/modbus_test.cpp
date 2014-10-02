@@ -6,10 +6,12 @@
 
 #include "testlog.h"
 #include "fake_modbus.h"
+#include "fake_mqtt.h"
 #include "../wb-homa-modbus/modbus_config.h"
+#include "../wb-homa-modbus/modbus_observer.h"
 
 class TModbusClientTest: public TLoggedFixture
-{ 
+{
 protected:
     void SetUp();
     void TearDown();
@@ -24,7 +26,7 @@ void TModbusClientTest::SetUp()
     Connector = PFakeModbusConnector(new TFakeModbusConnector(*this));
     ModbusClient = PModbusClient(new TModbusClient(settings, Connector));
     ModbusClient->SetCallback([this](const TModbusRegister& reg) {
-            Emit() << "Modbus Callback: " << reg.ToString() << " becomes " << 
+            Emit() << "Modbus Callback: " << reg.ToString() << " becomes " <<
                 ModbusClient->GetTextValue(reg);
         });
     Slave = Connector->AddSlave(TFakeModbusConnector::PORT0, 1,
@@ -187,7 +189,7 @@ TEST_F(TConfigParserTest, Parse)
                 }
 
                 if (device_config->SetupItems.empty())
-                    continue;                
+                    continue;
 
                 Emit() << "SetupItems:";
                 for (auto setup_item: device_config->SetupItems) {
@@ -207,6 +209,62 @@ TEST_F(TConfigParserTest, ForceDebug)
     TConfigParser parser(GetDataFilePath("../wb-homa-modbus/config.json"), true);
     PHandlerConfig config = parser.Parse();
     ASSERT_TRUE(config->Debug);
+}
+
+class TModbusDeviceTest: public TLoggedFixture
+{
+protected:
+    void SetUp();
+    void FilterConfig(const std::string& device_name);
+    PFakeModbusConnector Connector;
+    PHandlerConfig Config;
+    PFakeMQTTClient MQTTClient;
+};
+
+void TModbusDeviceTest::SetUp()
+{
+    Connector = PFakeModbusConnector(new TFakeModbusConnector(*this));
+    TConfigParser parser(GetDataFilePath("../wb-homa-modbus/config.json"), false);
+    Config = parser.Parse();
+    MQTTClient = PFakeMQTTClient(new TFakeMQTTClient("modbus-test", *this));
+}
+
+void TModbusDeviceTest::FilterConfig(const std::string& device_name)
+{
+    for (auto port_config: Config->PortConfigs) {
+        port_config->DeviceConfigs.erase(
+            remove_if(port_config->DeviceConfigs.begin(),
+                      port_config->DeviceConfigs.end(),
+                      [device_name](PDeviceConfig device_config) {
+                          return device_config->Name != device_name;
+                      }),
+            port_config->DeviceConfigs.end());
+    }
+    Config->PortConfigs.erase(
+        remove_if(Config->PortConfigs.begin(),
+                  Config->PortConfigs.end(),
+                  [](PPortConfig port_config) {
+                      return port_config->DeviceConfigs.empty();
+                  }),
+        Config->PortConfigs.end());
+    ASSERT_FALSE(Config->PortConfigs.empty()) << "device not found: " << device_name;
+}
+
+TEST_F(TModbusDeviceTest, DDL24)
+{
+    FilterConfig("DDL24");
+    PFakeSlave slave = Connector->AddSlave(TFakeModbusConnector::PORT0,
+                                           Config->PortConfigs[0]->DeviceConfigs[0]->SlaveId,
+                                           TRegisterRange(),
+                                           TRegisterRange(),
+                                           TRegisterRange(4, 19),
+                                           TRegisterRange());
+
+    PMQTTModbusObserver modbus_observer(new TMQTTModbusObserver(MQTTClient, Config, Connector));
+    modbus_observer->SetUp();
+
+    Note() << "ModbusLoopOnce()";
+    modbus_observer->ModbusLoopOnce();
 }
 
 // TBD: the code must check mosquitto return values
