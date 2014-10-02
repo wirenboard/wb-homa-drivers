@@ -139,6 +139,14 @@ TEST_F(TModbusClientTest, S8)
     EXPECT_EQ(254, Slave->Holding[20]);
 }
 
+TEST_F(TModbusClientTest, ReadErrors)
+{
+    TModbusRegister holding200(1, TModbusRegister::HOLDING_REGISTER, 200);
+    ModbusClient->AddRegister(holding200);
+    Note() << "Cycle()";
+    ModbusClient->Cycle();
+}
+
 class TConfigParserTest: public TLoggedFixture {};
 
 TEST_F(TConfigParserTest, Parse)

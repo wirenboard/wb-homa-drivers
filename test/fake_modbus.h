@@ -17,8 +17,10 @@ struct TRegisterRange {
     int ValidateIndex(const std::string& name, int index) const
     {
         if (index < Start || index > End) {
-            ADD_FAILURE() << name << " index is out of range: " << index <<
-                " (must be " << Start << " <= addr < " << End << ")";
+            throw TModbusException(name + " index is out of range: " +
+                                   std::to_string(index) +
+                                   " (must be " + std::to_string(Start) +
+                                   " <= addr < " + std::to_string(End) + ")");
             return Start;
         }
         return index;
