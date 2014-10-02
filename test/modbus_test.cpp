@@ -8,7 +8,7 @@
 #include "fake_modbus.h"
 #include "../wb-homa-modbus/modbus_config.h"
 
-class ModbusClientTest: public TLoggedFixture
+class TModbusClientTest: public TLoggedFixture
 { 
 protected:
     void SetUp();
@@ -18,7 +18,7 @@ protected:
     PFakeSlave Slave;
 };
 
-void ModbusClientTest::SetUp()
+void TModbusClientTest::SetUp()
 {
     TModbusConnectionSettings settings(TFakeModbusConnector::PORT0, 115200, 'N', 8, 1);
     Connector = PFakeModbusConnector(new TFakeModbusConnector(*this));
@@ -34,14 +34,14 @@ void ModbusClientTest::SetUp()
                                 TRegisterRange(30, 40));
 }
 
-void ModbusClientTest::TearDown()
+void TModbusClientTest::TearDown()
 {
     ModbusClient.reset();
     Connector.reset();
     TLoggedFixture::TearDown();
 }
 
-TEST_F(ModbusClientTest, Poll)
+TEST_F(TModbusClientTest, Poll)
 {
     TModbusRegister coil0(1, TModbusRegister::COIL, 0);
     TModbusRegister coil1(1, TModbusRegister::COIL, 1);
@@ -75,7 +75,7 @@ TEST_F(ModbusClientTest, Poll)
     EXPECT_EQ(42000, ModbusClient->GetRawValue(input33));
 }
 
-TEST_F(ModbusClientTest, Write)
+TEST_F(TModbusClientTest, Write)
 {
     TModbusRegister coil1(1, TModbusRegister::COIL, 1);
     TModbusRegister holding20(1, TModbusRegister::HOLDING_REGISTER, 20);
@@ -99,7 +99,7 @@ TEST_F(ModbusClientTest, Write)
     }
 }
 
-TEST_F(ModbusClientTest, S8)
+TEST_F(TModbusClientTest, S8)
 {
     TModbusRegister holding20(1, TModbusRegister::HOLDING_REGISTER, 20, TModbusRegister::S8);
     TModbusRegister input30(1, TModbusRegister::INPUT_REGISTER, 30, TModbusRegister::S8);
