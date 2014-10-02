@@ -46,6 +46,52 @@ Ports:
             ReadOnly: 1
             Registers: <2:input: 3>
         ------
+        Id: msu21
+        Name: MSU21
+        SlaveId: 24
+        ModbusChannels:
+            ------
+            Name: Temperature
+            Type: temperature
+            DeviceId: msu21
+            Order: 1
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <24:input: 0>
+        SetupItems:
+            ------
+            Name: Input 0 type
+            Address: 1
+            Value: 2
+            ------
+            Name: Input 0 module
+            Address: 3
+            Value: 6
+        ------
+        Id: msu24
+        Name: MSU24
+        SlaveId: 34
+        ModbusChannels:
+            ------
+            Name: Illuminance
+            Type: text
+            DeviceId: msu24
+            Order: 1
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <34:input: 0>
+            ------
+            Name: Temp 1
+            Type: temperature
+            DeviceId: msu24
+            Order: 2
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <34:input: 1>
+        ------
         Id: ddl24
         Name: DDL24
         SlaveId: 23
@@ -253,3 +299,107 @@ Ports:
             Name: Input 0 module
             Address: 3
             Value: 3
+    ------
+    ConnSettings: </dev/ttyNSC1 9600 8 N1>
+    PollInterval: 100
+    DeviceConfigs:
+        ------
+        Id: tmp3r3
+        Name: tM-P3R3
+        SlaveId: 1
+        ModbusChannels:
+            ------
+            Name: Relay 0
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 1
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <1:coil: 0>
+            ------
+            Name: Relay 1
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 2
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <1:coil: 1>
+            ------
+            Name: Relay 2
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 3
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <1:coil: 2>
+            ------
+            Name: Input 0
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 4
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <1:discrete: 32>
+            ------
+            Name: Input 1
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 5
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <1:discrete: 33>
+            ------
+            Name: Input 2
+            Type: switch
+            DeviceId: tmp3r3
+            Order: 6
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <1:discrete: 34>
+        ------
+        Id: lc103
+        Name: LC-103
+        SlaveId: 4
+        ModbusChannels:
+            ------
+            Name: Relay 1
+            Type: switch
+            DeviceId: lc103
+            Order: 1
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <4:coil: 0>
+            ------
+            Name: Relay 2
+            Type: switch
+            DeviceId: lc103
+            Order: 2
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <4:coil: 1>
+            ------
+            Name: Relay 3
+            Type: switch
+            DeviceId: lc103
+            Order: 3
+            OnValue: -1
+            Max: -1
+            ReadOnly: 0
+            Registers: <4:coil: 2>
+            ------
+            Name: Switch AC In
+            Type: switch
+            DeviceId: lc103
+            Order: 4
+            OnValue: -1
+            Max: -1
+            ReadOnly: 1
+            Registers: <4:discrete: 0>

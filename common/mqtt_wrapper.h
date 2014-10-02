@@ -24,7 +24,7 @@ public:
     virtual ~TMQTTClientBase();
     virtual void Connect() = 0;
     virtual int Publish(int *mid, const string& topic, const string& payload="", int qos=0, bool retain=false) = 0;
-    virtual int Subscribe(int *mid, const string& sub, int qos =0 ) = 0;
+    virtual int Subscribe(int *mid, const string& sub, int qos = 0) = 0;
     virtual std::string Id() const = 0;
     void Observe(PMQTTObserver observer) { Observers.push_back(observer); }
     void Unobserve(PMQTTObserver observer) { Observers.remove(observer); }
