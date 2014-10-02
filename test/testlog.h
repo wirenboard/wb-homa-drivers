@@ -38,22 +38,42 @@ public:
     TTestLogItem Emit()
     {
         return TTestLogItem([this](const std::string& s) {
-                Contents << s << std::endl;
+                Indented() << s << std::endl;
             });
     }
     TTestLogItem Note()
     {
         return TTestLogItem([this](const std::string& s) {
-                Contents << ">>> "  << s << std::endl;
+                Indented() << ">>> "  << s << std::endl;
             });
     }
 
     void TearDown();
     static void SetExecutableName(const std::string& file_name);
+    static std::string GetDataFilePath(const std::string& relative_path);
 
 private:
     bool IsOk();
-    std::string GetFileName(const std::string& suffix = "") const;
+    std::stringstream& Indented();
+    std::string GetLogFileName(const std::string& suffix = "") const;
     std::stringstream Contents;
+    int IndentLevel = 0;
     static std::string BaseDir;
+    friend class TTestLogIndent;
+    const int IndentBasicOffset = 4;
+};
+
+class TTestLogIndent
+{
+public:
+    TTestLogIndent(TLoggedFixture& fixture): Fixture(fixture)
+    {
+        ++Fixture.IndentLevel;
+    }
+    ~TTestLogIndent()
+    {
+        --Fixture.IndentLevel;
+    }
+private:
+    TLoggedFixture& Fixture;
 };

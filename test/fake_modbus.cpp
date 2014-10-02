@@ -101,8 +101,7 @@ const char* TFakeModbusConnector::PORT1 = "/dev/ttyNSC1";
 
 PModbusContext TFakeModbusConnector::CreateContext(const TModbusConnectionSettings& settings)
 {
-    Fixture.Emit() << "CreateContext(): " << settings.Device << " " << settings.BaudRate <<
-        " " << settings.DataBits << " " << settings.Parity << settings.StopBits;
+    Fixture.Emit() << "CreateContext(): " << settings;
     if (Contexts.count(settings.Device)) {
         ADD_FAILURE() << "context already created for serial port: " << settings.Device;
         return Contexts[settings.Device];

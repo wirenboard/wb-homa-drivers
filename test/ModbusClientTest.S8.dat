@@ -1,4 +1,4 @@
-CreateContext(): /dev/ttyNSC0 115200 8 N1
+CreateContext(): </dev/ttyNSC0 115200 8 N1>
 >>> AddSlave(1)
 >>> server -> client: 10, 20
 >>> Cycle()

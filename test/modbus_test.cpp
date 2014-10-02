@@ -6,6 +6,7 @@
 
 #include "testlog.h"
 #include "fake_modbus.h"
+#include "../wb-homa-modbus/modbus_config.h"
 
 class ModbusClientTest: public TLoggedFixture
 { 
@@ -136,4 +137,70 @@ TEST_F(ModbusClientTest, S8)
     EXPECT_EQ(254, Slave->Holding[20]);
 }
 
+class TConfigParserTest: public TLoggedFixture {};
+
+TEST_F(TConfigParserTest, Parse)
+{
+    TConfigParser parser(GetDataFilePath("../wb-homa-modbus/config.json"), false);
+    PHandlerConfig config = parser.Parse();
+    Emit() << "Debug: " << config->Debug;
+    Emit() << "Ports:";
+    for (auto port_config: config->PortConfigs) {
+        TTestLogIndent indent(*this);
+        ASSERT_EQ(config->Debug, port_config->Debug);
+        Emit() << "------";
+        Emit() << "ConnSettings: " << port_config->ConnSettings;
+        Emit() << "PollInterval: " << port_config->PollInterval;
+        if (port_config->DeviceConfigs.empty()) {
+            Emit() << "No device configs.";
+            continue;
+        }
+        Emit() << "DeviceConfigs:";
+        for (auto device_config: port_config->DeviceConfigs) {
+            TTestLogIndent indent(*this);
+            Emit() << "------";
+            Emit() << "Id: " << device_config->Id;
+            Emit() << "Name: " << device_config->Name;
+            Emit() << "SlaveId: " << device_config->SlaveId;
+            if (!device_config->ModbusChannels.empty()) {
+                Emit() << "ModbusChannels:";
+                for (auto modbus_channel: device_config->ModbusChannels) {
+                    TTestLogIndent indent(*this);
+                    Emit() << "------";
+                    Emit() << "Name: " << modbus_channel->Name;
+                    Emit() << "Type: " << modbus_channel->Type;
+                    Emit() << "DeviceId: " << modbus_channel->DeviceId;
+                    Emit() << "Order: " << modbus_channel->Order;
+                    Emit() << "OnValue: " << modbus_channel->OnValue;
+                    Emit() << "Max: " << modbus_channel->Max;
+                    Emit() << "ReadOnly: " << modbus_channel->ReadOnly;
+                    std::stringstream s;
+                    bool first = true;
+                    for (auto reg: modbus_channel->Registers) {
+                        if (first)
+                            first = false;
+                        else
+                            s << ", ";
+                        s << reg;
+                    }
+                    Emit() << "Registers: " << s.str();
+                }
+
+                if (device_config->SetupItems.empty())
+                    continue;                
+
+                Emit() << "SetupItems:";
+                for (auto setup_item: device_config->SetupItems) {
+                    TTestLogIndent indent(*this);
+                    Emit() << "------";
+                    Emit() << "Name: " << setup_item->Name;
+                    Emit() << "Address: " << setup_item->Address;
+                    Emit() << "Value: " << setup_item->Value;
+                }
+            }
+        }
+    }
+}
+
+// TBD: test force_debug in the config parser
 // TBD: the code must check mosquitto return values
