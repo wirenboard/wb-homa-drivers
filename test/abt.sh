@@ -8,7 +8,11 @@ usage() {
 }
 
 show() {
-    diff -uN "$1" "$2"
+    diff -uN "$1" "$2" ||
+    if [ $? = 2 ]; then
+        echo "DIFF FAILED" 1>&2
+        exit 1
+    fi
 }
 
 accept() {

@@ -140,7 +140,7 @@ test: $(TEST_DIR)/$(TEST_BIN)
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
             exit 1; \
-          else $(TEST_DIR)/abt.sh show; fi
+          else $(TEST_DIR)/abt.sh show; exit 1; fi
 
 clean :
 	-rm -f $(COMMON_DIR)/*.o
