@@ -31,7 +31,6 @@ COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
 .PHONY: all clean
 
-
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
@@ -115,18 +114,20 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
+
+
 install: all
+	install -d $(DESTDIR)
+	install -d $(DESTDIR)/etc
+	install -d $(DESTDIR)/usr/bin
+	install -d $(DESTDIR)/usr/lib
+
 	install -m 0644  $(GPIO_DIR)/config.json $(DESTDIR)/etc/wb-homa-gpio.conf
 	install -m 0755  $(GPIO_DIR)/$(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
 	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
-	install -m 0755  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
+	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
 
-	install -m 0755  initscripts/wb-homa-gpio $(DESTDIR)/etc/init.d/wb-homa-gpio
-	install -m 0755  initscripts/wb-homa-w1 $(DESTDIR)/etc/init.d/wb-homa-w1
-	install -m 0755  initscripts/wb-homa-ninja-bridge $(DESTDIR)/etc/init.d/wb-homa-ninja-bridge
-	install -m 0755  initscripts/wb-homa-modbus $(DESTDIR)/etc/init.d/wb-homa-modbus
-	install -m 0755  initscripts/wb-homa-adc $(DESTDIR)/etc/init.d/wb-homa-adc

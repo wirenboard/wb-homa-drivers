@@ -1,12 +1,12 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          wb-homa-w1
+# Provides:          wb-homa-gpio
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Required-Start:
-# Required-Stop:
-# Short-Description: Kernel 1-wire MQTT driver for WB-HomA
-# Description:       Kernel 1-wire MQTT driver for WB-HomA
+# Required-Start: $remote_fs
+# Required-Stop: $remote_fs
+# Short-Description: MQTT Driver for GPIO-controlled switches
+# Description:       MQTT Driver for GPIO-controlled switches
 ### END INIT INFO
 
 # Author: Evgeny Boger <boger@contactless.ru>
@@ -18,10 +18,10 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Kernel 1-wire MQTT driver for WB-HomA"
-NAME=wb-homa-w1
+DESC="MQTT Driver for GPIO-controlled switches"
+NAME=wb-homa-gpio
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS=""
+DAEMON_ARGS="-c /etc/wb-homa-gpio.conf"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
