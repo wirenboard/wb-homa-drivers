@@ -202,5 +202,11 @@ TEST_F(TConfigParserTest, Parse)
     }
 }
 
-// TBD: test force_debug in the config parser
+TEST_F(TConfigParserTest, ForceDebug)
+{
+    TConfigParser parser(GetDataFilePath("../wb-homa-modbus/config.json"), true);
+    PHandlerConfig config = parser.Parse();
+    ASSERT_TRUE(config->Debug);
+}
+
 // TBD: the code must check mosquitto return values
