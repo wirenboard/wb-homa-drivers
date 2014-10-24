@@ -9,6 +9,10 @@ case "$WB_VERSION" in
         BOARD_CONF="/etc/wb-homa-gpio.conf.wbsh3"
     ;;
 
+    "KMON1" )
+        BOARD_CONF="/etc/wb-homa-gpio.conf.mka3"
+    ;;
+
     * )
         BOARD_CONF="/etc/wb-homa-gpio.conf.default"
     ;;

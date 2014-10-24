@@ -1,0 +1,196 @@
+// Configuration options
+{
+    "device_name" : "Relays & Dry inputs",
+
+    "channels" : [
+        {
+            "name" : "relay_1",
+            "gpio" : 120
+        },
+        {
+            "name" : "relay_2",
+            "gpio" : 121
+        },
+        {
+            "name" : "relay_3",
+            "gpio" : 122
+        },
+        {
+            "name" : "relay_4",
+            "gpio" : 123
+        },
+
+
+
+
+        {
+            "name" : "dry_1",
+            "gpio" : 60,
+            "direction": "input",
+            "inverted" : true
+,
+            "inverted" : true
+        },
+        {
+            "name" : "dry_2",
+            "gpio" : 136,
+            "direction": "input",
+            "inverted" : true
+,
+            "inverted" : true
+        },
+        {
+            "name" : "dry_3",
+            "gpio" : 135,
+            "direction": "input",
+            "inverted" : true
+,
+            "inverted" : true
+        },
+        {
+            "name" : "dry_4",
+            "gpio" : 134,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_5",
+            "gpio" : 56,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_6",
+            "gpio" : 55,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_7",
+            "gpio" : 23,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_8",
+            "gpio" : 25,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_9",
+            "gpio" : 16,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_10",
+            "gpio" : 17,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_11",
+            "gpio" : 54,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_12",
+            "gpio" : 57,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_13",
+            "gpio" : 53,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_14",
+            "gpio" : 5,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_15",
+            "gpio" : 6,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_16",
+            "gpio" : 7,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_17",
+            "gpio" : 38,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_18",
+            "gpio" : 39,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_19",
+            "gpio" : 1,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_20",
+            "gpio" : 2,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_21",
+            "gpio" : 36,
+            "direction": "input",
+            "inverted" : true
+
+        },
+        {
+            "name" : "dry_22",
+            "gpio" : 37,
+            "direction": "input",
+            "inverted" : true
+
+        },
+
+        {
+            "name" : "reset_button",
+            "gpio" : 137,
+            "direction": "input",
+            "inverted" : true
+
+        }
+
+
+
+    ]
+
+}
