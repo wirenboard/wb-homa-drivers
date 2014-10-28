@@ -133,6 +133,7 @@ def on_message(client, userdata, msg):
     for channel, name in RELAYS:
         if name == parts[0]:
             toggle_switch(channel, msg.payload == "1")
+            client.publish(CONTROL_TOPIC_BASE + parts[0], msg.payload, 1, True)
             break
     else:
         print "unknown control %r" % parts[0]
