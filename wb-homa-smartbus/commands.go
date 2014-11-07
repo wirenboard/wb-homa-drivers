@@ -7,6 +7,9 @@ import (
 	"fmt"
 )
 
+// ------
+
+// SingleChannelControlCommand toggles single relay output
 type SingleChannelControlCommand struct {
 	ChannelNo uint8
 	Level uint8
@@ -15,8 +18,9 @@ type SingleChannelControlCommand struct {
 
 func (*SingleChannelControlCommand) Opcode() uint16 { return 0x0031 }
 
-// -----
+// ------
 
+// SingleChannelControlResponse is sent as a response to SingleChannelControlCommand
 type SingleChannelControlResponse struct {
 	ChannelNo uint8
 	Success bool
@@ -35,7 +39,7 @@ type SingleChannelControlResponseHeaderRaw struct {
 func (*SingleChannelControlResponse) Parse(reader io.Reader) (interface{}, error) {
 	var hdr SingleChannelControlResponseHeaderRaw
 	if err := binary.Read(reader, binary.BigEndian, &hdr); err != nil {
-		log.Printf("ParseSingleChannelControlResponse: error reading the header: %v", err)
+		log.Printf("SingleChannelControlResponse.Parse(): error reading the header: %v", err)
 		return nil, err
 	}
 
@@ -68,9 +72,45 @@ func (cmd *SingleChannelControlResponse) Write(writer io.Writer) {
 	WriteChannelStatus(writer, cmd.ChannelStatus)
 }
 
+// ------
+
+// ZoneBeastBroadcast packets are sent by ZoneBeast at regular intervals
+
+type ZoneBeastBroadcast struct {
+	ZoneStatus []uint8
+	ChannelStatus []bool
+}
+
+func (*ZoneBeastBroadcast) Opcode() uint16 { return 0xefff }
+
+func (*ZoneBeastBroadcast) Parse(reader io.Reader) (interface{}, error) {
+	var cmd ZoneBeastBroadcast
+	if zoneStatus, err := ReadZoneStatus(reader); err != nil {
+		log.Printf("ZoneBeastBroadcast.Parse(): error reading zone status: %v", err)
+		return nil, err
+	} else {
+		cmd.ZoneStatus = zoneStatus
+	}
+
+	if channelStatus, err := ReadChannelStatus(reader); err != nil {
+		log.Printf("ZoneBeastBroadcast.Parse(): error reading channel status: %v", err)
+		return nil, err
+	} else {
+		cmd.ChannelStatus = channelStatus
+	}
+
+	return &cmd, nil
+}
+
+func (cmd *ZoneBeastBroadcast) Write(writer io.Writer) {
+	WriteZoneStatus(writer, cmd.ZoneStatus)
+	WriteChannelStatus(writer, cmd.ChannelStatus)
+}
+
 // -----
 
 func init () {
 	RegisterCommand(func () Command { return new(SingleChannelControlCommand) })
 	RegisterCommand(func () Command { return new(SingleChannelControlResponse) })
+	RegisterCommand(func () Command { return new(ZoneBeastBroadcast) })
 }

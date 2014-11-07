@@ -3,9 +3,8 @@ package smartbus
 import (
 	"bytes"
 	"encoding/hex"
-	"reflect"
 	"testing"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -51,8 +50,8 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 			0x95, // OrigDeviceType(lo)
 			0x00, // Opcode(hi)
 			0x31, // Opcode(lo)
-			0x01, // TargetSubnetID(hi)
-			0x1c, // TargetDeviceID(lo)
+			0x01, // TargetSubnetID
+			0x1c, // TargetDeviceID
 			0x07, // [data] LightChannelNo
 			0x64, // [data] Level (100 = On)
 			0x00, // Duration(hi)
@@ -92,8 +91,8 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 			0x9c, // OrigDeviceType(lo)
 			0x00, // Opcode(hi)
 			0x32, // Opcode(lo)
-			0xff, // TargetSubnetID(hi)
-			0xff, // TargetDeviceID(lo)
+			0xff, // TargetSubnetID
+			0xff, // TargetDeviceID
 			0x07, // [data] LightChannelNo
 			0xf8, // [data] Flag (0xf8=ok, 0xf5=fail)
 			0x00, // [data] Level (0=Off, 100=On)
@@ -102,6 +101,46 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 			0x00, // [data] <channel data>
 			0x49, // CRC(hi)
 			0x59, // CRC(lo)
+		},
+	},
+	{
+		Name: "ZoneBeastBroadcast",
+		Opcode: 0xefff,
+		FullCommand: FullCommand{
+			CommandHeader{
+				OrigSubnetID: SAMPLE_SUBNET,
+				OrigDeviceID: SAMPLE_TARGET_DEVICE_ID,
+				OrigDeviceType: SAMPLE_TARGET_DEVICE_TYPE,
+				TargetSubnetID: 0xff, // broadcast
+				TargetDeviceID: 0xff, // broadcast
+			},
+			&ZoneBeastBroadcast{
+				ZoneStatus: []uint8 { 0 },
+				ChannelStatus: []bool{
+					false, false, false, false, true, false, false, false,
+					false, false, false, false, false, false, false,
+				},
+			},
+		},
+		Packet: [] byte {
+			0xaa, // Sync1
+			0xaa, // Sync2
+			0x10, // Len
+			0x01, // OrigSubnetID
+			0x1c, // OrigDeviceID
+			0x13, // OrigDeviceType(hi)
+			0x9c, // OrigDeviceType(lo)
+			0xef, // Opcode(hi)
+			0xff, // Opcode(lo)
+			0xff, // TargetSubnetID
+			0xff, // TargetDeviceID
+			0x01, // [data] NumberOfZones
+			0x00, // [data] <zone 0 status> (0 = sequence, >0 = scene)
+			0x0f, // [data] NumberOfChannels
+			0x10, // [data] <channel data>
+			0x00, // [data] <channel data>
+			0x27, // CRC(hi)
+			0xf2, // CRC(lo)
 		},
 	},
 }
@@ -130,12 +169,8 @@ func VerifyRead(t *testing.T, ftc FrameTestCase) {
 	}
 	cmd.Header.Opcode = 0 // for comparison
 
-	if !reflect.DeepEqual(ftc.FullCommand, *cmd) {
-		t.Fatalf("VerifyRead: %s: wrong parsed command\n EXP:\n%s\nACT:\n%s\n",
-			ftc.Name,
-			spew.Sdump(ftc.FullCommand),
-			spew.Sdump(cmd))
-	}
+	assert.Equal(t, ftc.FullCommand.Header, cmd.Header, "VerifyRead: %s - header diff", ftc.Name)
+	assert.Equal(t, ftc.FullCommand.Command, cmd.Command, "VerifyRead: %s - command", ftc.Name)
 }
 
 func VerifyWrite(t *testing.T, ftc FrameTestCase) {
@@ -172,5 +207,7 @@ func TestSingleFrame(t *testing.T) {
 // TBD: sync between R/W goroutines -- don't attempt writing while reading
 // TBD: test cases may be used for higher level API testing, too
 //      (just refer to them by name; perhaps should rename frameTestCases var)
-// TBD: rename FullCommand -> SmartbusCommand
+// TBD: rename FullCommand -> SmartbusMessage (?)
+// TBD: 'Command' is misnomer, it should be 'Message' (also: cmd -> msg)
 // TBD: move concrete commands to separate module
+// TBD: make sure unrecognized commands are skipped
