@@ -26,11 +26,17 @@ type Command interface {
 	Opcode() uint16
 }
 
+type CommandWriter interface {
+	Write(writer io.Writer)
+}
+
 type SingleChannelControlCommand struct {
 	ChannelNo uint8
 	Level uint8
 	Duration uint16 // FIXME: is it really duration? ("running time")
 }
+
+func (cmd *SingleChannelControlCommand) Opcode() uint16 { return 0x0031; }
 
 type SingleChannelControlResponse struct {
 	ChannelNo uint8
@@ -38,6 +44,8 @@ type SingleChannelControlResponse struct {
 	Level uint8
 	ChannelStatus []bool
 }
+
+func (cmd *SingleChannelControlResponse) Opcode() uint16 { return 0x0032; }
 
 func ReadChannelStatus(reader io.Reader) ([]bool, error) {
 	var n uint8
@@ -58,6 +66,20 @@ func ReadChannelStatus(reader io.Reader) ([]bool, error) {
 	}
 
 	return status, nil
+}
+
+func WriteChannelStatus(writer io.Writer, status []bool) {
+	binary.Write(writer, binary.BigEndian, uint8(len(status)))
+	if len(status) == 0 {
+		return
+	}
+	bs := make([]uint8, (len(status) + 7) / 8)
+	for i, v := range status {
+		if v {
+			bs[i / 8] |= 1 << uint(i % 8)
+		}
+	}
+	binary.Write(writer, binary.BigEndian, bs)
 }
 
 type SingleChannelControlResponseHeaderRaw struct {
@@ -92,9 +114,33 @@ func ParseSingleChannelControlResponse(reader io.Reader) (interface{}, error) {
 	}
 }
 
+func (cmd *SingleChannelControlResponse) Write(writer io.Writer) {
+	flag := uint8(0xf8)
+	if !cmd.Success {
+		flag = 0xf5
+	}
+	hdr := SingleChannelControlResponseHeaderRaw{cmd.ChannelNo, flag, cmd.Level}
+	binary.Write(writer, binary.BigEndian, &hdr)
+	WriteChannelStatus(writer, cmd.ChannelStatus)
+}
+
 type PacketParser func(io.Reader) (interface{}, error)
 
+func MakeSimplePacketParser(construct func() interface{}) PacketParser {
+	return func(reader io.Reader) (interface{}, error) {
+		cmd := construct()
+		if err := binary.Read(reader, binary.BigEndian, cmd); err != nil {
+			log.Printf("error reading the command: %v", err)
+			return nil, err
+		}
+		return cmd, nil
+	}
+}
+
 var RecognizedCommands map[uint16]PacketParser = map[uint16]PacketParser{
+	0x0031: MakeSimplePacketParser(func () interface {} {
+		return new(SingleChannelControlCommand)
+	}),
 	0x0032: ParseSingleChannelControlResponse,
 }
 
@@ -103,8 +149,6 @@ type FullCommand struct {
 	Command interface{}
 }
 
-func (cmd *SingleChannelControlCommand) Opcode() uint16 { return 0x0031; }
-
 func WriteCommand(writer io.Writer, fullCmd FullCommand) {
 	header := fullCmd.Header // make a copy because Opcode field is modified
 	cmd := fullCmd.Command.(Command)
@@ -112,7 +156,13 @@ func WriteCommand(writer io.Writer, fullCmd FullCommand) {
 	binary.Write(buf, binary.BigEndian, uint8(0)) // len placeholder
 	header.Opcode = cmd.Opcode()
 	binary.Write(buf, binary.BigEndian, header)
-	binary.Write(buf, binary.BigEndian, cmd)
+
+	cmdWriter, isWriter := cmd.(CommandWriter)
+	if isWriter {
+		cmdWriter.Write(buf)
+	} else {
+		binary.Write(buf, binary.BigEndian, cmd)
+	}
 
 	bs := buf.Bytes()
 	bs[0] = uint8(len(bs) + 2)
@@ -141,7 +191,7 @@ func ReadSync(reader io.Reader) error {
 }
 
 func ParsePacket(packet []byte) (*FullCommand, error) {
-	log.Printf("packet: %s", hex.Dump(packet))
+	log.Printf("packet:\n%s", hex.Dump(packet))
 	buf := bytes.NewBuffer(packet[1:]) // skip len
 	var header CommandHeader
 	if err := binary.Read(buf, binary.BigEndian, &header); err != nil {
