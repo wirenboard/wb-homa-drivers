@@ -62,14 +62,14 @@ func (*SingleChannelControlResponse) Parse(reader io.Reader) (interface{}, error
 	}
 }
 
-func (cmd *SingleChannelControlResponse) Write(writer io.Writer) {
+func (msg *SingleChannelControlResponse) Write(writer io.Writer) {
 	flag := uint8(0xf8)
-	if !cmd.Success {
+	if !msg.Success {
 		flag = 0xf5
 	}
-	hdr := SingleChannelControlResponseHeaderRaw{cmd.ChannelNo, flag, cmd.Level}
+	hdr := SingleChannelControlResponseHeaderRaw{msg.ChannelNo, flag, msg.Level}
 	binary.Write(writer, binary.BigEndian, &hdr)
-	WriteChannelStatus(writer, cmd.ChannelStatus)
+	WriteChannelStatus(writer, msg.ChannelStatus)
 }
 
 // ------
@@ -84,33 +84,33 @@ type ZoneBeastBroadcast struct {
 func (*ZoneBeastBroadcast) Opcode() uint16 { return 0xefff }
 
 func (*ZoneBeastBroadcast) Parse(reader io.Reader) (interface{}, error) {
-	var cmd ZoneBeastBroadcast
+	var msg ZoneBeastBroadcast
 	if zoneStatus, err := ReadZoneStatus(reader); err != nil {
 		log.Printf("ZoneBeastBroadcast.Parse(): error reading zone status: %v", err)
 		return nil, err
 	} else {
-		cmd.ZoneStatus = zoneStatus
+		msg.ZoneStatus = zoneStatus
 	}
 
 	if channelStatus, err := ReadChannelStatus(reader); err != nil {
 		log.Printf("ZoneBeastBroadcast.Parse(): error reading channel status: %v", err)
 		return nil, err
 	} else {
-		cmd.ChannelStatus = channelStatus
+		msg.ChannelStatus = channelStatus
 	}
 
-	return &cmd, nil
+	return &msg, nil
 }
 
-func (cmd *ZoneBeastBroadcast) Write(writer io.Writer) {
-	WriteZoneStatus(writer, cmd.ZoneStatus)
-	WriteChannelStatus(writer, cmd.ChannelStatus)
+func (msg *ZoneBeastBroadcast) Write(writer io.Writer) {
+	WriteZoneStatus(writer, msg.ZoneStatus)
+	WriteChannelStatus(writer, msg.ChannelStatus)
 }
 
 // -----
 
 func init () {
-	RegisterCommand(func () Command { return new(SingleChannelControlCommand) })
-	RegisterCommand(func () Command { return new(SingleChannelControlResponse) })
-	RegisterCommand(func () Command { return new(ZoneBeastBroadcast) })
+	RegisterMessage(func () Message { return new(SingleChannelControlCommand) })
+	RegisterMessage(func () Message { return new(SingleChannelControlResponse) })
+	RegisterMessage(func () Message { return new(ZoneBeastBroadcast) })
 }

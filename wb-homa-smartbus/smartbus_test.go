@@ -19,15 +19,15 @@ type FrameTestCase struct {
 	Name string
 	Opcode uint16
 	Packet []byte
-	FullCommand FullCommand
+	SmartbusMessage SmartbusMessage
 }
 
 var frameTestCases []FrameTestCase = []FrameTestCase {
 	{
 		Name: "SingleChannelControlCommand",
 		Opcode: 0x0031,
-		FullCommand: FullCommand{
-			CommandHeader{
+		SmartbusMessage: SmartbusMessage{
+			MessageHeader{
 				OrigSubnetID: SAMPLE_SUBNET,
 				OrigDeviceID: SAMPLE_ORIG_DEVICE_ID,
 				OrigDeviceType: SAMPLE_ORIG_DEVICE_TYPE,
@@ -63,8 +63,8 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 	{
 		Name: "SingleChannelControlResponse",
 		Opcode: 0x0032,
-		FullCommand: FullCommand{
-			CommandHeader{
+		SmartbusMessage: SmartbusMessage{
+			MessageHeader{
 				OrigSubnetID: SAMPLE_SUBNET,
 				OrigDeviceID: SAMPLE_TARGET_DEVICE_ID,
 				OrigDeviceType: SAMPLE_TARGET_DEVICE_TYPE,
@@ -106,8 +106,8 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 	{
 		Name: "ZoneBeastBroadcast",
 		Opcode: 0xefff,
-		FullCommand: FullCommand{
-			CommandHeader{
+		SmartbusMessage: SmartbusMessage{
+			MessageHeader{
 				OrigSubnetID: SAMPLE_SUBNET,
 				OrigDeviceID: SAMPLE_TARGET_DEVICE_ID,
 				OrigDeviceType: SAMPLE_TARGET_DEVICE_TYPE,
@@ -147,38 +147,38 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 
 func VerifyRead(t *testing.T, ftc FrameTestCase) {
 	r := bytes.NewBuffer(ftc.Packet)
-	ch := make(chan FullCommand)
+	ch := make(chan SmartbusMessage)
 
 	go ReadSmartbus(r, ch)
-	var cmd *FullCommand
+	var msg *SmartbusMessage
 	for c := range ch {
-		if cmd == nil {
-			cmd = &c
+		if msg == nil {
+			msg = &c
 		} else {
-			t.Errorf("VerifyRead: %s: more than one command received", ftc.Name)
+			t.Errorf("VerifyRead: %s: more than one message received", ftc.Name)
 		}
 	}
 
-	if cmd == nil {
-		t.Fatalf("VerifyRead: no command received")
+	if msg == nil {
+		t.Fatalf("VerifyRead: no message received")
 	}
 
-	if cmd.Header.Opcode != ftc.Opcode {
+	if msg.Header.Opcode != ftc.Opcode {
 		t.Fatalf("VerifyRead: %s: bad opcode in decoded frame: %04x instead of %04x",
-			ftc.Name, cmd.Header.Opcode, ftc.Opcode)
+			ftc.Name, msg.Header.Opcode, ftc.Opcode)
 	}
-	cmd.Header.Opcode = 0 // for comparison
+	msg.Header.Opcode = 0 // for comparison
 
-	assert.Equal(t, ftc.FullCommand.Header, cmd.Header, "VerifyRead: %s - header diff", ftc.Name)
-	assert.Equal(t, ftc.FullCommand.Command, cmd.Command, "VerifyRead: %s - command", ftc.Name)
+	assert.Equal(t, ftc.SmartbusMessage.Header, msg.Header, "VerifyRead: %s - header diff", ftc.Name)
+	assert.Equal(t, ftc.SmartbusMessage.Message, msg.Message, "VerifyRead: %s - message", ftc.Name)
 }
 
 func VerifyWrite(t *testing.T, ftc FrameTestCase) {
-	ch := make(chan FullCommand)
+	ch := make(chan SmartbusMessage)
 	w := bytes.NewBuffer(make([]byte, 0, 128))
 
 	go WriteSmartbus(w, ch)
-	ch <- ftc.FullCommand
+	ch <- ftc.SmartbusMessage
 	close(ch)
 
 	if !bytes.Equal(ftc.Packet, w.Bytes()) {
@@ -195,19 +195,11 @@ func TestSingleFrame(t *testing.T) {
 	}
 }
 
-// TBD: update TestWriteSingleFrame to use HandleSmartBusConnection
 // TBD: test resync, short packets etc.
-// TBD: only decode commands with our own address or broadcast address as the target
+// TBD: only decode messages with our own address or broadcast address as the target
 // TBD: test invalid CRC
-// TBD: test serializing/deserializing commands back and forth
-//      -- just make a table of commands and their binary representations
-//      Zero out opcode when serializing to make sure it's filled properly
-//      -- use table-driven test
 // TBD: report bad sync/len/etc.
 // TBD: sync between R/W goroutines -- don't attempt writing while reading
 // TBD: test cases may be used for higher level API testing, too
 //      (just refer to them by name; perhaps should rename frameTestCases var)
-// TBD: rename FullCommand -> SmartbusMessage (?)
-// TBD: 'Command' is misnomer, it should be 'Message' (also: cmd -> msg)
-// TBD: move concrete commands to separate module
-// TBD: make sure unrecognized commands are skipped
+// TBD: make sure unrecognized messages are skipped
