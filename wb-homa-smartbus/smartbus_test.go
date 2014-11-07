@@ -36,20 +36,27 @@ func TestWriteSingleFrame(t *testing.T) {
 		0x60, // CRC(hi)
 		0x66, // CRC(lo)
 	}
+
+	ch := make(chan FullCommand)
 	w := bytes.NewBuffer(make([]byte, 0, 128))
-	cmd := SingleChannelControlCommand{
-		ChannelNo: 7,
-		Level: 100,
-		Duration: 0,
+
+	go WriteSmartbus(w, ch)
+	ch <- FullCommand{
+		CommandHeader{
+			OrigSubnetID: SAMPLE_SUBNET,
+			OrigDeviceID: SAMPLE_ORIG_DEVICE_ID,
+			OrigDeviceType: SAMPLE_ORIG_DEVICE_TYPE,
+			TargetSubnetID: SAMPLE_SUBNET,
+			TargetDeviceID: SAMPLE_TARGET_DEVICE_ID,
+		},
+		&SingleChannelControlCommand{
+			ChannelNo: 7,
+			Level: 100,
+			Duration: 0,
+		},
 	}
-	header := CommandHeader{
-		OrigSubnetID: SAMPLE_SUBNET,
-		OrigDeviceID: SAMPLE_ORIG_DEVICE_ID,
-		OrigDeviceType: SAMPLE_ORIG_DEVICE_TYPE,
-		TargetSubnetID: SAMPLE_SUBNET,
-		TargetDeviceID: SAMPLE_TARGET_DEVICE_ID,
-	}
-	WriteCommand(w, &header, &cmd)
+	close(ch)
+
 	if !bytes.Equal(expected, w.Bytes()) {
 		// Tbd: hex dump
 		t.Fatalf("bad datagram\n EXP:\n%s ACT:\n%s\n",
@@ -91,7 +98,7 @@ func TestDecodeSingleFrame(t *testing.T) {
 			TargetSubnetID: 0xff, // broadcast
 			TargetDeviceID: 0xff, // broadcast
 		},
-		SingleChannelControlResponse{
+		&SingleChannelControlResponse{
 			ChannelNo: 7,
 			Success: true,
 			Level: 0,
@@ -102,10 +109,9 @@ func TestDecodeSingleFrame(t *testing.T) {
 		},
 	}
 	r := bytes.NewBuffer(bs)
-	w := bytes.NewBuffer(make([]byte, 0, 128))
 	ch := make(chan FullCommand)
 
-	HandleSmartbusConnection(r, w, ch)
+	go ReadSmartbus(r, ch)
 	var cmd *FullCommand
 	for c := range ch {
 		if cmd == nil {
@@ -131,3 +137,4 @@ func TestDecodeSingleFrame(t *testing.T) {
 //      Zero out opcode when serializing to make sure it's filled properly
 //      -- use table-driven test
 // TBD: report bad sync/len/etc.
+// TBD: sync between R/W goroutines -- don't attempt writing while reading

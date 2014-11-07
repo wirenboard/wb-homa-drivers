@@ -88,7 +88,7 @@ func ParseSingleChannelControlResponse(reader io.Reader) (interface{}, error) {
 		log.Printf("ParseSingleChannelControlResponse: error reading status: %v", err)
 		return nil, err
 	} else {
-		return SingleChannelControlResponse{hdr.ChannelNo, success, hdr.Level, status}, nil
+		return &SingleChannelControlResponse{hdr.ChannelNo, success, hdr.Level, status}, nil
 	}
 }
 
@@ -105,7 +105,9 @@ type FullCommand struct {
 
 func (cmd *SingleChannelControlCommand) Opcode() uint16 { return 0x0031; }
 
-func WriteCommand(writer io.Writer, header *CommandHeader, cmd Command) {
+func WriteCommand(writer io.Writer, fullCmd FullCommand) {
+	header := fullCmd.Header // make a copy because Opcode field is modified
+	cmd := fullCmd.Command.(Command)
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	binary.Write(buf, binary.BigEndian, uint8(0)) // len placeholder
 	header.Opcode = cmd.Opcode()
@@ -205,6 +207,8 @@ func ReadSmartbus(reader io.Reader, ch chan FullCommand) {
 	}
 }
 
-func HandleSmartbusConnection(reader io.Reader, writer io.Writer, ch chan FullCommand) {
-	go ReadSmartbus(reader, ch)
+func WriteSmartbus(writer io.Writer, ch chan FullCommand) {
+	for cmd := range ch {
+		WriteCommand(writer, cmd)
+	}
 }
