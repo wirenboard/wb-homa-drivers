@@ -75,7 +75,6 @@ func (msg *SingleChannelControlResponse) Write(writer io.Writer) {
 // ------
 
 // ZoneBeastBroadcast packets are sent by ZoneBeast at regular intervals
-
 type ZoneBeastBroadcast struct {
 	ZoneStatus []uint8
 	ChannelStatus []bool

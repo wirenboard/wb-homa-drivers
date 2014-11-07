@@ -15,14 +15,14 @@ const (
 	SAMPLE_TARGET_DEVICE_TYPE = 0x139c
 )
 
-type FrameTestCase struct {
+type MessageTestCase struct {
 	Name string
 	Opcode uint16
 	Packet []byte
 	SmartbusMessage SmartbusMessage
 }
 
-var frameTestCases []FrameTestCase = []FrameTestCase {
+var messageTestCases []MessageTestCase = []MessageTestCase {
 	{
 		Name: "SingleChannelControlCommand",
 		Opcode: 0x0031,
@@ -145,53 +145,79 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 	},
 }
 
-func VerifyRead(t *testing.T, ftc FrameTestCase) {
-	r := bytes.NewBuffer(ftc.Packet)
-	ch := make(chan SmartbusMessage)
+func VerifyRead(t *testing.T, mtc MessageTestCase, msg SmartbusMessage) {
+	if msg.Header.Opcode != mtc.Opcode {
+		t.Fatalf("VerifyRead: %s: bad opcode in decoded frame: %04x instead of %04x",
+			mtc.Name, msg.Header.Opcode, mtc.Opcode)
+	}
+	msg.Header.Opcode = 0 // for comparison
 
-	go ReadSmartbus(r, ch)
+	assert.Equal(t, mtc.SmartbusMessage.Header, msg.Header, "VerifyRead: %s - header diff", mtc.Name)
+	assert.Equal(t, mtc.SmartbusMessage.Message, msg.Message, "VerifyRead: %s - message", mtc.Name)
+}
+
+func VerifyReadSingle(t *testing.T, mtc MessageTestCase, r *bytes.Buffer, ch chan SmartbusMessage) {
 	var msg *SmartbusMessage
 	for c := range ch {
 		if msg == nil {
 			msg = &c
 		} else {
-			t.Errorf("VerifyRead: %s: more than one message received", ftc.Name)
+			t.Errorf("VerifyReadSingle: %s: more than one message received", mtc.Name)
 		}
 	}
 
 	if msg == nil {
-		t.Fatalf("VerifyRead: no message received")
+		t.Fatalf("VerifyReadSingle: no message received")
 	}
 
-	if msg.Header.Opcode != ftc.Opcode {
-		t.Fatalf("VerifyRead: %s: bad opcode in decoded frame: %04x instead of %04x",
-			ftc.Name, msg.Header.Opcode, ftc.Opcode)
-	}
-	msg.Header.Opcode = 0 // for comparison
-
-	assert.Equal(t, ftc.SmartbusMessage.Header, msg.Header, "VerifyRead: %s - header diff", ftc.Name)
-	assert.Equal(t, ftc.SmartbusMessage.Message, msg.Message, "VerifyRead: %s - message", ftc.Name)
+	VerifyRead(t, mtc, *msg)
 }
 
-func VerifyWrite(t *testing.T, ftc FrameTestCase) {
-	ch := make(chan SmartbusMessage)
-	w := bytes.NewBuffer(make([]byte, 0, 128))
+func VerifyWrite(t *testing.T, mtc MessageTestCase, w *bytes.Buffer, ch chan SmartbusMessage) {
+	ch <- mtc.SmartbusMessage
 
-	go WriteSmartbus(w, ch)
-	ch <- ftc.SmartbusMessage
-	close(ch)
-
-	if !bytes.Equal(ftc.Packet, w.Bytes()) {
+	if !bytes.Equal(mtc.Packet, w.Bytes()) {
 		// Tbd: hex dump
 		t.Fatalf("VerifyWrite: %s: bad packet\n EXP:\n%s ACT:\n%s\n",
-			ftc.Name, hex.Dump(ftc.Packet), hex.Dump(w.Bytes()))
+			mtc.Name, hex.Dump(mtc.Packet), hex.Dump(w.Bytes()))
 	}
 }
 
 func TestSingleFrame(t *testing.T) {
-	for _, ftc := range frameTestCases {
-		VerifyRead(t, ftc)
-		VerifyWrite(t, ftc)
+	for _, mtc := range messageTestCases {
+		r := bytes.NewBuffer(mtc.Packet)
+		w := bytes.NewBuffer(make([]byte, 0, 128))
+
+		ch := make(chan SmartbusMessage)
+		go ReadSmartbus(r, ch)
+		VerifyReadSingle(t, mtc, r, ch)
+
+		ch = make(chan SmartbusMessage)
+		go WriteSmartbus(w, ch)
+		VerifyWrite(t, mtc, w, ch)
+		close(ch)
+	}
+}
+
+func TestMultiRead(t *testing.T) {
+	cap := 0
+	for _, mtc := range messageTestCases {
+		cap += len(mtc.Packet)
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, cap))
+	for _, mtc := range messageTestCases {
+		buf.Write(mtc.Packet)
+	}
+
+	ch := make(chan SmartbusMessage)
+	go ReadSmartbus(buf, ch)
+	for _, mtc := range messageTestCases {
+		msg := <- ch
+		VerifyRead(t, mtc, msg)
+	}
+
+	for _ = range ch {
+		t.Fatalf("got excess messages from the channel")
 	}
 }
 
@@ -201,5 +227,5 @@ func TestSingleFrame(t *testing.T) {
 // TBD: report bad sync/len/etc.
 // TBD: sync between R/W goroutines -- don't attempt writing while reading
 // TBD: test cases may be used for higher level API testing, too
-//      (just refer to them by name; perhaps should rename frameTestCases var)
+//      (just refer to them by name; perhaps should rename messageTestCases var)
 // TBD: make sure unrecognized messages are skipped
