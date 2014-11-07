@@ -104,7 +104,7 @@ var frameTestCases []FrameTestCase = []FrameTestCase {
 			0x59, // CRC(lo)
 		},
 	},
-};
+}
 
 func VerifyRead(t *testing.T, ftc FrameTestCase) {
 	r := bytes.NewBuffer(ftc.Packet)

@@ -30,103 +30,13 @@ type CommandWriter interface {
 	Write(writer io.Writer)
 }
 
-type SingleChannelControlCommand struct {
-	ChannelNo uint8
-	Level uint8
-	Duration uint16 // FIXME: is it really duration? ("running time")
-}
-
-func (cmd *SingleChannelControlCommand) Opcode() uint16 { return 0x0031; }
-
-type SingleChannelControlResponse struct {
-	ChannelNo uint8
-	Success bool
-	Level uint8
-	ChannelStatus []bool
-}
-
-func (cmd *SingleChannelControlResponse) Opcode() uint16 { return 0x0032; }
-
-func ReadChannelStatus(reader io.Reader) ([]bool, error) {
-	var n uint8
-	if err := binary.Read(reader, binary.BigEndian, &n); err != nil {
-		log.Printf("error reading channel status header: %v", err)
-		return nil, err
-	}
-	status := make([]bool, n)
-	if n > 0 {
-		bs := make([]uint8, (n + 7) / 8)
-		if _, err := io.ReadFull(reader, bs); err != nil {
-			log.Printf("error reading channel status: %v", err)
-			return nil, err
-		}
-		for i := range status {
-			status[i] = (bs[i / 8] >> uint(i % 8)) & 1 == 1
-		}
-	}
-
-	return status, nil
-}
-
-func WriteChannelStatus(writer io.Writer, status []bool) {
-	binary.Write(writer, binary.BigEndian, uint8(len(status)))
-	if len(status) == 0 {
-		return
-	}
-	bs := make([]uint8, (len(status) + 7) / 8)
-	for i, v := range status {
-		if v {
-			bs[i / 8] |= 1 << uint(i % 8)
-		}
-	}
-	binary.Write(writer, binary.BigEndian, bs)
-}
-
-type SingleChannelControlResponseHeaderRaw struct {
-	ChannelNo uint8
-	Flag uint8
-	Level uint8
-}
-
-func ParseSingleChannelControlResponse(reader io.Reader) (interface{}, error) {
-	var hdr SingleChannelControlResponseHeaderRaw
-	if err := binary.Read(reader, binary.BigEndian, &hdr); err != nil {
-		log.Printf("ParseSingleChannelControlResponse: error reading the header: %v", err)
-		return nil, err
-	}
-
-	var success bool
-	switch hdr.Flag {
-	case 0xf8:
-		success = true
-	case 0xf5:
-		success = false
-	default:
-		return nil, fmt.Errorf("bad flag SingleChannelControlResponse flag value %02x",
-			hdr.Flag)
-	}
-
-	if status, err := ReadChannelStatus(reader); err != nil {
-		log.Printf("ParseSingleChannelControlResponse: error reading status: %v", err)
-		return nil, err
-	} else {
-		return &SingleChannelControlResponse{hdr.ChannelNo, success, hdr.Level, status}, nil
-	}
-}
-
-func (cmd *SingleChannelControlResponse) Write(writer io.Writer) {
-	flag := uint8(0xf8)
-	if !cmd.Success {
-		flag = 0xf5
-	}
-	hdr := SingleChannelControlResponseHeaderRaw{cmd.ChannelNo, flag, cmd.Level}
-	binary.Write(writer, binary.BigEndian, &hdr)
-	WriteChannelStatus(writer, cmd.ChannelStatus)
+type CommandParser interface {
+	Parse(reader io.Reader) (interface{}, error)
 }
 
 type PacketParser func(io.Reader) (interface{}, error)
 
-func MakeSimplePacketParser(construct func() interface{}) PacketParser {
+func MakeSimplePacketParser(construct func() Command) PacketParser {
 	return func(reader io.Reader) (interface{}, error) {
 		cmd := construct()
 		if err := binary.Read(reader, binary.BigEndian, cmd); err != nil {
@@ -137,11 +47,20 @@ func MakeSimplePacketParser(construct func() interface{}) PacketParser {
 	}
 }
 
-var RecognizedCommands map[uint16]PacketParser = map[uint16]PacketParser{
-	0x0031: MakeSimplePacketParser(func () interface {} {
-		return new(SingleChannelControlCommand)
-	}),
-	0x0032: ParseSingleChannelControlResponse,
+var recognizedCommands map[uint16]PacketParser = make(map[uint16]PacketParser)
+
+func RegisterCommand(construct func () Command) {
+	cmd := construct()
+	cmdParser, hasParser := cmd.(CommandParser)
+	var parser PacketParser
+	if hasParser {
+		parser = func(reader io.Reader) (interface{}, error) {
+			return cmdParser.Parse(reader)
+		}
+	} else {
+		parser = MakeSimplePacketParser(construct)
+	}
+	recognizedCommands[cmd.Opcode()] = parser
 }
 
 type FullCommand struct {
@@ -197,7 +116,7 @@ func ParsePacket(packet []byte) (*FullCommand, error) {
 	if err := binary.Read(buf, binary.BigEndian, &header); err != nil {
 		return nil, err
 	}
-	cmdParser, found := RecognizedCommands[header.Opcode]
+	cmdParser, found := recognizedCommands[header.Opcode]
 	if !found {
 		return nil, fmt.Errorf("opcode %04x not recognized", header.Opcode)
 	}
@@ -215,7 +134,7 @@ func ReadSmartbus(reader io.Reader, ch chan FullCommand) {
 	defer func () {
 		switch {
 		case err == io.EOF || err == io.ErrUnexpectedEOF:
-			log.Printf("eof reached");
+			log.Printf("eof reached")
 			return
 		case err != nil:
 			panic(err)
