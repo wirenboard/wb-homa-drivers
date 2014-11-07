@@ -18,7 +18,7 @@ const (
 type MessageTestCase struct {
 	Name string
 	Opcode uint16
-	Packet []byte
+	Packet []uint8
 	SmartbusMessage SmartbusMessage
 }
 
@@ -40,7 +40,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				Duration: 0,
 			},
 		},
-		Packet: []byte{
+		Packet: []uint8{
 			0xaa, // Sync1
 			0xaa, // Sync2
 			0x0f, // Len
@@ -81,7 +81,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				},
 			},
 		},
-		Packet: []byte{
+		Packet: []uint8{
 			0xaa, // Sync1
 			0xaa, // Sync2
 			0x11, // Len
@@ -186,7 +186,7 @@ func VerifyWrite(t *testing.T, mtc MessageTestCase, w *bytes.Buffer, ch chan Sma
 func TestSingleFrame(t *testing.T) {
 	for _, mtc := range messageTestCases {
 		r := bytes.NewBuffer(mtc.Packet)
-		w := bytes.NewBuffer(make([]byte, 0, 128))
+		w := bytes.NewBuffer(make([]uint8, 0, 128))
 
 		ch := make(chan SmartbusMessage)
 		go ReadSmartbus(r, ch)
@@ -204,7 +204,7 @@ func TestMultiRead(t *testing.T) {
 	for _, mtc := range messageTestCases {
 		cap += len(mtc.Packet)
 	}
-	buf := bytes.NewBuffer(make([]byte, 0, cap))
+	buf := bytes.NewBuffer(make([]uint8, 0, cap))
 	for _, mtc := range messageTestCases {
 		buf.Write(mtc.Packet)
 	}
@@ -221,10 +221,38 @@ func TestMultiRead(t *testing.T) {
 	}
 }
 
-// TBD: test resync, short packets etc.
-// TBD: only decode messages with our own address or broadcast address as the target
-// TBD: test invalid CRC
-// TBD: report bad sync/len/etc.
+func TestResync(t *testing.T) {
+	bs := append([]uint8{
+		0xaa, // Sync1
+		0x00, // oops! bad sync
+		0xaa, // Sync1
+		0xaa, // Sync2
+		0x05, // Len (too short)
+		0xaa, // Sync1
+		0xaa, // Sync2
+		0x0f, // Len
+		0x01, // OrigSubnetID
+		0x14, // OrigDeviceID
+		0x00, // OrigDeviceType(hi)
+		0x95, // OrigDeviceType(lo)
+		0x00, // Opcode(hi)
+		0x31, // Opcode(lo)
+		0x01, // TargetSubnetID
+		0x1c, // TargetDeviceID
+		0x01, // [data] LightChannelNo
+		0x00, // [data] Level (100 = On)
+		0x00, // Duration(hi)
+		0x00, // Duration(lo)
+		0xff, // CRC(hi) - BAD!
+		0xff, // CRC(lo) - BAD!
+	}, messageTestCases[0].Packet...)
+	r := bytes.NewBuffer(bs)
+	ch := make(chan SmartbusMessage)
+	go ReadSmartbus(r, ch)
+	VerifyReadSingle(t, messageTestCases[0], r, ch)
+}
+
+// TBD: only handle messages with our own address or broadcast address as the target
 // TBD: sync between R/W goroutines -- don't attempt writing while reading
 // TBD: test cases may be used for higher level API testing, too
 //      (just refer to them by name; perhaps should rename messageTestCases var)
