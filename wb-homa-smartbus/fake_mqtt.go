@@ -3,16 +3,15 @@ package smartbus
 import (
 	"fmt"
 	"testing"
-	MQTT "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
 
-func FormatMQTTMessage(message MQTT.Message) string {
+func FormatMQTTMessage(message MQTTMessage) string {
 	suffix := ""
-	if message.RetainedFlag() {
+	if message.Retained {
 		suffix = ", retained"
 	}
 	return fmt.Sprintf("[%s] (QoS %d%s)",
-		string(message.Payload()), message.QoS(), suffix)
+		string(message.Payload), message.QoS, suffix)
 }
 
 type SubscriptionList []*FakeMQTTClient
@@ -29,9 +28,9 @@ func NewFakeMQTTBroker (t *testing.T) (broker *FakeMQTTBroker) {
 	return
 }
 
-func (broker *FakeMQTTBroker) Publish(origin, topic string, message *MQTT.Message) {
-	broker.Rec("%s -> %s: %s", origin, topic, FormatMQTTMessage(*message))
-	subs, found := broker.subscriptions[topic]
+func (broker *FakeMQTTBroker) Publish(origin string, message MQTTMessage) {
+	broker.Rec("%s -> %s: %s", origin, message.Topic, FormatMQTTMessage(message))
+	subs, found := broker.subscriptions[message.Topic]
 	if !found {
 		return
 	}
@@ -72,29 +71,50 @@ func (broker *FakeMQTTBroker) Unsubscribe(client *FakeMQTTClient, topic string) 
 }
 
 func (broker *FakeMQTTBroker) MakeClient(id string, handler MQTTMessageHandler) *FakeMQTTClient {
-	return &FakeMQTTClient{id, broker, handler}
+	return &FakeMQTTClient{id, false, broker, handler}
 }
 
 type FakeMQTTClient struct {
 	id string
+	started bool
 	broker *FakeMQTTBroker
 	handler MQTTMessageHandler
 }
 
-func (client *FakeMQTTClient) receive(message *MQTT.Message) {
-	client.handler(*message)
+func (client *FakeMQTTClient) receive(message MQTTMessage) {
+	client.handler(message)
 }
 
-func (client *FakeMQTTClient) Publish(topic string, message *MQTT.Message) {
-	client.broker.Publish(client.id, topic, message)
+func (client *FakeMQTTClient) Start() {
+	if (client.started) {
+		client.broker.T().Fatalf("%s: client already started", client.id)
+	}
+	client.started = true
+}
+
+func (client *FakeMQTTClient) Stop() {
+	client.ensureStarted()
+	client.started = false
+	client.broker.Rec("stop: %s", client.id)
+}
+
+func (client *FakeMQTTClient) ensureStarted() {
+	if (!client.started) {
+		client.broker.T().Fatalf("%s: client not started", client.id)
+	}
+}
+
+func (client *FakeMQTTClient) Publish(message MQTTMessage) {
+	client.ensureStarted()
+	client.broker.Publish(client.id, message)
 }
 
 func (client *FakeMQTTClient) Subscribe(topic string) {
+	client.ensureStarted()
 	client.broker.Subscribe(client, topic)
 }
 
 func (client *FakeMQTTClient) Unsubscribe(topic string) {
+	client.ensureStarted()
 	client.broker.Unsubscribe(client, topic)
 }
-
-// TBD: support wildcard topics

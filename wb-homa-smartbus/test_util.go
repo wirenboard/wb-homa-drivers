@@ -19,9 +19,9 @@ func (rec *Recorder) InitRecorder(t *testing.T) {
 }
 
 func (rec *Recorder) Rec(format string, args... interface{}) {
-	rec.logs = append(
-		rec.logs,
-		fmt.Sprintf(format, args...))
+	item := fmt.Sprintf(format, args...)
+	rec.t.Log("REC: ", item)
+	rec.logs = append(rec.logs, item)
 	rec.ch <- struct{}{}
 }
 
@@ -29,7 +29,9 @@ func (rec *Recorder) Verify(logs... string) {
 	if logs == nil {
 		assert.Equal(rec.t, 0, len(rec.logs), "rec log count")
 	} else {
-		<- rec.ch
+		for _ = range logs {
+			<- rec.ch
+		}
 		assert.Equal(rec.t, logs, rec.logs, "rec logs")
 	}
 	rec.Reset()
@@ -37,4 +39,8 @@ func (rec *Recorder) Verify(logs... string) {
 
 func (rec *Recorder) Reset() {
 	rec.logs = make([]string, 0, 1000)
+}
+
+func (rec *Recorder) T() *testing.T {
+	return rec.t
 }
