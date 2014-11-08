@@ -1,6 +1,8 @@
 package smartbus
 
 import (
+	"io"
+	"time"
 	"bytes"
 	"encoding/hex"
 	"testing"
@@ -145,6 +147,37 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 	},
 }
 
+type FakeMutex struct {
+	t *testing.T
+	locked bool
+	lockCount int
+}
+
+func NewFakeMutex(t *testing.T) *FakeMutex {
+	return &FakeMutex{t, false, 0}
+}
+
+func (mutex *FakeMutex) Lock() {
+	assert.False(mutex.t, mutex.locked, "recursive locking detected")
+	mutex.locked = true
+	mutex.lockCount++
+}
+
+func (mutex *FakeMutex) Unlock() {
+	assert.True(mutex.t, mutex.locked, "unlocking a non-locked mutex")
+	mutex.locked = false
+}
+
+func (mutex *FakeMutex) VerifyLocked(count int, msg... interface{}) {
+	assert.True(mutex.t, mutex.locked, msg...)
+	assert.Equal(mutex.t, count, mutex.lockCount, msg...)
+}
+
+func (mutex *FakeMutex) VerifyUnlocked(count int, msg... interface{}) {
+	assert.False(mutex.t, mutex.locked, msg...)
+	assert.Equal(mutex.t, count, mutex.lockCount, msg...)
+}
+
 func VerifyRead(t *testing.T, mtc MessageTestCase, msg SmartbusMessage) {
 	if msg.Header.Opcode != mtc.Opcode {
 		t.Fatalf("VerifyRead: %s: bad opcode in decoded frame: %04x instead of %04x",
@@ -156,7 +189,7 @@ func VerifyRead(t *testing.T, mtc MessageTestCase, msg SmartbusMessage) {
 	assert.Equal(t, mtc.SmartbusMessage.Message, msg.Message, "VerifyRead: %s - message", mtc.Name)
 }
 
-func VerifyReadSingle(t *testing.T, mtc MessageTestCase, r *bytes.Buffer, ch chan SmartbusMessage) {
+func VerifyReadSingle(t *testing.T, mtc MessageTestCase, ch chan SmartbusMessage) {
 	var msg *SmartbusMessage
 	for c := range ch {
 		if msg == nil {
@@ -185,16 +218,25 @@ func VerifyWrite(t *testing.T, mtc MessageTestCase, w *bytes.Buffer, ch chan Sma
 
 func TestSingleFrame(t *testing.T) {
 	for _, mtc := range messageTestCases {
-		r := bytes.NewBuffer(mtc.Packet)
+		p, r := io.Pipe()
 		w := bytes.NewBuffer(make([]uint8, 0, 128))
 
 		ch := make(chan SmartbusMessage)
-		go ReadSmartbus(r, ch)
-		VerifyReadSingle(t, mtc, r, ch)
+		mtx := NewFakeMutex(t)
+		go ReadSmartbus(p, mtx, ch)
+
+		n, err := r.Write(mtc.Packet)
+		r.Close()
+		assert.Equal(t, nil, err)
+		assert.Equal(t, len(mtc.Packet), n)
+
+		VerifyReadSingle(t, mtc, ch)
+		mtx.VerifyUnlocked(1, "unlocked after ReadSmartbus")
 
 		ch = make(chan SmartbusMessage)
-		go WriteSmartbus(w, ch)
+		go WriteSmartbus(w, mtx, ch)
 		VerifyWrite(t, mtc, w, ch)
+		mtx.VerifyUnlocked(2, "unlocked after WriteSmartbus")
 		close(ch)
 	}
 }
@@ -210,11 +252,13 @@ func TestMultiRead(t *testing.T) {
 	}
 
 	ch := make(chan SmartbusMessage)
-	go ReadSmartbus(buf, ch)
+	mtx := NewFakeMutex(t)
+	go ReadSmartbus(buf, mtx, ch)
 	for _, mtc := range messageTestCases {
 		msg := <- ch
 		VerifyRead(t, mtc, msg)
 	}
+	mtx.VerifyUnlocked(len(messageTestCases), "unlocked after ReadSmartbus")
 
 	for _ = range ch {
 		t.Fatalf("got excess messages from the channel")
@@ -248,12 +292,37 @@ func TestResync(t *testing.T) {
 	}, messageTestCases[0].Packet...)
 	r := bytes.NewBuffer(bs)
 	ch := make(chan SmartbusMessage)
-	go ReadSmartbus(r, ch)
-	VerifyReadSingle(t, messageTestCases[0], r, ch)
+	mtx := NewFakeMutex(t)
+	go ReadSmartbus(r, mtx, ch)
+	VerifyReadSingle(t, messageTestCases[0], ch)
+	mtx.VerifyUnlocked(4, "unlocked after ReadSmartbus") // one lock for each initial sync byte
+}
+
+func TestReadLocking(t *testing.T) {
+	mtc := messageTestCases[0]
+	p, r := io.Pipe()
+	ch := make(chan SmartbusMessage)
+	mtx := NewFakeMutex(t)
+	go ReadSmartbus(p, mtx, ch)
+
+	time.Sleep(100 * time.Millisecond)
+	mtx.VerifyUnlocked(0, "initially unlocked")
+
+	r.Write(mtc.Packet[:1])
+	mtx.VerifyLocked(1, "lock after sync")
+
+	r.Write(mtc.Packet[1:len(mtc.Packet) - 1])
+	mtx.VerifyLocked(1, "still locked after partial packet")
+
+	r.Write(mtc.Packet[len(mtc.Packet) - 1:])
+	mtx.VerifyUnlocked(1, "unlocked after complete packet")
+
+	r.Close()
+	mtx.VerifyUnlocked(1, "unlocked after the pipe is closed")
+
+	VerifyReadSingle(t, mtc, ch)
 }
 
 // TBD: only handle messages with our own address or broadcast address as the target
-// TBD: sync between R/W goroutines -- don't attempt writing while reading
 // TBD: test cases may be used for higher level API testing, too
 //      (just refer to them by name; perhaps should rename messageTestCases var)
-// TBD: make sure unrecognized messages are skipped

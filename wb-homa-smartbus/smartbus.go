@@ -49,6 +49,11 @@ func MakeSimplePacketParser(construct func() Message) PacketParser {
 
 var recognizedMessages map[uint16]PacketParser = make(map[uint16]PacketParser)
 
+type MutexLike interface {
+	Lock()
+	Unlock()
+}
+
 func RegisterMessage(construct func () Message) {
 	msg := construct()
 	msgParser, hasParser := msg.(MessageParser)
@@ -91,21 +96,30 @@ func WriteMessage(writer io.Writer, fullCmd SmartbusMessage) {
 	binary.Write(writer, binary.BigEndian, crc16(bs))
 }
 
-func ReadSync(reader io.Reader) error {
+func ReadSync(reader io.Reader, mutex MutexLike) error {
 	var b byte
-	n := 0
-	for n < 2 {
-		err := binary.Read(reader, binary.BigEndian, &b)
-		switch {
-		case err != nil:
+	for {
+		if err := binary.Read(reader, binary.BigEndian, &b); err != nil {
 			return err
-		case b == 0xaa:
-			n++
-		default:
-			log.Printf("unsync byte: %02x", b)
-			n = 0
 		}
+		if b != 0xaa {
+			log.Printf("unsync byte 0: %02x", b)
+			continue
+		}
+
+		mutex.Lock()
+		if err := binary.Read(reader, binary.BigEndian, &b); err != nil {
+			mutex.Unlock()
+			return err
+		}
+		if b == 0xaa {
+			break
+		}
+
+		log.Printf("unsync byte 1: %02x", b)
+		mutex.Unlock()
 	}
+	// the mutex is locked here
 	return nil
 }
 
@@ -128,7 +142,37 @@ func ParsePacket(packet []byte) (*SmartbusMessage, error) {
 	}
 }
 
-func ReadSmartbus(reader io.Reader, ch chan SmartbusMessage) {
+func ReadSmartbusMessage(reader io.Reader) (*SmartbusMessage, bool) {
+	var l byte
+	if err := binary.Read(reader, binary.BigEndian, &l); err != nil {
+		log.Printf("error reading packet length: %v", err)
+		return nil, false
+	}
+	if l < MIN_PACKET_SIZE {
+		log.Printf("packet too short")
+		return nil, true
+	}
+	var packet []byte = make([]byte, l)
+	packet[0] = l
+	if _, err := io.ReadFull(reader, packet[1:]); err != nil {
+		log.Printf("error reading packet body (%d bytes): %v", l, err)
+		return nil, false
+	}
+
+	crc := crc16(packet[:len(packet) - 2])
+	if crc != binary.BigEndian.Uint16(packet[len(packet) - 2:]) {
+		log.Printf("bad crc")
+		return nil, true
+	}
+
+	if msg, err := ParsePacket(packet); err != nil {
+		return nil, true
+	} else {
+		return msg, true
+	}
+}
+
+func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
 	var err error
 	defer close(ch)
 	defer func () {
@@ -141,43 +185,28 @@ func ReadSmartbus(reader io.Reader, ch chan SmartbusMessage) {
 		}
 	}()
 	for {
-		if err = ReadSync(reader); err != nil {
+		if err = ReadSync(reader, mutex); err != nil {
 			log.Printf("ReadSync error: %v", err)
-			break
-		}
-		var l byte
-		if err = binary.Read(reader, binary.BigEndian, &l); err != nil {
-			log.Printf("error reading packet length: %v", err)
-			break
-		}
-		if l < MIN_PACKET_SIZE {
-			log.Printf("packet too short")
-			continue
-		}
-		var packet []byte = make([]byte, l)
-		packet[0] = l
-		if _, err = io.ReadFull(reader, packet[1:]); err != nil {
-			log.Printf("error reading packet body (%d bytes): %v", l, err)
+			// the mutex is not locked if ReadSync failed
 			break
 		}
 
-		crc := crc16(packet[:len(packet) - 2])
-		if crc != binary.BigEndian.Uint16(packet[len(packet) - 2:]) {
-			log.Printf("bad crc")
-			continue
+		// the mutex is locked here
+		msg, cont := ReadSmartbusMessage(reader)
+		mutex.Unlock()
+		if msg != nil {
+			ch <- *msg
 		}
-
-		var msg *SmartbusMessage
-		if msg, err = ParsePacket(packet); err != nil {
-			log.Printf("error parsing packet: %v", err)
-			continue
+		if !cont {
+			break
 		}
-		ch <- *msg
 	}
 }
 
-func WriteSmartbus(writer io.Writer, ch chan SmartbusMessage) {
+func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan SmartbusMessage) {
 	for msg := range ch {
+		mutex.Lock()
 		WriteMessage(writer, msg)
+		mutex.Unlock()
 	}
 }
