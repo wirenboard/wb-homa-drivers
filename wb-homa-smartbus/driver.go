@@ -25,41 +25,52 @@ type MQTTClient interface {
 }
 
 type Model interface {
-	Name() string
-	Title() string
-	SetNewParameterHandler(handler func(name, paramType, value string))
-	SetValueHandler(handler func(name, value string))
-	SendValue(name, value string)
-	QueryParams()
+	QueryDevices()
+	Observe(observer ModelObserver)
 }
 
-type Control struct {
-	Name string
-	Type string
-	Value string
+type Device interface {
+	Name() string
+	Title() string
+	SendValue(name, value string)
+	Observe(observer DeviceObserver)
+}
+
+// TBD: Use ModelObserver interface
+
+type ModelObserver interface {
+	OnNewDevice(dev Device)
+}
+
+type DeviceObserver interface {
+	OnNewControl(dev Device, name, paramType, value string)
+	OnValue(dev Device, name, value string)
 }
 
 type ModelBase struct {
+	Observer ModelObserver
+}
+
+func (model *ModelBase) Observe(observer ModelObserver) {
+	model.Observer = observer
+}
+
+type DeviceBase struct {
 	DevName string
 	DevTitle string
-	ValueHandler func(name, value string)
-	ParameterHandler func(name, paramType, value string)
+	Observer DeviceObserver
 }
 
-func (model *ModelBase) Name() string {
-	return model.DevName
+func (dev *DeviceBase) Name() string {
+	return dev.DevName
 }
 
-func (model *ModelBase) Title() string {
-	return model.DevTitle
+func (dev *DeviceBase) Title() string {
+	return dev.DevTitle
 }
 
-func (model *ModelBase) SetNewParameterHandler(handler func(name, paramType, value string)) {
-	model.ParameterHandler = handler
-}
-
-func (model *ModelBase) SetValueHandler(handler func(name, value string)) {
-	model.ValueHandler = handler
+func (dev *DeviceBase) Observe(observer DeviceObserver) {
+	dev.Observer = observer
 }
 
 type Driver struct {
@@ -67,9 +78,8 @@ type Driver struct {
 	client MQTTClient
 	messageCh chan MQTTMessage
 	quit chan struct{}
+	deviceMap map[string]Device
 	nextOrder int
-	// controls []Control
-	// controlMap map[string]Control
 }
 
 func NewDriver(model Model, makeClient MQTTClientFactory) (drv *Driver) {
@@ -78,12 +88,10 @@ func NewDriver(model Model, makeClient MQTTClientFactory) (drv *Driver) {
 		messageCh: make(chan MQTTMessage),
 		quit: make(chan struct{}),
 		nextOrder: 1,
-		// controls: make([]Control, 0, 100),
-		// controlMap: make(map[string]Control),
+		deviceMap: make(map[string]Device),
 	}
 	drv.client = makeClient(drv.handleMessage)
-	drv.model.SetNewParameterHandler(drv.handleParameter)
-	drv.model.SetValueHandler(drv.publishValue)
+	drv.model.Observe(drv)
 	return
 }
 
@@ -91,14 +99,14 @@ func (drv *Driver) handleMessage(message MQTTMessage) {
 	drv.messageCh <- message
 }
 
-func (drv *Driver) topic(sub ...string) string {
-	parts := append(append([]string(nil), "/devices", drv.model.Name()), sub...)
+func (drv *Driver) topic(dev Device, sub ...string) string {
+	parts := append(append([]string(nil), "/devices", dev.Name()), sub...)
 	return strings.Join(parts, "/")
 }
 
-func (drv *Driver) controlTopic(controlName string, sub ...string) string {
+func (drv *Driver) controlTopic(dev Device, controlName string, sub ...string) string {
 	parts := append(append([]string(nil), "controls", controlName), sub...)
-	return drv.topic(parts...)
+	return drv.topic(dev, parts...)
 }
 
 func (drv *Driver) publish(topic, payload string, qos byte) {
@@ -109,18 +117,29 @@ func (drv *Driver) publishMeta(topic string, payload string) {
 	drv.publish(topic, payload, 1)
 }
 
-func (drv *Driver) publishValue(controlName, value string) {
-	drv.publish(drv.controlTopic(controlName), value, 1)
+func (drv *Driver) publishValue(dev Device, controlName, value string) {
+	drv.publish(drv.controlTopic(dev, controlName), value, 1)
 }
 
-func (drv *Driver) handleParameter(controlName, paramType, value string) {
-	drv.publishMeta(drv.controlTopic(controlName, "meta", "type"), paramType)
-	drv.publishMeta(drv.controlTopic(controlName, "meta", "order"), strconv.Itoa(drv.nextOrder))
-	drv.nextOrder++
-	drv.publishValue(controlName, value)
+func (drv *Driver) OnNewDevice(dev Device) {
+	drv.deviceMap[dev.Name()] = dev
+	drv.publishMeta(drv.topic(dev, "meta", "name"), dev.Title())
+	dev.Observe(drv)
+}
+
+func (drv *Driver) OnNewControl(dev Device, controlName, paramType, value string) {
+	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "type"), paramType)
+	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "order"),
+		strconv.Itoa(drv.nextOrder))
+	drv.nextOrder++ // FIXME: should start the order from 1 for each device
+	drv.publishValue(dev, controlName, value)
 	// TBD: subscribe for non-read-only controls only
-	log.Printf("subscribe to: %s", drv.controlTopic(controlName, "on"))
-	drv.client.Subscribe(drv.controlTopic(controlName, "on"))
+	log.Printf("subscribe to: %s", drv.controlTopic(dev, controlName, "on"))
+	drv.client.Subscribe(drv.controlTopic(dev, controlName, "on"))
+}
+
+func (drv *Driver) OnValue(dev Device, controlName, value string) {
+	drv.publishValue(dev, controlName, value)
 }
 
 func (drv *Driver) doHandleMessage(msg MQTTMessage) {
@@ -130,22 +149,27 @@ func (drv *Driver) doHandleMessage(msg MQTTMessage) {
 	parts := strings.Split(msg.Topic, "/")
 	if len(parts) != 6 ||
 		parts[1] != "devices" ||
-		parts[2] != drv.model.Name() ||
 		parts[3] != "controls" ||
 		parts[5] != "on" {
 		log.Printf("UNHANDLED TOPIC: %s", msg.Topic)
 		return
 	}
+
+	deviceName := parts[2]
 	controlName := parts[4]
-	drv.model.SendValue(controlName, msg.Payload)
-	drv.publishValue(controlName, msg.Payload)
+	dev, found := drv.deviceMap[deviceName]
+	if !found {
+		log.Printf("UNKNOWN DEVICE: %s", deviceName)
+		return
+	}
+	dev.SendValue(controlName, msg.Payload)
+	drv.publishValue(dev, controlName, msg.Payload)
 }
 
 func (drv *Driver) Start() {
 	go func () {
 		drv.client.Start()
-		drv.publishMeta(drv.topic("meta", "name"), drv.model.Title())
-		drv.model.QueryParams()
+		drv.model.QueryDevices()
 		for {
 			select {
 			case <- drv.quit:

@@ -6,7 +6,8 @@ import (
 
 func TestDriver(t *testing.T) {
 	broker := NewFakeMQTTBroker(t)
-	model := NewFakeModel(t, "somedev", "SomeDev", map[string]string {
+	model := NewFakeModel(t)
+	dev := model.MakeDevice("somedev", "SomeDev", map[string]string {
 		"paramOne": "switch",
 		"paramTwo": "switch",
 	})
@@ -38,10 +39,10 @@ func TestDriver(t *testing.T) {
 		"driver -> /devices/somedev/controls/paramOne: [1] (QoS 1, retained)",
 	)
 	model.Verify(
-		"send: paramOne = 1",
+		"send: somedev.paramOne = 1",
 	)
 
-	model.ReceiveValue("paramTwo", "1")
+	dev.ReceiveValue("paramTwo", "1")
 	broker.Verify(
 		"driver -> /devices/somedev/controls/paramTwo: [1] (QoS 1, retained)",
 	)
