@@ -2,6 +2,7 @@ package smartbus
 
 import (
 	"io"
+	"net"
 	"time"
 	"bytes"
 	"encoding/hex"
@@ -206,13 +207,11 @@ func VerifyReadSingle(t *testing.T, mtc MessageTestCase, ch chan SmartbusMessage
 	VerifyRead(t, mtc, *msg)
 }
 
-func VerifyWrite(t *testing.T, mtc MessageTestCase, w *bytes.Buffer, ch chan SmartbusMessage) {
-	ch <- mtc.SmartbusMessage
-
-	if !bytes.Equal(mtc.Packet, w.Bytes()) {
+func VerifyWrite(t *testing.T, mtc MessageTestCase, bs []byte) {
+	if !bytes.Equal(mtc.Packet, bs) {
 		// Tbd: hex dump
 		t.Fatalf("VerifyWrite: %s: bad packet\n EXP:\n%s ACT:\n%s\n",
-			mtc.Name, hex.Dump(mtc.Packet), hex.Dump(w.Bytes()))
+			mtc.Name, hex.Dump(mtc.Packet), hex.Dump(bs))
 	}
 }
 
@@ -235,7 +234,9 @@ func TestSingleFrame(t *testing.T) {
 
 		ch = make(chan SmartbusMessage)
 		go WriteSmartbus(w, mtx, ch)
-		VerifyWrite(t, mtc, w, ch)
+
+		ch <- mtc.SmartbusMessage
+		VerifyWrite(t, mtc, w.Bytes())
 		mtx.VerifyUnlocked(2, "unlocked after WriteSmartbus")
 		close(ch)
 	}
@@ -323,6 +324,20 @@ func TestReadLocking(t *testing.T) {
 	VerifyReadSingle(t, mtc, ch)
 }
 
+func TestSmartbusEndpoint(t *testing.T) {
+	p, r := net.Pipe() // need bidirectional pipe here
+
+	conn := NewSmartbusConnection(p)
+	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
+	dev := ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
+	dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
+
+	bs := make([]byte, len(messageTestCases[0].Packet))
+	if _, err := io.ReadFull(r, bs); err != nil {
+		t.Fatalf("failed to read the datagram")
+	}
+	VerifyWrite(t, messageTestCases[0], bs)
+	r.Close()
+}
+
 // TBD: only handle messages with our own address or broadcast address as the target
-// TBD: test cases may be used for higher level API testing, too
-//      (just refer to them by name; perhaps should rename messageTestCases var)
