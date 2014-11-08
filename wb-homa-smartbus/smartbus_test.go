@@ -364,30 +364,45 @@ func (handler *FakeHandler) Verify(messages... string) {
 	handler.messages = make([]string, 0, 1000)
 }
 
-func (handler *FakeHandler) addMessage(format string, args... interface{}) {
+func (handler *FakeHandler) addMessage(header *MessageHeader, format string, args... interface{}) {
 	handler.messages = append(
 		handler.messages,
-		fmt.Sprintf(format, args...))
+		fmt.Sprintf("%02x/%02x (type %04x) -> %02x/%02x: %s",
+			header.OrigSubnetID,
+			header.OrigDeviceID,
+			header.OrigDeviceType,
+			header.TargetSubnetID,
+			header.TargetDeviceID,
+			fmt.Sprintf(format, args...)))
 	handler.ch <- struct{}{}
 }
 
-func (handler *FakeHandler) OnSingleChannelControlCommand(msg *SingleChannelControlCommand) {
-	handler.addMessage("<SingleChannelControlCommand %v/%v/%v>",
+func (handler *FakeHandler) OnSingleChannelControlCommand(msg *SingleChannelControlCommand,
+	header *MessageHeader) {
+	handler.addMessage(
+		header,
+		"<SingleChannelControlCommand %v/%v/%v>",
 		msg.ChannelNo,
 		msg.Level,
 		msg.Duration)
 }
 
-func (handler *FakeHandler) OnSingleChannelControlResponse(msg *SingleChannelControlResponse) {
-	handler.addMessage("<SingleChannelControlResponse %v/%v/%v/%s>",
+func (handler *FakeHandler) OnSingleChannelControlResponse(msg *SingleChannelControlResponse,
+	header *MessageHeader) {
+	handler.addMessage(
+		header,
+		"<SingleChannelControlResponse %v/%v/%v/%s>",
 		msg.ChannelNo,
 		msg.Success,
 		msg.Level,
 		formatChannelStatus(msg.ChannelStatus))
 }
 
-func (handler *FakeHandler) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast) {
-	handler.addMessage("<ZoneBeastBroadcast %v/%s>",
+func (handler *FakeHandler) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast,
+	header *MessageHeader) {
+	handler.addMessage(
+		header,
+		"<ZoneBeastBroadcast %v/%s>",
 		msg.ZoneStatus,
 		formatChannelStatus(msg.ChannelStatus))
 }
@@ -422,9 +437,9 @@ func TestSmartbusEndpointReceive(t *testing.T) {
 	ep.SetHandler(handler)
 
 	r.Write(messageTestCases[0].Packet)
-	handler.Verify("<SingleChannelControlCommand 7/100/0>")
+	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
 	r.Write(messageTestCases[1].Packet)
-	handler.Verify("<SingleChannelControlResponse 7/true/0/------x-------->")
+	handler.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/0/------x-------->")
 
 	conn.Close()
 	r.Close()
@@ -446,17 +461,15 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	dev2 := ep2.GetBroadcastDevice()
 
 	dev1.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
-	handler2.Verify("<SingleChannelControlCommand 7/100/0>")
+	handler2.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
 
 	dev2.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
 		parseChannelStatus("---------------"))
- 	handler1.Verify("<SingleChannelControlResponse 7/true/100/--------------->")
+ 	handler1.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/100/--------------->")
 
 	dev2.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
-	handler1.Verify("<ZoneBeastBroadcast [0]/------x-------->")
+	handler1.Verify("01/1c (type 139c) -> ff/ff: <ZoneBeastBroadcast [0]/------x-------->")
 
 	conn1.Close()
 	conn2.Close()
 }
-
-// TBD: pass message header to the visitor

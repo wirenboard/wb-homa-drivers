@@ -105,11 +105,11 @@ func (ep *SmartbusEndpoint) maybeHandleMessage(smartbusMsg *SmartbusMessage) {
 		smartbusMsg.Header.TargetDeviceID != BROADCAST_DEVICE {
 		return
 	}
-	ep.doHandleMessage(smartbusMsg.Message)
+	ep.doHandleMessage(smartbusMsg)
 }
 
-func (ep *SmartbusEndpoint) doHandleMessage(msg interface{}) {
-	visit(ep.handler, msg, "On")
+func (ep *SmartbusEndpoint) doHandleMessage(smartbusMsg *SmartbusMessage) {
+	visit(ep.handler, smartbusMsg.Message, "On", &smartbusMsg.Header)
 }
 
 type SmartbusDevice struct {
