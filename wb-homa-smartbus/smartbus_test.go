@@ -345,36 +345,23 @@ func parseChannelStatus(statusStr string) (status []bool) {
 }
 
 type FakeHandler struct {
-	t *testing.T
-	messages []string
-	ch chan struct{}
+	Recorder
 }
 
-func NewFakeHandler (t *testing.T) *FakeHandler {
-	return &FakeHandler{t, make([]string, 0, 1000), make(chan struct{})}
-}
-
-func (handler *FakeHandler) Verify(messages... string) {
-	if messages == nil {
-		assert.Equal(handler.t, 0, len(handler.messages), "handler message count")
-	} else {
-		<- handler.ch
-		assert.Equal(handler.t, messages, handler.messages, "handler messages")
-	}
-	handler.messages = make([]string, 0, 1000)
+func NewFakeHandler (t *testing.T) (handler *FakeHandler) {
+	handler = &FakeHandler{}
+	handler.InitRecorder(t)
+	return
 }
 
 func (handler *FakeHandler) addMessage(header *MessageHeader, format string, args... interface{}) {
-	handler.messages = append(
-		handler.messages,
-		fmt.Sprintf("%02x/%02x (type %04x) -> %02x/%02x: %s",
-			header.OrigSubnetID,
-			header.OrigDeviceID,
-			header.OrigDeviceType,
-			header.TargetSubnetID,
-			header.TargetDeviceID,
-			fmt.Sprintf(format, args...)))
-	handler.ch <- struct{}{}
+	handler.Rec("%02x/%02x (type %04x) -> %02x/%02x: %s",
+		header.OrigSubnetID,
+		header.OrigDeviceID,
+		header.OrigDeviceType,
+		header.TargetSubnetID,
+		header.TargetDeviceID,
+		fmt.Sprintf(format, args...))
 }
 
 func (handler *FakeHandler) OnSingleChannelControlCommand(msg *SingleChannelControlCommand,
