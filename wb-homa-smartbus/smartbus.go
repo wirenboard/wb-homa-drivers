@@ -73,27 +73,31 @@ type SmartbusMessage struct {
 	Message interface{}
 }
 
-func WriteMessage(writer io.Writer, fullCmd SmartbusMessage) {
-	header := fullCmd.Header // make a copy because Opcode field is modified
-	msg := fullCmd.Message.(Message)
+func WriteMessageRaw(writer io.Writer, header MessageHeader, writeMsg func(writer io.Writer)) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	binary.Write(buf, binary.BigEndian, uint8(0)) // len placeholder
-	header.Opcode = msg.Opcode()
 	binary.Write(buf, binary.BigEndian, header)
-
-	msgWriter, isWriter := msg.(MessageWriter)
-	if isWriter {
-		msgWriter.Write(buf)
-	} else {
-		binary.Write(buf, binary.BigEndian, msg)
-	}
-
+	writeMsg(buf)
 	bs := buf.Bytes()
 	bs[0] = uint8(len(bs) + 2)
-
 	binary.Write(writer, binary.BigEndian, uint16(0xaaaa))
 	binary.Write(writer, binary.BigEndian, bs)
 	binary.Write(writer, binary.BigEndian, crc16(bs))
+}
+
+func WriteMessage(writer io.Writer, fullMsg SmartbusMessage) {
+	header := fullMsg.Header // make a copy because Opcode field is modified
+	msg := fullMsg.Message.(Message)
+	header.Opcode = msg.Opcode()
+
+	WriteMessageRaw(writer, header, func (writer io.Writer) {
+		msgWriter, isWriter := msg.(MessageWriter)
+		if isWriter {
+			msgWriter.Write(writer)
+		} else {
+			binary.Write(writer, binary.BigEndian, msg)
+		}
+	})
 }
 
 func ReadSync(reader io.Reader, mutex MutexLike) error {
@@ -142,7 +146,7 @@ func ParsePacket(packet []byte) (*SmartbusMessage, error) {
 	}
 }
 
-func ReadSmartbusMessage(reader io.Reader) (*SmartbusMessage, bool) {
+func ReadSmartbusPacket(reader io.Reader) ([]byte, bool) {
 	var l byte
 	if err := binary.Read(reader, binary.BigEndian, &l); err != nil {
 		log.Printf("error reading packet length: %v", err)
@@ -165,16 +169,11 @@ func ReadSmartbusMessage(reader io.Reader) (*SmartbusMessage, bool) {
 		return nil, true
 	}
 
-	if msg, err := ParsePacket(packet); err != nil {
-		return nil, true
-	} else {
-		return msg, true
-	}
+	return packet, true
 }
 
-func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
+func ReadSmartbusRaw(reader io.Reader, mutex MutexLike, packetHandler func (packet []byte)) {
 	var err error
-	defer close(ch)
 	defer func () {
 		switch {
 		case err == io.EOF || err == io.ErrUnexpectedEOF:
@@ -192,15 +191,26 @@ func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
 		}
 
 		// the mutex is locked here
-		msg, cont := ReadSmartbusMessage(reader)
+		packet, cont := ReadSmartbusPacket(reader)
 		mutex.Unlock()
-		if msg != nil {
-			ch <- *msg
+		if packet != nil {
+			packetHandler(packet)
 		}
 		if !cont {
 			break
 		}
 	}
+}
+
+func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
+	ReadSmartbusRaw(reader, mutex, func (packet[] byte) {
+		if msg, err := ParsePacket(packet); err != nil {
+			log.Printf("failed to parse smartbus packet: %s", err)
+		} else {
+			ch <- *msg
+		}
+	})
+	close(ch)
 }
 
 func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan SmartbusMessage) {
