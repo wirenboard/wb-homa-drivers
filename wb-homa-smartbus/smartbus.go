@@ -13,6 +13,11 @@ const (
 	MIN_PACKET_SIZE = 11 // excluding sync
 )
 
+const (
+	BROADCAST_SUBNET = 0xff
+	BROADCAST_DEVICE = 0xff
+)
+
 type MessageHeader struct {
 	OrigSubnetID uint8
 	OrigDeviceID uint8
@@ -90,6 +95,7 @@ func WriteMessage(writer io.Writer, fullMsg SmartbusMessage) {
 	msg := fullMsg.Message.(Message)
 	header.Opcode = msg.Opcode()
 
+	log.Printf("writeMsg: %v", fullMsg)
 	WriteMessageRaw(writer, header, func (writer io.Writer) {
 		msgWriter, isWriter := msg.(MessageWriter)
 		if isWriter {
@@ -180,7 +186,8 @@ func ReadSmartbusRaw(reader io.Reader, mutex MutexLike, packetHandler func (pack
 			log.Printf("eof reached")
 			return
 		case err != nil:
-			panic(err)
+			log.Printf("NOTE: connection error: %s", err)
+			return
 		}
 	}()
 	for {

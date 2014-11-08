@@ -3,6 +3,7 @@ package smartbus
 import (
 	"io"
 	"net"
+	"fmt"
 	"time"
 	"bytes"
 	"encoding/hex"
@@ -324,12 +325,82 @@ func TestReadLocking(t *testing.T) {
 	VerifyReadSingle(t, mtc, ch)
 }
 
-func TestSmartbusEndpoint(t *testing.T) {
-	p, r := net.Pipe() // need bidirectional pipe here
+func formatChannelStatus(status []bool) (result string) {
+	for _, s := range status {
+		if s {
+			result += "x"
+		} else {
+			result += "-"
+		}
+	}
+	return
+}
 
+func parseChannelStatus(statusStr string) (status []bool) {
+	status = make([]bool, len(statusStr))
+	for i, c := range statusStr {
+		status[i] = c == 'x'
+	}
+	return
+}
+
+type FakeHandler struct {
+	t *testing.T
+	messages []string
+	ch chan struct{}
+}
+
+func NewFakeHandler (t *testing.T) *FakeHandler {
+	return &FakeHandler{t, make([]string, 0, 1000), make(chan struct{})}
+}
+
+func (handler *FakeHandler) Verify(messages... string) {
+	if messages == nil {
+		assert.Equal(handler.t, 0, len(handler.messages), "handler message count")
+	} else {
+		<- handler.ch
+		assert.Equal(handler.t, messages, handler.messages, "handler messages")
+	}
+	handler.messages = make([]string, 0, 1000)
+}
+
+func (handler *FakeHandler) addMessage(format string, args... interface{}) {
+	handler.messages = append(
+		handler.messages,
+		fmt.Sprintf(format, args...))
+	handler.ch <- struct{}{}
+}
+
+func (handler *FakeHandler) OnSingleChannelControlCommand(msg *SingleChannelControlCommand) {
+	handler.addMessage("<SingleChannelControlCommand %v/%v/%v>",
+		msg.ChannelNo,
+		msg.Level,
+		msg.Duration)
+}
+
+func (handler *FakeHandler) OnSingleChannelControlResponse(msg *SingleChannelControlResponse) {
+	handler.addMessage("<SingleChannelControlResponse %v/%v/%v/%s>",
+		msg.ChannelNo,
+		msg.Success,
+		msg.Level,
+		formatChannelStatus(msg.ChannelStatus))
+}
+
+func (handler *FakeHandler) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast) {
+	handler.addMessage("<ZoneBeastBroadcast %v/%s>",
+		msg.ZoneStatus,
+		formatChannelStatus(msg.ChannelStatus))
+}
+
+func TestSmartbusEndpointSend(t *testing.T) {
+	p, r := net.Pipe() // we need bidirectional pipe here
+
+	handler := NewFakeHandler(t)
 	conn := NewSmartbusConnection(p)
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
+	ep.SetHandler(handler)
 	dev := ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
+
 	dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
 
 	bs := make([]byte, len(messageTestCases[0].Packet))
@@ -337,7 +408,55 @@ func TestSmartbusEndpoint(t *testing.T) {
 		t.Fatalf("failed to read the datagram")
 	}
 	VerifyWrite(t, messageTestCases[0], bs)
+	handler.Verify()
+
+	conn.Close()
 	r.Close()
 }
 
-// TBD: only handle messages with our own address or broadcast address as the target
+func TestSmartbusEndpointReceive(t *testing.T) {
+	p, r := net.Pipe()
+	handler := NewFakeHandler(t)
+	conn := NewSmartbusConnection(p)
+	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
+	ep.SetHandler(handler)
+
+	r.Write(messageTestCases[0].Packet)
+	handler.Verify("<SingleChannelControlCommand 7/100/0>")
+	r.Write(messageTestCases[1].Packet)
+	handler.Verify("<SingleChannelControlResponse 7/true/0/------x-------->")
+
+	conn.Close()
+	r.Close()
+}
+
+func TestSmartbusEndpointSendReceive(t *testing.T) {
+	p, r := net.Pipe()
+
+	handler1 := NewFakeHandler(t)
+	conn1 := NewSmartbusConnection(p)
+	ep1 := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
+	ep1.SetHandler(handler1)
+	dev1 := ep1.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
+
+	handler2 := NewFakeHandler(t)
+	conn2 := NewSmartbusConnection(r)
+	ep2 := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
+	ep2.SetHandler(handler2)
+	dev2 := ep2.GetBroadcastDevice()
+
+	dev1.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
+	handler2.Verify("<SingleChannelControlCommand 7/100/0>")
+
+	dev2.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
+		parseChannelStatus("---------------"))
+ 	handler1.Verify("<SingleChannelControlResponse 7/true/100/--------------->")
+
+	dev2.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
+	handler1.Verify("<ZoneBeastBroadcast [0]/------x-------->")
+
+	conn1.Close()
+	conn2.Close()
+}
+
+// TBD: pass message header to the visitor

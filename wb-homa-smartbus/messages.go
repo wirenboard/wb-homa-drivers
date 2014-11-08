@@ -7,6 +7,11 @@ import (
 	"fmt"
 )
 
+const (
+	LIGHT_LEVEL_OFF = 0
+	LIGHT_LEVEL_ON = 100
+)
+
 // ------
 
 // SingleChannelControlCommand toggles single relay output
