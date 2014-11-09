@@ -57,7 +57,7 @@ func (model *SmartbusModel) ensureDevice(header *MessageHeader) *SmartbusModelDe
 	if found {
 		return dev
 	}
-	
+
 	dev = &SmartbusModelDevice{}
 	dev.DevName = name
 	dev.DevTitle = title
@@ -67,6 +67,19 @@ func (model *SmartbusModel) ensureDevice(header *MessageHeader) *SmartbusModelDe
 	model.Observer.OnNewDevice(dev)
 
 	return dev
+}
+
+func (model *SmartbusModel) OnSingleChannelControlResponse(msg *SingleChannelControlResponse,
+	header *MessageHeader) {
+	if !msg.Success {
+		log.Printf("ERROR: unsuccessful SingleChannelControlCommand")
+		return
+	}
+
+	dev := model.ensureDevice(header)
+	if dev != nil {
+		dev.updateSingleChannel(int(msg.ChannelNo - 1), msg.Level != 0)
+	}
 }
 
 func (model *SmartbusModel) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast, header *MessageHeader) {
@@ -82,6 +95,24 @@ type SmartbusModelDevice struct {
 	channelStatus []bool
 }
 
+func (dev *SmartbusModelDevice) updateSingleChannel(n int, isOn bool) {
+	if n >= len(dev.channelStatus) {
+		log.Printf("SmartbusModelDevice.updateSingleChannel(): bad channel number: %d", n)
+		return
+	}
+
+	if dev.channelStatus[n] == isOn {
+		return
+	}
+
+	dev.channelStatus[n] = isOn
+	v := "0"
+	if isOn {
+		v = "1"
+	}
+	dev.Observer.OnValue(dev, fmt.Sprintf("Channel %d", n + 1), v)
+}
+
 func (dev *SmartbusModelDevice) updateChannelStatus(channelStatus []bool) {
 	updateCount := len(dev.channelStatus)
 	if updateCount > len(channelStatus) {
@@ -89,15 +120,7 @@ func (dev *SmartbusModelDevice) updateChannelStatus(channelStatus []bool) {
 	}
 
 	for i := 0; i < updateCount; i++ {
-		if dev.channelStatus[i] == channelStatus[i] {
-			continue
-		}
-		v := "0"
-		dev.channelStatus[i] = channelStatus[i]
-		if dev.channelStatus[i] {
-			v = "1"
-		}
-		dev.Observer.OnValue(dev, fmt.Sprintf("Channel %d", i + 1), v)
+		dev.updateSingleChannel(i, channelStatus[i])
 	}
 
 	for i := updateCount; i < len(channelStatus); i++ {
@@ -111,7 +134,7 @@ func (dev *SmartbusModelDevice) updateChannelStatus(channelStatus []bool) {
 	}
 }
 
-func (dev *SmartbusModelDevice) SendValue(name, value string) {
+func (dev *SmartbusModelDevice) SendValue(name, value string) bool {
 	channelNo, err := strconv.Atoi(strings.TrimPrefix(name, "Channel "))
 	if err != nil {
 		log.Printf("bad channel name: %s", name)
@@ -121,4 +144,7 @@ func (dev *SmartbusModelDevice) SendValue(name, value string) {
 		level = LIGHT_LEVEL_ON
 	}
 	dev.smartDev.SingleChannelControl(uint8(channelNo), level, 0)
+	// No need to echo the value back.
+	// It will be echoed after the device response
+	return false
 }

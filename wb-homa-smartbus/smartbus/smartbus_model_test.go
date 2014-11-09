@@ -22,7 +22,7 @@ func TestSmartbusDriver(t *testing.T) {
 	conn := NewSmartbusConnection(r)
 	ep := conn.MakeSmartbusEndpoint(
 		SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
-	ep.SetHandler(handler)
+	ep.Observe(handler)
 	dev := ep.GetBroadcastDevice()
 
 	driver.Start()
@@ -59,18 +59,21 @@ func TestSmartbusDriver(t *testing.T) {
 	)
 
 	client.Publish(MQTTMessage{"/devices/zonebeast011c/controls/Channel 2/on", "1", 1, false})
+	// note that SingleChannelControlResponse carries pre-command channel status
+	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 2/100/0>")
+	dev.SingleChannelControlResponse(2, true, LIGHT_LEVEL_ON, parseChannelStatus("x---"))
 	broker.Verify(
 		"tst -> /devices/zonebeast011c/controls/Channel 2/on: [1] (QoS 1)",
 		"driver -> /devices/zonebeast011c/controls/Channel 2: [1] (QoS 1, retained)",
 	)
-	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 2/100/0>")
 
 	client.Publish(MQTTMessage{"/devices/zonebeast011c/controls/Channel 1/on", "0", 1, false})
+	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 1/0/0>")
+	dev.SingleChannelControlResponse(1, true, LIGHT_LEVEL_OFF, parseChannelStatus("xx--"))
 	broker.Verify(
 		"tst -> /devices/zonebeast011c/controls/Channel 1/on: [0] (QoS 1)",
 		"driver -> /devices/zonebeast011c/controls/Channel 1: [0] (QoS 1, retained)",
 	)
-	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 1/0/0>")
 
 	// TBD: off (ch 1)
 
@@ -81,4 +84,4 @@ func TestSmartbusDriver(t *testing.T) {
 	)
 }
 
-// TBD: handle SingleChannelControlResponse status values
+// TBD: outdated ZoneBeastBroadcast messages still arrive sometimes, need to fix this

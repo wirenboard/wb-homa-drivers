@@ -32,7 +32,9 @@ type Model interface {
 type Device interface {
 	Name() string
 	Title() string
-	SendValue(name, value string)
+	// SendValue sends the specified control value to the target device
+	// and returns true if the value should be automatically echoed back
+	SendValue(name, value string) bool
 	Observe(observer DeviceObserver)
 }
 
@@ -162,8 +164,9 @@ func (drv *Driver) doHandleMessage(msg MQTTMessage) {
 		log.Printf("UNKNOWN DEVICE: %s", deviceName)
 		return
 	}
-	dev.SendValue(controlName, msg.Payload)
-	drv.publishValue(dev, controlName, msg.Payload)
+	if (dev.SendValue(controlName, msg.Payload)) {
+		drv.publishValue(dev, controlName, msg.Payload)
+	}
 }
 
 func (drv *Driver) Start() {

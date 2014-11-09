@@ -47,13 +47,14 @@ func (model *FakeModel) MakeDevice(name string, title string,
 	return
 }
 
-func (dev *FakeDevice) SendValue(name, value string) {
+func (dev *FakeDevice) SendValue(name, value string) bool {
 	if _, found := dev.paramTypes[name]; !found {
 		dev.model.T().Fatalf("trying to send unknown param %s (value %s)",
 			name, value)
 	}
 	dev.paramValues[name] = value
 	dev.model.Rec("send: %s.%s = %s", dev.DevName, name, value)
+	return true
 }
 
 func (dev *FakeDevice) QueryParams() {
