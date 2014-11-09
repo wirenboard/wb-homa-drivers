@@ -180,6 +180,16 @@ func (mutex *FakeMutex) VerifyUnlocked(count int, msg... interface{}) {
 	assert.Equal(mutex.t, count, mutex.lockCount, msg...)
 }
 
+func (mutex *FakeMutex) WaitForUnlock() {
+	for i := 0; i < 50; i++ {
+		if (!mutex.locked) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	mutex.t.Fatalf("timed out waiting for the fake mutex to be unlocked")
+}
+
 func VerifyRead(t *testing.T, mtc MessageTestCase, msg SmartbusMessage) {
 	if msg.Header.Opcode != mtc.Opcode {
 		t.Fatalf("VerifyRead: %s: bad opcode in decoded frame: %04x instead of %04x",
@@ -219,7 +229,6 @@ func VerifyWrite(t *testing.T, mtc MessageTestCase, bs []byte) {
 func TestSingleFrame(t *testing.T) {
 	for _, mtc := range messageTestCases {
 		p, r := io.Pipe()
-		w := bytes.NewBuffer(make([]uint8, 0, 128))
 
 		ch := make(chan SmartbusMessage)
 		mtx := NewFakeMutex(t)
@@ -233,11 +242,16 @@ func TestSingleFrame(t *testing.T) {
 		VerifyReadSingle(t, mtc, ch)
 		mtx.VerifyUnlocked(1, "unlocked after ReadSmartbus")
 
+		p, r = io.Pipe()
 		ch = make(chan SmartbusMessage)
-		go WriteSmartbus(w, mtx, ch)
-
+		go WriteSmartbus(r, mtx, ch)
 		ch <- mtc.SmartbusMessage
-		VerifyWrite(t, mtc, w.Bytes())
+		bs := make([]byte, len(mtc.Packet))
+		if _, err := io.ReadFull(p, bs); err != nil {
+			t.Fatalf("failed to read the datagram")
+		}
+		VerifyWrite(t, mtc, bs)
+		mtx.WaitForUnlock()
 		mtx.VerifyUnlocked(2, "unlocked after WriteSmartbus")
 		close(ch)
 	}
