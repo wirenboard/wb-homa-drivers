@@ -38,7 +38,8 @@ func NewSmartbusModel(stream io.ReadWriteCloser, subnetID uint8,
 	model = &SmartbusModel{ deviceMap: make(map[string]*SmartbusModelDevice) }
 	conn := NewSmartbusConnection(stream)
 	model.ep = conn.MakeSmartbusEndpoint(subnetID, deviceID, deviceType)
-	model.ep.SetHandler(model)
+	model.ep.Observe(model)
+	model.ep.Observe(NewMessageDumper())
 	return
 }
 

@@ -3,7 +3,6 @@ package smartbus
 import (
 	"io"
 	"net"
-	"fmt"
 	"time"
 	"bytes"
 	"encoding/hex"
@@ -339,17 +338,6 @@ func TestReadLocking(t *testing.T) {
 	VerifyReadSingle(t, mtc, ch)
 }
 
-func formatChannelStatus(status []bool) (result string) {
-	for _, s := range status {
-		if s {
-			result += "x"
-		} else {
-			result += "-"
-		}
-	}
-	return
-}
-
 func parseChannelStatus(statusStr string) (status []bool) {
 	status = make([]bool, len(statusStr))
 	for i, c := range statusStr {
@@ -360,52 +348,16 @@ func parseChannelStatus(statusStr string) (status []bool) {
 
 type FakeHandler struct {
 	Recorder
+	MessageFormatter
 }
 
 func NewFakeHandler (t *testing.T) (handler *FakeHandler) {
 	handler = &FakeHandler{}
 	handler.InitRecorder(t)
+	handler.AddMessage = func (format string, args... interface{}) {
+		handler.Rec(format, args...)
+	}
 	return
-}
-
-func (handler *FakeHandler) addMessage(header *MessageHeader, format string, args... interface{}) {
-	handler.Rec("%02x/%02x (type %04x) -> %02x/%02x: %s",
-		header.OrigSubnetID,
-		header.OrigDeviceID,
-		header.OrigDeviceType,
-		header.TargetSubnetID,
-		header.TargetDeviceID,
-		fmt.Sprintf(format, args...))
-}
-
-func (handler *FakeHandler) OnSingleChannelControlCommand(msg *SingleChannelControlCommand,
-	header *MessageHeader) {
-	handler.addMessage(
-		header,
-		"<SingleChannelControlCommand %v/%v/%v>",
-		msg.ChannelNo,
-		msg.Level,
-		msg.Duration)
-}
-
-func (handler *FakeHandler) OnSingleChannelControlResponse(msg *SingleChannelControlResponse,
-	header *MessageHeader) {
-	handler.addMessage(
-		header,
-		"<SingleChannelControlResponse %v/%v/%v/%s>",
-		msg.ChannelNo,
-		msg.Success,
-		msg.Level,
-		formatChannelStatus(msg.ChannelStatus))
-}
-
-func (handler *FakeHandler) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast,
-	header *MessageHeader) {
-	handler.addMessage(
-		header,
-		"<ZoneBeastBroadcast %v/%s>",
-		msg.ZoneStatus,
-		formatChannelStatus(msg.ChannelStatus))
 }
 
 func TestSmartbusEndpointSend(t *testing.T) {
@@ -414,7 +366,7 @@ func TestSmartbusEndpointSend(t *testing.T) {
 	handler := NewFakeHandler(t)
 	conn := NewSmartbusConnection(p)
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
-	ep.SetHandler(handler)
+	ep.Observe(handler)
 	dev := ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
 
 	dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
@@ -435,7 +387,7 @@ func TestSmartbusEndpointReceive(t *testing.T) {
 	handler := NewFakeHandler(t)
 	conn := NewSmartbusConnection(p)
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
-	ep.SetHandler(handler)
+	ep.Observe(handler)
 
 	r.Write(messageTestCases[0].Packet)
 	handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
@@ -452,13 +404,13 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	handler1 := NewFakeHandler(t)
 	conn1 := NewSmartbusConnection(p)
 	ep1 := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
-	ep1.SetHandler(handler1)
+	ep1.Observe(handler1)
 	dev1 := ep1.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
 
 	handler2 := NewFakeHandler(t)
 	conn2 := NewSmartbusConnection(r)
 	ep2 := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
-	ep2.SetHandler(handler2)
+	ep2.Observe(handler2)
 	dev2 := ep2.GetBroadcastDevice()
 
 	dev1.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)

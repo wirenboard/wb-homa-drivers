@@ -48,7 +48,7 @@ func (conn *SmartbusConnection) MakeSmartbusEndpoint(subnetID uint8,
 		deviceID,
 		deviceType,
 		make(map[uint16]*SmartbusDevice),
-		struct{}{},
+		make([]interface{}, 0, 16),
 	}
 	conn.endpoints = append(conn.endpoints, ep)
 	return ep
@@ -65,7 +65,7 @@ type SmartbusEndpoint struct {
 	DeviceID uint8
 	DeviceType uint16
 	deviceMap map[uint16]*SmartbusDevice
-	handler interface{}
+	observers []interface{}
 }
 
 func deviceKey(subnetID uint8, deviceID uint8) uint16 {
@@ -92,8 +92,8 @@ func (ep *SmartbusEndpoint) Send(msg SmartbusMessage) {
 	ep.Connection.Send(msg)
 }
 
-func (ep *SmartbusEndpoint) SetHandler(handler interface{}) {
-	ep.handler = handler
+func (ep *SmartbusEndpoint) Observe(observer interface{}) {
+	ep.observers = append(ep.observers, observer)
 }
 
 func (ep *SmartbusEndpoint) maybeHandleMessage(smartbusMsg *SmartbusMessage) {
@@ -109,7 +109,9 @@ func (ep *SmartbusEndpoint) maybeHandleMessage(smartbusMsg *SmartbusMessage) {
 }
 
 func (ep *SmartbusEndpoint) doHandleMessage(smartbusMsg *SmartbusMessage) {
-	visit(ep.handler, smartbusMsg.Message, "On", &smartbusMsg.Header)
+	for _, observer := range ep.observers {
+		visit(observer, smartbusMsg.Message, "On", &smartbusMsg.Header)
+	}
 }
 
 type SmartbusDevice struct {
