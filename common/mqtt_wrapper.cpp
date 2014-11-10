@@ -13,24 +13,43 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::steady_clock;
 
-int TMQTTWrapper::Publish(int *mid, const string& topic, const string& payload, int qos, bool retain) {
-    return publish(mid, topic.c_str(), payload.size(), payload.c_str(), qos, retain);
-}
+IMQTTObserver::~IMQTTObserver() {}
 
-int TMQTTWrapper::Subscribe(int *mid, const string& sub, int qos) {
-    return subscribe(mid, sub.c_str(), qos);
-}
+TMQTTClientBase::~TMQTTClientBase() {}
 
-TMQTTWrapper::TMQTTWrapper(const TConfig& config)
+TMQTTClient::TMQTTClient(const TConfig& config)
     : mosquittopp(config.Id.empty() ? NULL : config.Id.c_str())
     , MQTTConfig(config)
 {
-};
+}
 
+void TMQTTClient::on_connect(int rc)
+{
+    for (auto observer: GetObservers())
+        observer->OnConnect(rc);
+}
 
+void TMQTTClient::on_message(const struct mosquitto_message *message)
+{
+    for (auto observer: GetObservers())
+        observer->OnMessage(message);
+}
 
+void TMQTTClient::on_subscribe(int mid, int qos_count, const int *granted_qos)
+{
+    for (auto observer: GetObservers())
+        observer->OnSubscribe(mid, qos_count, granted_qos);
+}
 
-int TMQTTWrapper::LoopFor(int duration, int timeout)
+int TMQTTClient::Publish(int *mid, const string& topic, const string& payload, int qos, bool retain) {
+    return publish(mid, topic.c_str(), payload.size(), payload.c_str(), qos, retain);
+}
+
+int TMQTTClient::Subscribe(int *mid, const string& sub, int qos) {
+    return subscribe(mid, sub.c_str(), qos);
+}
+
+int TMQTTClient::LoopFor(int duration, int timeout)
 {
     steady_clock::time_point start = steady_clock::now();
     int cur_duration;
@@ -48,8 +67,10 @@ int TMQTTWrapper::LoopFor(int duration, int timeout)
 			this->reconnect();
         }
 	}
-
-
-
 }
 
+TMQTTWrapper::TMQTTWrapper(const TConfig& config)
+    : TMQTTClient(config)
+{
+    Observe(shared_from_this());
+}

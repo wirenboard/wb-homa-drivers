@@ -17,19 +17,24 @@ GPIO_BIN=wb-homa-gpio
 MODBUS_DIR=wb-homa-modbus
 MODBUS_BIN=wb-homa-modbus
 MODBUS_LIBS=-lmodbus
+MODBUS_OBJS=$(MODBUS_DIR)/modbus_client.o \
+  $(MODBUS_DIR)/modbus_config.o $(MODBUS_DIR)/modbus_port.o \
+  $(MODBUS_DIR)/modbus_observer.o
 W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
 ADC_DIR=wb-homa-adc
 ADC_BIN=wb-homa-adc
+TEST_LIBS=-lgtest -lpthread
 
 NINJABRIDGE_DIR=wb-homa-ninja-bridge
 NINJABRIDGE_BIN=wb-homa-ninja-bridge
-
+TEST_DIR=test
+TEST_BIN=wb-homa-test
 
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean
+.PHONY: all clean test
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
@@ -57,7 +62,16 @@ $(MODBUS_DIR)/main.o : $(MODBUS_DIR)/main.cpp $(COMMON_H)
 $(MODBUS_DIR)/modbus_client.o : $(MODBUS_DIR)/modbus_client.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_DIR)/modbus_client.o $(COMMON_O)
+$(MODBUS_DIR)/modbus_config.o : $(MODBUS_DIR)/modbus_config.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/modbus_port.o : $(MODBUS_DIR)/modbus_port.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/modbus_observer.o : $(MODBUS_DIR)/modbus_observer.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_OBJS) $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@ $(MODBUS_LIBS)
 
 # W1
@@ -104,7 +118,32 @@ $(NINJABRIDGE_DIR)/local_connection.o : $(NINJABRIDGE_DIR)/local_connection.cpp 
 $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o  $(NINJABRIDGE_DIR)/http_helper.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} ${NINJABRIDGE_LDFLAGS} -o $@
 
+$(TEST_DIR)/testlog.o: $(TEST_DIR)/testlog.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
 
+$(TEST_DIR)/modbus_test.o: $(TEST_DIR)/modbus_test.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(TEST_DIR)/fake_modbus.o: $(TEST_DIR)/fake_modbus.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(TEST_DIR)/fake_mqtt.o: $(TEST_DIR)/fake_mqtt.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(TEST_DIR)/main.o: $(TEST_DIR)/main.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
+  $(TEST_DIR)/testlog.o $(TEST_DIR)/modbus_test.o $(TEST_DIR)/fake_modbus.o \
+  $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
+	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
+
+test: $(TEST_DIR)/$(TEST_BIN)
+	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
+          if [ $$? = 180 ]; then \
+            echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
+            exit 1; \
+          else $(TEST_DIR)/abt.sh show; exit 1; fi
 
 clean :
 	-rm -f $(COMMON_DIR)/*.o
@@ -113,6 +152,7 @@ clean :
 	-rm -f $(W1_DIR)/*.o $(W1_DIR)/$(W1_BIN)
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
 
 
 
