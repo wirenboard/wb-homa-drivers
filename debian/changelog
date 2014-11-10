@@ -1,3 +1,9 @@
+wb-homa-drivers (1.5) stable; urgency=medium
+
+  * Add different config files for each board (default, wbsh3 and mka3)
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 24 Oct 2014 16:31:42 +0400
+
 wb-homa-drivers (1.4) stable; urgency=medium
 
   * Split wb-homa-drivers to multiple packages 
