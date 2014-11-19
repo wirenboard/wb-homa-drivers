@@ -80,14 +80,16 @@ type SmartbusMessage struct {
 
 func WriteMessageRaw(writer io.Writer, header MessageHeader, writeMsg func(writer io.Writer)) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
+	binary.Write(buf, binary.BigEndian, uint16(0xaaaa)) // signature
 	binary.Write(buf, binary.BigEndian, uint8(0)) // len placeholder
 	binary.Write(buf, binary.BigEndian, header)
 	writeMsg(buf)
 	bs := buf.Bytes()
-	bs[0] = uint8(len(bs) + 2)
-	binary.Write(writer, binary.BigEndian, uint16(0xaaaa))
-	binary.Write(writer, binary.BigEndian, bs)
-	binary.Write(writer, binary.BigEndian, crc16(bs))
+	bs[2] = uint8(len(bs)) // minus 2 bytes of signature, but plus 2 bytes of crc
+	binary.Write(buf, binary.BigEndian, crc16(bs[2:]))
+	log.Printf("SEND:\n%s", hex.Dump(buf.Bytes()))
+	// writing the buffer in parts may cause missed packets
+	writer.Write(buf.Bytes())
 }
 
 func WriteMessage(writer io.Writer, fullMsg SmartbusMessage) {
@@ -95,7 +97,6 @@ func WriteMessage(writer io.Writer, fullMsg SmartbusMessage) {
 	msg := fullMsg.Message.(Message)
 	header.Opcode = msg.Opcode()
 
-	log.Printf("writeMsg: %v", fullMsg)
 	WriteMessageRaw(writer, header, func (writer io.Writer) {
 		msgWriter, isWriter := msg.(MessageWriter)
 		if isWriter {
