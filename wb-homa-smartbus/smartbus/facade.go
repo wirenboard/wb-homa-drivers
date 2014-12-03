@@ -29,11 +29,9 @@ func connect(serialAddress string) (io.ReadWriteCloser, error) {
 }
 
 func NewSmartbusTCPDriver(serialAddress, brokerAddress string) (*Driver, error) {
-	conn, err := connect(serialAddress)
-	if err != nil {
-		return nil, err
-	}
-	model := NewSmartbusModel(conn, DRIVER_SUBNET, DRIVER_DEVICE_ID, DRIVER_DEVICE_TYPE)
+	model := NewSmartbusModel(func () (io.ReadWriteCloser, error) {
+		return connect(serialAddress)
+	}, DRIVER_SUBNET, DRIVER_DEVICE_ID, DRIVER_DEVICE_TYPE)
 	driver := NewDriver(model, func (handler MQTTMessageHandler) MQTTClient {
 		return NewPahoMQTTClient(brokerAddress, DRIVER_CLIENT_ID, handler)
 	})

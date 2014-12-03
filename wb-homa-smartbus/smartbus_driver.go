@@ -13,7 +13,9 @@ func main () {
 	if driver, err := smartbus.NewSmartbusTCPDriver(*serial, *broker); err != nil {
 		panic(err)
 	} else {
-		driver.Start()
+		if err := driver.Start(); err != nil {
+			panic(err)
+		}
 		for {
 			time.Sleep(1 * time.Second)
 		}

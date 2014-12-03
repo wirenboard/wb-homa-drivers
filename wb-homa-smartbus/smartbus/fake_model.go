@@ -23,11 +23,12 @@ func NewFakeModel(t *testing.T) (model *FakeModel) {
 	return
 }
 
-func (model *FakeModel) QueryDevices() {
+func (model *FakeModel) Start() error {
 	for _, dev := range model.devices {
 		model.Observer.OnNewDevice(dev)
 		dev.QueryParams()
 	}
+	return nil
 }
 
 func (model *FakeModel) MakeDevice(name string, title string,

@@ -25,7 +25,7 @@ type MQTTClient interface {
 }
 
 type Model interface {
-	QueryDevices()
+	Start() error
 	Observe(observer ModelObserver)
 }
 
@@ -169,10 +169,12 @@ func (drv *Driver) doHandleMessage(msg MQTTMessage) {
 	}
 }
 
-func (drv *Driver) Start() {
+func (drv *Driver) Start() error {
+	drv.client.Start()
+	if err := drv.model.Start(); err != nil {
+		return err
+	}
 	go func () {
-		drv.client.Start()
-		drv.model.QueryDevices()
 		for {
 			select {
 			case <- drv.quit:
@@ -184,6 +186,7 @@ func (drv *Driver) Start() {
 			}
 		}
 	}()
+	return nil
 }
 
 func (drv *Driver) Stop() {

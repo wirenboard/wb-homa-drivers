@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+type Connector func() (io.ReadWriteCloser, error)
+
 type SmartbusDeviceItem struct {
 	Name, Title string
 }
@@ -29,22 +31,36 @@ func smartbusNameFromHeader(header *MessageHeader) (string, string, bool) {
 
 type SmartbusModel struct {
 	ModelBase
+	connector Connector
 	deviceMap map[string]*SmartbusModelDevice
+	subnetID uint8
+	deviceID uint8
+	deviceType uint16
 	ep *SmartbusEndpoint
 }
 
-func NewSmartbusModel(stream io.ReadWriteCloser, subnetID uint8,
+func NewSmartbusModel(connector Connector, subnetID uint8,
 	deviceID uint8, deviceType uint16) (model *SmartbusModel) {
-	model = &SmartbusModel{ deviceMap: make(map[string]*SmartbusModelDevice) }
-	conn := NewSmartbusConnection(stream)
-	model.ep = conn.MakeSmartbusEndpoint(subnetID, deviceID, deviceType)
-	model.ep.Observe(model)
-	model.ep.Observe(NewMessageDumper())
+	model = &SmartbusModel{
+		connector: connector,
+		subnetID: subnetID,
+		deviceID: deviceID,
+		deviceType: deviceType,
+		deviceMap: make(map[string]*SmartbusModelDevice),
+	}
 	return
 }
 
-func (model *SmartbusModel) QueryDevices() {
-	// NOOP
+func (model *SmartbusModel) Start() error {
+	stream, err := model.connector()
+	if err != nil {
+		return err
+	}
+	conn := NewSmartbusConnection(stream)
+	model.ep = conn.MakeSmartbusEndpoint(model.subnetID, model.deviceID, model.deviceType)
+	model.ep.Observe(model)
+	model.ep.Observe(NewMessageDumper())
+	return err
 }
 
 func (model *SmartbusModel) ensureDevice(header *MessageHeader) *SmartbusModelDevice {
