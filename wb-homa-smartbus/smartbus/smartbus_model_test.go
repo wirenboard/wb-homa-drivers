@@ -1,7 +1,6 @@
 package smartbus
 
 import (
-	"io"
 	"net"
 	"testing"
 )
@@ -10,8 +9,8 @@ func TestSmartbusDriver(t *testing.T) {
 	p, r := net.Pipe()
 
 	broker := NewFakeMQTTBroker(t)
-	model := NewSmartbusModel(func () (io.ReadWriteCloser, error) {
-		return p, nil
+	model := NewSmartbusModel(func () (SmartbusIO, error) {
+		return NewStreamIO(p), nil
 	}, SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
 	client := broker.MakeClient("tst", func (msg MQTTMessage) {
 		t.Logf("tst: message %v", msg)
@@ -22,7 +21,7 @@ func TestSmartbusDriver(t *testing.T) {
 	})
 
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(r)
+	conn := NewSmartbusConnection(NewStreamIO(r))
 	ep := conn.MakeSmartbusEndpoint(
 		SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
 	ep.Observe(handler)

@@ -2,6 +2,7 @@ package smartbus
 
 import (
 	"io"
+	"sync"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
@@ -227,4 +228,40 @@ func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan SmartbusMessage) {
 		WriteMessage(writer, msg)
 		mutex.Unlock()
 	}
+}
+
+type SmartbusIO interface {
+	Start() chan SmartbusMessage
+	Send(msg SmartbusMessage)
+	Stop()
+}
+
+type SmartbusStreamIO struct {
+	stream io.ReadWriteCloser
+	readCh chan SmartbusMessage
+	writeCh chan SmartbusMessage
+	mutex sync.Mutex
+}
+
+func NewStreamIO(stream io.ReadWriteCloser) *SmartbusStreamIO {
+	return &SmartbusStreamIO{
+		stream: stream,
+		readCh: make(chan SmartbusMessage),
+		writeCh: make(chan SmartbusMessage),
+	}
+}
+
+func (streamIO *SmartbusStreamIO) Start() chan SmartbusMessage {
+	go ReadSmartbus(streamIO.stream, &streamIO.mutex, streamIO.readCh)
+	go WriteSmartbus(streamIO.stream, &streamIO.mutex, streamIO.writeCh)
+	return streamIO.readCh
+}
+
+func (streamIO *SmartbusStreamIO) Send(msg SmartbusMessage) {
+	streamIO.writeCh <- msg
+}
+
+func (streamIO *SmartbusStreamIO) Stop() {
+	close(streamIO.writeCh) // this kills WriteSmartbus goroutine
+	streamIO.stream.Close() // this kills ReadSmartbus goroutine by causing read error
 }

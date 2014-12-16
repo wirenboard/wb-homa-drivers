@@ -364,7 +364,7 @@ func TestSmartbusEndpointSend(t *testing.T) {
 	p, r := net.Pipe() // we need bidirectional pipe here
 
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(p)
+	conn := NewSmartbusConnection(NewStreamIO(p))
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
 	ep.Observe(handler)
 	dev := ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
@@ -385,7 +385,7 @@ func TestSmartbusEndpointSend(t *testing.T) {
 func TestSmartbusEndpointReceive(t *testing.T) {
 	p, r := net.Pipe()
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(p)
+	conn := NewSmartbusConnection(NewStreamIO(p))
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
 	ep.Observe(handler)
 
@@ -402,13 +402,13 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	p, r := net.Pipe()
 
 	handler1 := NewFakeHandler(t)
-	conn1 := NewSmartbusConnection(p)
+	conn1 := NewSmartbusConnection(NewStreamIO(p))
 	ep1 := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_ORIG_DEVICE_ID, SAMPLE_ORIG_DEVICE_TYPE)
 	ep1.Observe(handler1)
 	dev1 := ep1.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID)
 
 	handler2 := NewFakeHandler(t)
-	conn2 := NewSmartbusConnection(r)
+	conn2 := NewSmartbusConnection(NewStreamIO(r))
 	ep2 := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_TARGET_DEVICE_ID, SAMPLE_TARGET_DEVICE_TYPE)
 	ep2.Observe(handler2)
 	dev2 := ep2.GetBroadcastDevice()

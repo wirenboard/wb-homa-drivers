@@ -1,23 +1,13 @@
 package smartbus
 
-import (
-	"io"
-	"sync"
-)
-
 type SmartbusConnection struct {
-	stream io.ReadWriteCloser
-	mutex sync.Mutex
-	readCh chan SmartbusMessage
-	writeCh chan SmartbusMessage
+	smartbusIO SmartbusIO
 	endpoints []*SmartbusEndpoint
 }
 
-func NewSmartbusConnection(stream io.ReadWriteCloser) *SmartbusConnection {
+func NewSmartbusConnection(smartbusIO SmartbusIO) *SmartbusConnection {
 	conn := &SmartbusConnection{
-		stream: stream,
-		readCh: make(chan SmartbusMessage),
-		writeCh: make(chan SmartbusMessage),
+		smartbusIO: smartbusIO,
 		endpoints: make([]*SmartbusEndpoint, 0, 100),
 	}
 	conn.run()
@@ -25,10 +15,9 @@ func NewSmartbusConnection(stream io.ReadWriteCloser) *SmartbusConnection {
 }
 
 func (conn *SmartbusConnection) run() {
-	go ReadSmartbus(conn.stream, &conn.mutex, conn.readCh)
-	go WriteSmartbus(conn.stream, &conn.mutex, conn.writeCh)
+	readCh := conn.smartbusIO.Start()
 	go func () {
-		for msg := range conn.readCh {
+		for msg := range readCh {
 			for _, ep := range conn.endpoints {
 				ep.maybeHandleMessage(&msg)
 			}
@@ -37,7 +26,7 @@ func (conn *SmartbusConnection) run() {
 }
 
 func (conn *SmartbusConnection) Send(msg SmartbusMessage) {
-	conn.writeCh <- msg
+	conn.smartbusIO.Send(msg)
 }
 
 func (conn *SmartbusConnection) MakeSmartbusEndpoint(subnetID uint8,
@@ -55,8 +44,7 @@ func (conn *SmartbusConnection) MakeSmartbusEndpoint(subnetID uint8,
 }
 
 func (conn *SmartbusConnection) Close() {
-	close(conn.writeCh) // this kills WriteSmartbus goroutine
-	conn.stream.Close() // this kills ReadSmartbus goroutine by causing read error
+	conn.smartbusIO.Stop()
 }
 
 type SmartbusEndpoint struct {

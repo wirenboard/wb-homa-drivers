@@ -3,12 +3,11 @@ package smartbus
 import (
 	"fmt"
 	"log"
-	"io"
 	"strings"
 	"strconv"
 )
 
-type Connector func() (io.ReadWriteCloser, error)
+type Connector func() (SmartbusIO, error)
 
 type SmartbusDeviceItem struct {
 	Name, Title string
@@ -52,11 +51,11 @@ func NewSmartbusModel(connector Connector, subnetID uint8,
 }
 
 func (model *SmartbusModel) Start() error {
-	stream, err := model.connector()
+	smartbusIO, err := model.connector()
 	if err != nil {
 		return err
 	}
-	conn := NewSmartbusConnection(stream)
+	conn := NewSmartbusConnection(smartbusIO)
 	model.ep = conn.MakeSmartbusEndpoint(model.subnetID, model.deviceID, model.deviceType)
 	model.ep.Observe(model)
 	model.ep.Observe(NewMessageDumper())
