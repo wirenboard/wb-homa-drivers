@@ -1,3 +1,17 @@
+wb-homa-drivers (1.7) stable; urgency=medium
+
+  * Add test support for Uniel devices (http://smart.uniel.ru/).
+Some other devices which support Adicon protocol (a.k.a. A-BUS) 
+might work as well.
+
+ -- Evgeny Boger <boger@contactless.ru>  Thu, 01 Jan 2015 16:43:59 +0300
+
+wb-homa-drivers (1.6) stable; urgency=medium
+
+  * Modbus improvements 
+
+ -- Evgeny Boger <boger@contactless.ru>  Wed, 17 Dec 2014 21:25:14 +0300
+
 wb-homa-drivers (1.5) stable; urgency=medium
 
   * Add different config files for each board (default, wbsh3 and mka3)
