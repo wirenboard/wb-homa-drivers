@@ -1,7 +1,7 @@
 Debug: 0
 Ports:
     ------
-    ConnSettings: </dev/ttyNSC0 9600 8 N2>
+    ConnSettings: </dev/ttyNSC0 9600 8 N2 timeout 0>
     PollInterval: 10
     DeviceConfigs:
         ------
@@ -300,7 +300,7 @@ Ports:
             Address: 3
             Value: 3
     ------
-    ConnSettings: </dev/ttyNSC1 9600 8 N1>
+    ConnSettings: </dev/ttyNSC1 9600 8 N1 timeout 0>
     PollInterval: 100
     DeviceConfigs:
         ------

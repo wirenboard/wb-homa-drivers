@@ -1,5 +1,5 @@
 >>> AddSlave(23)
-CreateContext(): </dev/ttyNSC0 9600 8 N2>
+CreateContext(): </dev/ttyNSC0 9600 8 N2 timeout 0>
 SetDebug(0)
 Publish: /devices/ddl24/meta/name: 'DDL24' (QoS 0, retained)
 Publish: /devices/ddl24/controls/RGB/meta/type: 'rgb' (QoS 0, retained)
