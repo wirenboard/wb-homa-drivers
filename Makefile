@@ -19,7 +19,8 @@ MODBUS_BIN=wb-homa-modbus
 MODBUS_LIBS=-lmodbus
 MODBUS_OBJS=$(MODBUS_DIR)/modbus_client.o \
   $(MODBUS_DIR)/modbus_config.o $(MODBUS_DIR)/modbus_port.o \
-  $(MODBUS_DIR)/modbus_observer.o
+  $(MODBUS_DIR)/modbus_observer.o \
+  $(MODBUS_DIR)/uniel.o $(MODBUS_DIR)/uniel_context.o
 W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
 ADC_DIR=wb-homa-adc
@@ -69,6 +70,12 @@ $(MODBUS_DIR)/modbus_port.o : $(MODBUS_DIR)/modbus_port.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(MODBUS_DIR)/modbus_observer.o : $(MODBUS_DIR)/modbus_observer.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/uniel.o : $(MODBUS_DIR)/uniel.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(MODBUS_DIR)/uniel_context.o : $(MODBUS_DIR)/uniel_context.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_OBJS) $(COMMON_O)
