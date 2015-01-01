@@ -20,7 +20,7 @@ Ports:
             Registers: <2:input: 0>
             ------
             Name: Illuminance
-            Type: text
+            Type: lux
             DeviceId: msu34tlp
             Order: 2
             OnValue: -1
@@ -29,7 +29,7 @@ Ports:
             Registers: <2:input: 1>
             ------
             Name: Pressure
-            Type: text
+            Type: pressure
             DeviceId: msu34tlp
             Order: 3
             OnValue: -1
@@ -107,7 +107,7 @@ Ports:
             Registers: <23:holding: 4>, <23:holding: 5>, <23:holding: 6>
             ------
             Name: White
-            Type: range
+            Type: dimmer
             DeviceId: ddl24
             Order: 2
             OnValue: -1
