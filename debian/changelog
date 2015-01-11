@@ -1,8 +1,14 @@
+wb-homa-drivers (1.7.1) stable; urgency=medium
+
+  * Add support for UCH-M131RC/0808 and UCH-M141RC/0808
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 11 Jan 2015 03:51:18 +0300
+
 wb-homa-drivers (1.7) stable; urgency=medium
 
-  * Add test support for Uniel devices (http://smart.uniel.ru/).
-Some other devices which support Adicon protocol (a.k.a. A-BUS) 
-might work as well.
+  * Add test support for Uniel devices (http://smart.uniel.ru/). 
+    Some other devices which support Adicon protocol (a.k.a. A-BUS) 
+    might work as well.
 
  -- Evgeny Boger <boger@contactless.ru>  Thu, 01 Jan 2015 16:43:59 +0300
 
