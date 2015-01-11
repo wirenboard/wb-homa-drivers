@@ -221,6 +221,7 @@ void TMQTTNinjaBridgeHandler::ConnectToCloud()
     ninja_mqtt_config.Id =  BlockId;
 
     NinjaCloudMqttHandler.reset(new TMQTTNinjaCloudHandler(ninja_mqtt_config, this));
+    NinjaCloudMqttHandler->Init();
 
     //~ PublishStatus("Connected");
 

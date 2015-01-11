@@ -141,7 +141,6 @@ namespace {
 
 int main(int argc, char **argv)
 {
-	class TMQTTADCHandler* mqtt_handler;
 	int rc;
     string config_fname;
     bool debug = false;
@@ -187,7 +186,8 @@ int main(int argc, char **argv)
 
         config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
-        mqtt_handler = new TMQTTADCHandler(mqtt_config, config);
+        std::shared_ptr<TMQTTADCHandler> mqtt_handler(new TMQTTADCHandler(mqtt_config, config));
+        mqtt_handler->Init();
 
         while(1){
             rc = mqtt_handler->loop();

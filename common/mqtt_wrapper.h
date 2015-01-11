@@ -93,5 +93,6 @@ typedef std::shared_ptr<TMQTTClient> PMQTTClient;
 class TMQTTWrapper : public TMQTTClient, public IMQTTObserver,
                      public std::enable_shared_from_this<TMQTTWrapper> {
 public:
-    TMQTTWrapper(const TConfig& config);
+    TMQTTWrapper(const TConfig& config): TMQTTClient(config) {}
+    void Init() { Observe(shared_from_this()); }
 };

@@ -76,7 +76,7 @@ class TMQTTNinjaBridgeHandler : public TMQTTWrapper
         string VarDirectory;
         bool Activated;
 
-        unique_ptr<TMQTTNinjaCloudHandler> NinjaCloudMqttHandler;
+        shared_ptr<TMQTTNinjaCloudHandler> NinjaCloudMqttHandler;
 
         map<pair<const string,const string>, TControlDesc> ControlsCache; //(device_id, control_id) => desc
 

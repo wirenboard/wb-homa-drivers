@@ -27,7 +27,6 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	class TMQTTNinjaBridgeHandler* mqtt_handler;
     TMQTTNinjaBridgeHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
@@ -59,7 +58,8 @@ int main(int argc, char *argv[])
 
 
     //will block until activation
-	mqtt_handler = new TMQTTNinjaBridgeHandler(mqtt_config);
+    std::shared_ptr<TMQTTNinjaBridgeHandler> mqtt_handler(new TMQTTNinjaBridgeHandler(mqtt_config));
+    mqtt_handler->Init();
 
     // run MQTT loop for 2 seconds to allow it to publish messages
     mqtt_handler->LoopFor(1000 * 2);

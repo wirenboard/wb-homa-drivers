@@ -152,7 +152,6 @@ void TMQTTOnewireHandler::UpdateChannelValues() {
 
 int main(int argc, char *argv[])
 {
-	class TMQTTOnewireHandler* mqtt_handler;
 	int rc;
     TMQTTOnewireHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
@@ -187,7 +186,8 @@ int main(int argc, char *argv[])
 
     mqtt_config.Id = "wb-w1";
 
-	mqtt_handler = new TMQTTOnewireHandler(mqtt_config);
+    std::shared_ptr<TMQTTOnewireHandler> mqtt_handler(new TMQTTOnewireHandler(mqtt_config));
+    mqtt_handler->Init();
 
 	while(1){
 		rc = mqtt_handler->loop();

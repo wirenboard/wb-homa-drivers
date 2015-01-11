@@ -190,7 +190,6 @@ void TMQTTGpioHandler::UpdateChannelValues() {
 
 int main(int argc, char *argv[])
 {
-	class TMQTTGpioHandler* mqtt_handler;
 	int rc;
     THandlerConfig handler_config;
     TMQTTGpioHandler::TConfig mqtt_config;
@@ -293,7 +292,8 @@ int main(int argc, char *argv[])
 	mosqpp::lib_init();
 
     mqtt_config.Id = "wb-gpio";
-	mqtt_handler = new TMQTTGpioHandler(mqtt_config, handler_config);
+    std::shared_ptr<TMQTTGpioHandler> mqtt_handler(new TMQTTGpioHandler(mqtt_config, handler_config));
+    mqtt_handler->Init();
 
 	while(1){
 		rc = mqtt_handler->loop();

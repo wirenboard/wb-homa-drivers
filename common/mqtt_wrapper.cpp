@@ -68,9 +68,3 @@ int TMQTTClient::LoopFor(int duration, int timeout)
         }
 	}
 }
-
-TMQTTWrapper::TMQTTWrapper(const TConfig& config)
-    : TMQTTClient(config)
-{
-    Observe(shared_from_this());
-}
