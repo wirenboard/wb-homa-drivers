@@ -72,11 +72,16 @@ TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
       Debug(debug),
       Initialized(false),
       SysfsDir(sysfs_dir),
-      CurrentMuxInput(-1)
+      CurrentMuxInput(-1),
+      AdcValStream(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw")
 {
     GpioMuxA = GetGPIOFromEnv("WB_GPIO_MUX_A");
     GpioMuxB = GetGPIOFromEnv("WB_GPIO_MUX_B");
     GpioMuxC = GetGPIOFromEnv("WB_GPIO_MUX_C");
+    if (AdcValStream < 0) {
+        throw TADCException("error opening sysfs ADC file");
+    }
+
 }
 
 TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
@@ -88,21 +93,10 @@ TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
 int TSysfsADC::GetValue(int index)
 {
     SetMuxABC(index);
-    for (;;) {
-        try {
-            std::ifstream getvaladc(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw");
-
-            if (getvaladc < 0)
-                throw TADCException("unable to read ADC value");
-
-            int val;
-            getvaladc >> val;
-            return val;
-        } catch (const std::ios_base::failure& e) {
-            std::cerr << "warning: error getting ADC value (" <<
-                e.what() << ", retrying..." << std::endl;
-        }
-    }
+    int val;
+    AdcValStream.seekg(0);
+    AdcValStream >> val;
+    return val;
 }
 
 void TSysfsADC::InitMux()
@@ -174,13 +168,13 @@ void TSysfsADC::SetMuxABC(int n)
     InitMux();
     if (CurrentMuxInput == n)
         return;
-    MaybeWaitBeforeSwitching();
     if (Debug)
         std::cerr << "SetMuxABC: " << n << std::endl;
     SetGPIOValue(GpioMuxA, n & 1);
     SetGPIOValue(GpioMuxB, n & 2);
     SetGPIOValue(GpioMuxC, n & 4);
     CurrentMuxInput = n;
+    usleep(MinSwitchIntervalMs * 1000);
 }
 
 struct TSysfsADCChannelPrivate {

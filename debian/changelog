@@ -1,3 +1,11 @@
+wb-homa-drivers (1.7.2) stable; urgency=medium
+
+  * fix bad_alloc
+  * ADC driver waits after each MUX switch. The duration of the delay 
+    is controlled by "min_switch_interval_ms" config option
+
+ -- Evgeny Boger <boger@contactless.ru>  Wed, 14 Jan 2015 13:36:45 +0300
+
 wb-homa-drivers (1.7.1) stable; urgency=medium
 
   * Add support for UCH-M131RC/0808 and UCH-M141RC/0808
