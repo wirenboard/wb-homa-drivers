@@ -1,5 +1,7 @@
 package smartbus
 
+// TBD: should prefix all hex vals with 0x
+
 import (
 	"fmt"
 	"log"
@@ -91,12 +93,12 @@ func (f *MessageFormatter) OnPanelControlResponse(msg *PanelControlResponse,
 	if !found {
 		typeName = fmt.Sprintf("<unknown type 0x%02x>", msg.Type)
 	}
-	f.log(hdr, "<PanelControlResponse %s %v>", typeName, msg.Value)
+	f.log(hdr, "<PanelControlResponse %s=%v>", typeName, msg.Value)
 }
 
 func (f *MessageFormatter) OnQueryFanController(msg *QueryFanController,
 	hdr *MessageHeader) {
-	f.log(hdr, "<QueryFanController %02x>", msg.Unknown)
+	f.log(hdr, "<QueryFanController %d>", msg.Index)
 }
 
 func (f *MessageFormatter) OnQueryPanelButtonAssignment(msg *QueryPanelButtonAssignment,
@@ -137,7 +139,11 @@ func (f *MessageFormatter) OnAssignPanelButtonResponse(msg *AssignPanelButtonRes
 }
 
 func (f *MessageFormatter) OnSetPanelButtonModes(msg *SetPanelButtonModes, hdr *MessageHeader) {
-	f.log(hdr, "<SetPanelButtonModes %v>", strings.Join(msg.Modes[:], ","))
+	m := make([]string, len(msg.Modes))
+	for i, mode := range msg.Modes {
+		m[i] = fmt.Sprintf("%d/%d:%s", i / 4 + 1, i % 4 + 1, mode)
+	}
+	f.log(hdr, "<SetPanelButtonModes %v>", strings.Join(m, ","))
 }
 
 func (f *MessageFormatter) OnSetPanelButtonModesResponse(msg *SetPanelButtonModesResponse,

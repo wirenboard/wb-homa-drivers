@@ -1,5 +1,9 @@
 package smartbus
 
+// SmartbusConnection provides higher-level interface for
+// a SmartbusIO that uses endpoints to filter incoming
+// messages by their destination and assign source
+// addresses to outgoind messages.
 type SmartbusConnection struct {
 	smartbusIO SmartbusIO
 	endpoints []*SmartbusEndpoint
@@ -150,4 +154,61 @@ func (dev *SmartbusDevice) SingleChannelControlResponse(channelNo uint8,
 
 func (dev *SmartbusDevice) ZoneBeastBroadcast(zoneStatus []uint8, channelStatus []bool) {
 	dev.Send(&ZoneBeastBroadcast{zoneStatus, channelStatus})
+}
+
+func (dev *SmartbusDevice) QueryModules() {
+	dev.Send(&QueryModules{});
+}
+
+func (dev *SmartbusDevice) QueryModulesResponse(deviceCategory uint8, channelNo uint8) {
+	dev.Send(&QueryModulesResponse{
+		dev.Endpoint.SubnetID, dev.Endpoint.DeviceID, deviceCategory, channelNo,
+		dev.Endpoint.SubnetID, dev.Endpoint.DeviceID,
+	});
+}
+
+func (dev *SmartbusDevice) PanelControlResponse(Type uint8, Value uint8) {
+	dev.Send(&PanelControlResponse{Type, Value})
+}
+
+func (dev *SmartbusDevice) QueryFanController(index uint8) {
+	dev.Send(&QueryFanController{index})
+}
+
+func (dev *SmartbusDevice) QueryPanelButtonAssignment(buttonNo uint8, functionNo uint8) {
+	dev.Send(&QueryPanelButtonAssignment{buttonNo, functionNo})
+}
+
+func (dev *SmartbusDevice) QueryPanelButtonAssignmentResponse(
+	buttonNo uint8, functionNo uint8, command uint8,
+	commandSubnetID int8, commandDeviceID uint8,
+	channelNo uint8, level uint8, duration uint16) {
+	dev.Send(&QueryPanelButtonAssignmentResponse{
+		buttonNo, functionNo, command,
+		commandSubnetID, commandDeviceID,
+		channelNo, level, duration,
+	})
+}
+
+func (dev *SmartbusDevice) AssignPanelButton(
+	buttonNo uint8, functionNo uint8, command uint8,
+	commandSubnetID int8, commandDeviceID uint8,
+	channelNo uint8, level uint8, duration uint16) {
+	dev.Send(&AssignPanelButton{
+		buttonNo, functionNo, command,
+		commandSubnetID, commandDeviceID,
+		channelNo, level, duration, 0, // 0 for unknown field
+	})
+}
+
+func (dev *SmartbusDevice) AssignPanelButtonResponse(buttonNo uint8, functionNo uint8) {
+	dev.Send(&AssignPanelButtonResponse{buttonNo, functionNo})
+}
+
+func (dev *SmartbusDevice) SetPanelButtonModes(modes [SET_PANEL_BUTTON_MODES_COUNT]string) {
+	dev.Send(&SetPanelButtonModes{modes})
+}
+
+func (dev *SmartbusDevice) SetPanelButtonModesResponse(success bool) {
+	dev.Send(&SetPanelButtonModesResponse{success})
 }

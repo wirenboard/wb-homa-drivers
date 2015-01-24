@@ -267,7 +267,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				TargetDeviceID: SAMPLE_RELAY_DEVICE_ID,
 			},
 			&QueryFanController{
-				Unknown: 0x07,
+				Index: 0x07,
 			},
 		},
 		Packet: [] byte {
@@ -282,7 +282,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 			0x33, // Opcode(lo)
 			0x01, // TargetSubnetID
 			0x1c, // TargetDeviceID
-			0x07, // [data] Undocumented (doc says there's no such field)
+			0x07, // [data] Index -- undocumented (doc says there's no such field)
 			0x05, // CRC(hi)
 			0xdd, // CRC(lo)
 		},
@@ -338,8 +338,8 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				Command: 0x59,
 				CommandSubnetID: 0x01,
 				CommandDeviceID: 0x99,
-				ChannelNo: 0x08,
-				Level: 0x64,
+				ChannelNo: 8,
+				Level: 100,
 				Duration: 0,
 			},
 		},
@@ -386,7 +386,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				CommandSubnetID: 0x01,
 				CommandDeviceID: 0x99,
 				ChannelNo: 1,
-				Level: 0x64,
+				Level: 100,
 				Duration: 0,
 				Unknown: 0,
 			},
@@ -815,27 +815,96 @@ func TestSmartbusEndpointReceive(t *testing.T) {
 func TestSmartbusEndpointSendReceive(t *testing.T) {
 	p, r := net.Pipe()
 
-	handler1 := NewFakeHandler(t)
+	ddp_handler := NewFakeHandler(t)
 	conn1 := NewSmartbusConnection(NewStreamIO(p))
-	ep1 := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
-	ep1.Observe(handler1)
-	dev1 := ep1.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
+	ddp_ep := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
+	ddp_ep.Observe(ddp_handler)
+	ddp_to_relay_dev := ddp_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
+	ddp_to_app_dev := ddp_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
+	ddp_to_all_dev := ddp_ep.GetBroadcastDevice()
 
-	handler2 := NewFakeHandler(t)
+	relay_handler := NewFakeHandler(t)
 	conn2 := NewSmartbusConnection(NewStreamIO(r))
-	ep2 := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
-	ep2.Observe(handler2)
-	dev2 := ep2.GetBroadcastDevice()
+	relay_ep := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
+	relay_ep.Observe(relay_handler)
+	relay_to_ddp_dev := relay_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
+	relay_to_all_dev := relay_ep.GetBroadcastDevice()
 
-	dev1.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
-	handler2.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
+	app_handler := NewFakeHandler(t)
+	app_ep := conn2.MakeSmartbusEndpoint(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID, SAMPLE_APP_DEVICE_TYPE)
+	app_ep.Observe(app_handler)
+	app_to_ddp_dev := app_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
 
-	dev2.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
+	ddp_to_relay_dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
+	relay_handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
+
+	relay_to_all_dev.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
 		parseChannelStatus("---------------"))
- 	handler1.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/100/--------------->")
+ 	ddp_handler.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/100/--------------->")
 
-	dev2.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
-	handler1.Verify("01/1c (type 139c) -> ff/ff: <ZoneBeastBroadcast [0]/------x-------->")
+	relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
+	ddp_handler.Verify("01/1c (type 139c) -> ff/ff: <ZoneBeastBroadcast [0]/------x-------->")
+
+	// DDP commands
+	ddp_to_all_dev.QueryModules()
+	// fixme: actually it goes to 01/1f
+	app_handler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
+	relay_handler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
+
+	relay_to_ddp_dev.QueryModulesResponse(QUERY_MODULES_DEV_RELAY, 0x0a)
+	// note that channel number (10) is stringified as decimal
+	ddp_handler.Verify("01/1c (type 139c) -> 01/14: <QueryModulesResponse 01/1c/02/10/00/00>")
+
+	ddp_to_app_dev.PanelControlResponse(PANEL_CONTROL_TYPE_COOLING_SET_POINT, 25)
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: <PanelControlResponse Cooling Set Point=25>")
+
+	ddp_to_relay_dev.QueryFanController(7)
+	relay_handler.Verify("01/14 (type 0095) -> 01/1c: <QueryFanController 7>")
+
+	app_to_ddp_dev.QueryPanelButtonAssignment(1, 2)
+	ddp_handler.Verify("03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment 1/2>")
+
+	ddp_to_app_dev.QueryPanelButtonAssignmentResponse(
+		1, 2, 0x59, 0x01, 0x99, 8, 100, 0)
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+		"<QueryPanelButtonAssignmentResponse 1/2/59/01/99/8/100/0>")
+
+	app_to_ddp_dev.AssignPanelButton(
+		1, 1, 0x59, 0x01, 0x99, 1, 100, 0)
+	ddp_handler.Verify("03/fe (type fffe) -> 01/14: " +
+		"<AssignPanelButton 1/1/59/01/99/1/100/0/0>") // the last 0 is 'unknown' field
+
+	ddp_to_app_dev.AssignPanelButtonResponse(1, 1)
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: <AssignPanelButtonResponse 1/1>")
+
+	app_to_ddp_dev.SetPanelButtonModes(
+		[16]string {
+			"Invalid",
+			"SingleOnOff",
+			"SingleOnOff",
+			"SingleOnOff",
+			"CombinationOn",
+			"Invalid",
+			"Invalid",
+			"Invalid",
+			"Invalid",
+			"SingleOnOff",
+			"SingleOnOff",
+			"SingleOnOff",
+			"SingleOnOff",
+			"Invalid",
+			"Invalid",
+			"Invalid",
+		})
+	ddp_handler.Verify("03/fe (type fffe) -> 01/14: " +
+		"<SetPanelButtonModes " +
+		"1/1:Invalid,1/2:SingleOnOff,1/3:SingleOnOff,1/4:SingleOnOff," +
+		"2/1:CombinationOn,2/2:Invalid,2/3:Invalid,2/4:Invalid," +
+		"3/1:Invalid,3/2:SingleOnOff,3/3:SingleOnOff,3/4:SingleOnOff," +
+		"4/1:SingleOnOff,4/2:Invalid,4/3:Invalid,4/4:Invalid>")
+
+	ddp_to_app_dev.SetPanelButtonModesResponse(true)
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: <SetPanelButtonModesResponse true>")
 
 	conn1.Close()
 	conn2.Close()

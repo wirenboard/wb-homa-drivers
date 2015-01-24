@@ -162,7 +162,7 @@ func (*PanelControlResponse) Opcode() uint16 { return 0xe3d9 }
 
 // QueryFanController is sent by the panel to fan controller devices
 type QueryFanController struct {
-	Unknown uint8 // spec says there's no such field, but it's present
+	Index uint8 // spec says there's no such field, but it's present
 }
 
 func (*QueryFanController) Opcode() uint16 { return 0x0033 }
