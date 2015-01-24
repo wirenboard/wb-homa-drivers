@@ -15,6 +15,7 @@ type SmartbusDeviceItem struct {
 
 var smartbusDeviceTypes map[uint16]SmartbusDeviceItem = map[uint16]SmartbusDeviceItem{
 	0x139c: {"zonebeast", "Zone Beast"},
+	0x0095: {"ddp", "DDP" },
 }
 
 func smartbusNameFromHeader(header *MessageHeader) (string, string, bool) {
@@ -105,6 +106,14 @@ func (model *SmartbusModel) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast, header
 		dev.updateChannelStatus(msg.ChannelStatus)
 	}
 }
+
+// The following can be used to assign buttons:
+// func (model *SmartbusModel) OnQueryModules(msg *QueryModules, header *MessageHeader) {
+// 	dev := model.ensureDevice(header)
+// 	if dev != nil {
+// 		dev.smartDev.QueryModulesResponse(QUERY_MODULES_DEV_RELAY, 0x08)
+// 	}
+// }
 
 type SmartbusModelDevice struct {
 	DeviceBase
