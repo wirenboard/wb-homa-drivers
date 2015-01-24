@@ -38,6 +38,8 @@ func (conn *SmartbusConnection) MakeSmartbusEndpoint(subnetID uint8,
 		deviceType,
 		make(map[uint16]*SmartbusDevice),
 		make([]interface{}, 0, 16),
+		make([]interface{}, 0, 16),
+		make([]interface{}, 0, 16),
 	}
 	conn.endpoints = append(conn.endpoints, ep)
 	return ep
@@ -54,6 +56,8 @@ type SmartbusEndpoint struct {
 	DeviceType uint16
 	deviceMap map[uint16]*SmartbusDevice
 	observers []interface{}
+	inputSniffers []interface{}
+	outputSniffers []interface{}
 }
 
 func deviceKey(subnetID uint8, deviceID uint8) uint16 {
@@ -77,6 +81,7 @@ func (ep *SmartbusEndpoint) Send(msg SmartbusMessage) {
 	msg.Header.OrigSubnetID = ep.SubnetID
 	msg.Header.OrigDeviceID = ep.DeviceID
 	msg.Header.OrigDeviceType = ep.DeviceType
+	ep.notify(ep.outputSniffers, &msg)
 	ep.Connection.Send(msg)
 }
 
@@ -84,20 +89,34 @@ func (ep *SmartbusEndpoint) Observe(observer interface{}) {
 	ep.observers = append(ep.observers, observer)
 }
 
-func (ep *SmartbusEndpoint) maybeHandleMessage(smartbusMsg *SmartbusMessage) {
-	if smartbusMsg.Header.TargetSubnetID != ep.SubnetID &&
-		smartbusMsg.Header.TargetSubnetID != BROADCAST_SUBNET {
-		return
-	}
-	if smartbusMsg.Header.TargetDeviceID != ep.DeviceID &&
-		smartbusMsg.Header.TargetDeviceID != BROADCAST_DEVICE {
-		return
-	}
-	ep.doHandleMessage(smartbusMsg)
+func (ep *SmartbusEndpoint) AddInputSniffer(observer interface{}) {
+	ep.inputSniffers = append(ep.inputSniffers, observer)
 }
 
-func (ep *SmartbusEndpoint) doHandleMessage(smartbusMsg *SmartbusMessage) {
-	for _, observer := range ep.observers {
+func (ep *SmartbusEndpoint) AddOutputSniffer(observer interface{}) {
+	ep.outputSniffers = append(ep.outputSniffers, observer)
+}
+
+func (ep *SmartbusEndpoint) isMessageForUs(smartbusMsg *SmartbusMessage) bool {
+	if smartbusMsg.Header.TargetSubnetID != ep.SubnetID &&
+		smartbusMsg.Header.TargetSubnetID != BROADCAST_SUBNET {
+		return false
+	}
+	return smartbusMsg.Header.TargetDeviceID == ep.DeviceID ||
+		smartbusMsg.Header.TargetDeviceID == BROADCAST_DEVICE
+}
+
+func (ep *SmartbusEndpoint) maybeHandleMessage(smartbusMsg *SmartbusMessage) {
+	if ep.isMessageForUs(smartbusMsg) {
+		ep.notify(ep.observers, smartbusMsg)
+	} else {
+		ep.notify(ep.inputSniffers, smartbusMsg)
+	}
+}
+
+func (ep *SmartbusEndpoint) notify(observers []interface{},
+	smartbusMsg *SmartbusMessage) {
+	for _, observer := range observers {
 		visit(observer, smartbusMsg.Message, "On", &smartbusMsg.Header)
 	}
 }

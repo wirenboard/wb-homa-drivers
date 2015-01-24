@@ -1,3 +1,5 @@
+// TBD: should rename this module
+
 package smartbus
 
 import (
@@ -88,7 +90,7 @@ func WriteMessageRaw(writer io.Writer, header MessageHeader, writeMsg func(write
 	bs := buf.Bytes()
 	bs[2] = uint8(len(bs)) // minus 2 bytes of signature, but plus 2 bytes of crc
 	binary.Write(buf, binary.BigEndian, crc16(bs[2:]))
-	log.Printf("SEND:\n%s", hex.Dump(buf.Bytes()))
+	log.Printf("sending packet:\n%s", hex.Dump(buf.Bytes()))
 	// writing the buffer in parts may cause missed packets
 	writer.Write(buf.Bytes())
 }
@@ -136,7 +138,7 @@ func ReadSync(reader io.Reader, mutex MutexLike) error {
 }
 
 func ParsePacket(packet []byte) (*SmartbusMessage, error) {
-	log.Printf("packet:\n%s", hex.Dump(packet))
+	log.Printf("parsing packet:\n%s", hex.Dump(packet))
 	buf := bytes.NewBuffer(packet[1:]) // skip len
 	var header MessageHeader
 	if err := binary.Read(buf, binary.BigEndian, &header); err != nil {

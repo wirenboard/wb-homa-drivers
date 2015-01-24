@@ -9,7 +9,7 @@ func visit(visitor interface{}, thing interface{}, prefix string, args... interf
 	typeName := reflect.Indirect(reflect.ValueOf(thing)).Type().Name()
 	methodName := prefix + typeName
 	if method, found := reflect.TypeOf(visitor).MethodByName(methodName); !found {
-		log.Printf("visit: no visitor method: %s", typeName)
+		log.Printf("visit: no visitor method for %s", typeName)
 		return
 	} else {
 		moreValues := make([]reflect.Value, len(args))

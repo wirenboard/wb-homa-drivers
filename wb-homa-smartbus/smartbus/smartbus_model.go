@@ -58,7 +58,9 @@ func (model *SmartbusModel) Start() error {
 	conn := NewSmartbusConnection(smartbusIO)
 	model.ep = conn.MakeSmartbusEndpoint(model.subnetID, model.deviceID, model.deviceType)
 	model.ep.Observe(model)
-	model.ep.Observe(NewMessageDumper())
+	model.ep.Observe(NewMessageDumper("MESSAGE FOR US"))
+	model.ep.AddInputSniffer(NewMessageDumper("NOT FOR US"))
+	model.ep.AddOutputSniffer(NewMessageDumper("OUTGOING"))
 	return err
 }
 
