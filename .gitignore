@@ -5,6 +5,7 @@ wb-homa-ninja-bridge/wb-homa-ninja-bridge
 wb-homa-w1/wb-homa-w1
 wb-homa-adc/wb-homa-adc
 wb-homa-smartbus/wb-homa-smartbus
+wb-homa-smartbus/smartbus/smartbus.test
 debian/files
 debian/wb-homa-drivers*
 test/wb-homa-test
