@@ -125,7 +125,7 @@ func (dgramIO *DatagramIO) processUdpPacket(packet []byte) {
 		log.Println("invalid udp packet:", hex.Dump(packet))
 		return
 	}
-	if msg, err := ParsePacket(packet[len(udpSignature) + 4:]); err != nil {
+	if msg, err := ParseFrame(packet[len(udpSignature) + 4:]); err != nil {
 		log.Printf("failed to parse smartbus packet: %s", err)
 	} else {
 		dgramIO.readCh <- *msg
@@ -138,7 +138,7 @@ func (dgramIO *DatagramIO) doSend(msg SmartbusMessage) {
 	log.Println("outip:", dgramIO.smartbusGwAddress.IP[15])
 	binary.Write(buf, binary.BigEndian, dgramIO.outgoingIP[:4])
 	binary.Write(buf, binary.BigEndian, udpSignature[:len(udpSignature) - 2])
-	WritePacket(buf, msg)
+	WriteFrame(buf, msg)
 	if _, err := dgramIO.conn.WriteToUDP(buf.Bytes(), &dgramIO.smartbusGwAddress); err != nil {
 		log.Printf("UDP SEND ERROR: %s", err)
 	}
