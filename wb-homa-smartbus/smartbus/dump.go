@@ -137,7 +137,7 @@ func (f *MessageFormatter) OnAssignPanelButtonResponse(msg *AssignPanelButtonRes
 }
 
 func (f *MessageFormatter) OnSetPanelButtonModes(msg *SetPanelButtonModes, hdr *MessageHeader) {
-	f.log(hdr, "<SetPanelButtonModes %v>", strings.Join(msg.Modes, ","))
+	f.log(hdr, "<SetPanelButtonModes %v>", strings.Join(msg.Modes[:], ","))
 }
 
 func (f *MessageFormatter) OnSetPanelButtonModesResponse(msg *SetPanelButtonModesResponse,

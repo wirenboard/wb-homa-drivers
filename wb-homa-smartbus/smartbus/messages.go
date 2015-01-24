@@ -3,9 +3,6 @@ package smartbus
 // FIXME: this module needs some spaghetti reduction
 
 import (
-	"io"
-	"log"
-	"encoding/binary"
 	"fmt"
 )
 
@@ -34,24 +31,6 @@ const (
 	PANEL_CONTROL_TYPE_GO_TO_PAGE = 0x16
 )
 
-func SuccessFlagToBool (flag uint8) (bool, error) {
-	switch flag {
-	case 0xf8:
-		return true, nil
-	case 0xf5:
-		return false, nil
-	default:
-		return false, fmt.Errorf("bad success flag value %02x", flag)
-	}
-}
-
-func BoolToSuccessFlag (value bool) uint8 {
-	if (value) {
-		return 0xf8
-	}
-	return 0xf5
-}
-
 // ------
 
 // SingleChannelControlCommand toggles single relay output
@@ -68,89 +47,31 @@ func (*SingleChannelControlCommand) Opcode() uint16 { return 0x0031 }
 // SingleChannelControlResponse is sent as a response to SingleChannelControlCommand
 type SingleChannelControlResponse struct {
 	ChannelNo uint8
-	Success bool
+	Success bool `sbus:"success"`
 	Level uint8
-	ChannelStatus []bool
+	ChannelStatus []bool `sbus:"channelStatus"`
 }
 
 func (*SingleChannelControlResponse) Opcode() uint16 { return 0x0032 }
-
-type SingleChannelControlResponseHeaderRaw struct {
-	ChannelNo uint8
-	Flag uint8
-	Level uint8
-}
-
-func (*SingleChannelControlResponse) Parse(reader io.Reader) (interface{}, error) {
-	var rr SingleChannelControlResponseHeaderRaw
-	if err := binary.Read(reader, binary.BigEndian, &rr); err != nil {
-		log.Printf("SingleChannelControlResponse.Parse(): error reading the header: %v", err)
-		return nil, err
-	}
-
-	if success, err := SuccessFlagToBool(rr.Flag); err != nil {
-		return nil, err
-	} else {
-		if status, err := ReadChannelStatus(reader); err != nil {
-			log.Printf("ParseSingleChannelControlResponse: error reading status: %v", err)
-			return nil, err
-		} else {
-			return &SingleChannelControlResponse{rr.ChannelNo, success, rr.Level, status}, nil
-		}
-	}
-}
-
-func (msg *SingleChannelControlResponse) Write(writer io.Writer) {
-	flag := BoolToSuccessFlag(msg.Success)
-	rr := SingleChannelControlResponseHeaderRaw{msg.ChannelNo, flag, msg.Level}
-	binary.Write(writer, binary.BigEndian, &rr)
-	WriteChannelStatus(writer, msg.ChannelStatus)
-}
 
 // ------
 
 // ZoneBeastBroadcast packets are sent by ZoneBeast at regular intervals
 type ZoneBeastBroadcast struct {
-	ZoneStatus []uint8
-	ChannelStatus []bool
+	ZoneStatus []uint8 `sbus:"zoneStatus"`
+	ChannelStatus []bool `sbus:"channelStatus"`
 }
 
 func (*ZoneBeastBroadcast) Opcode() uint16 { return 0xefff }
 
-func (*ZoneBeastBroadcast) Parse(reader io.Reader) (interface{}, error) {
-	var msg ZoneBeastBroadcast
-	if zoneStatus, err := ReadZoneStatus(reader); err != nil {
-		log.Printf("ZoneBeastBroadcast.Parse(): error reading zone status: %v", err)
-		return nil, err
-	} else {
-		msg.ZoneStatus = zoneStatus
-	}
-
-	if channelStatus, err := ReadChannelStatus(reader); err != nil {
-		log.Printf("ZoneBeastBroadcast.Parse(): error reading channel status: %v", err)
-		return nil, err
-	} else {
-		msg.ChannelStatus = channelStatus
-	}
-
-	return &msg, nil
-}
-
-func (msg *ZoneBeastBroadcast) Write(writer io.Writer) {
-	WriteZoneStatus(writer, msg.ZoneStatus)
-	WriteChannelStatus(writer, msg.ChannelStatus)
-}
+// ------
 
 // QueryModules is sent by DDP upon a button press
 type QueryModules struct {}
 
 func (*QueryModules) Opcode() uint16 { return 0x286 }
 
-// func (*QueryModules) Parse(reader io.Reader) (interface{}, error) {
-// 	return &QueryModules{}, nil
-// }
-
-// func (msg *QueryModules) Write(writer io.Writer) {}
+// ------
 
 // QueryModulesResponse is sent as a response to QueryModules
 type QueryModulesResponse struct {
@@ -174,35 +95,35 @@ type QueryModulesResponseRaw struct {
 
 func (*QueryModulesResponse) Opcode() uint16 { return 0x287 }
 
-func (*QueryModulesResponse) Parse(reader io.Reader) (interface{}, error) {
+func (msg *QueryModulesResponse) FromRaw(parseRaw func (interface {}) error) (err error) {
 	var raw QueryModulesResponseRaw
-	if err := binary.Read(reader, binary.BigEndian, &raw); err != nil {
-		log.Printf("QueryModulesResponse.Parse(): read failed", err)
-		return nil, err
+	if err = parseRaw(&raw); err != nil {
+		return
 	}
 
-	r := &QueryModulesResponse{
-		ControlledDeviceSubnetID: raw.ControlledDeviceSubnetID,
-		ControlledDeviceID: raw.ControlledDeviceID,
-		DeviceCategory: raw.DeviceCategory,
-	}
-	switch r.DeviceCategory {
+	// TBD: if more such structures appear, may as well
+	// copy similarly named fields right in smartbus.go
+	msg.ControlledDeviceSubnetID = raw.ControlledDeviceSubnetID
+	msg.ControlledDeviceID = raw.ControlledDeviceID
+	msg.DeviceCategory = raw.DeviceCategory
+
+	switch msg.DeviceCategory {
 	case QUERY_MODULES_DEV_DIMMER, QUERY_MODULES_DEV_RELAY:
-		r.ChannelNo = raw.Param1
+		msg.ChannelNo = raw.Param1
 	case QUERY_MODULES_DEV_HVAC:
-		r.HVACSubnetID = raw.Param1
-		r.HVACDeviceID = raw.Param2
+		msg.HVACSubnetID = raw.Param1
+		msg.HVACDeviceID = raw.Param2
 	case QUERY_MODULES_DEV_SENSORS, QUERY_MODULES_DEV_Z_AUDIO:
 		break
 	default:
-		return nil, fmt.Errorf("bad flag QueryModulesResponse DeviceCategory field %02x",
-			r.DeviceCategory)
+		err = fmt.Errorf("bad flag QueryModulesResponse DeviceCategory field %02x",
+			msg.DeviceCategory)
 	}
-	return r, nil
+	return
 }
 
-func (msg *QueryModulesResponse) Write(writer io.Writer) {
-	raw := QueryModulesResponseRaw{
+func (msg *QueryModulesResponse) ToRaw() (interface{}, error) {
+	raw := &QueryModulesResponseRaw{
 		ControlledDeviceSubnetID: msg.ControlledDeviceSubnetID,
 		ControlledDeviceID: msg.ControlledDeviceID,
 		DeviceCategory: msg.DeviceCategory,
@@ -218,9 +139,11 @@ func (msg *QueryModulesResponse) Write(writer io.Writer) {
 	case QUERY_MODULES_DEV_HVAC:
 		raw.Param1 = msg.HVACSubnetID
 		raw.Param2 = msg.HVACDeviceID
-		/* FIXME: there should be a way to fail without panicking for this func */
+	default:
+		return nil, fmt.Errorf("bad device category %v", msg.DeviceCategory)
 	}
-	binary.Write(writer, binary.BigEndian, &raw)
+
+	return raw, nil
 }
 
 // -----
@@ -268,38 +191,6 @@ func (*QueryPanelButtonAssignmentResponse) Opcode() uint16 { return 0xe001 }
 
 // ------
 
-var modeList []string = []string {
-	"Invalid",
-	"SingleOnOff",
-	"SingleOn",
-	"SingleOff",
-	"CombinationOn",
-	"CombinationOff",
-	"PressOnReleaseOff",
-	"CombinationOnOff",
-	"SeparateLeftRightPressOnReleaseOff",
-	"SeparateLeftRightCombinationOnOff",
-	"LeftOffRightOn",
-}
-
-func ButtonModeStringToByte(mode string) uint8 {
-	for i, v := range modeList {
-		if mode == v {
-			return uint8(i)
-		}
-	}
-	return 0
-}
-
-func ButtonModeByteToString(rawMode uint8) string {
-	if int(rawMode) > len(modeList) {
-		return modeList[0] // invalid mode
-	}
-	return modeList[int(rawMode)]
-}
-
-// ------
-
 type AssignPanelButton struct {
 	ButtonNo uint8
 	FunctionNo uint8
@@ -326,64 +217,18 @@ func (*AssignPanelButtonResponse) Opcode() uint16 { return 0xe003 }
 // ------
 
 type SetPanelButtonModes struct {
-	Modes []string
+	Modes [16]string `sbus:"panelButtonModes"`
 }
 
 func (*SetPanelButtonModes) Opcode() uint16 { return 0xe00a }
 
-func (*SetPanelButtonModes) Parse(reader io.Reader) (interface{}, error) {
-	rawModes := make([]uint8, SET_PANEL_BUTTON_MODES_COUNT)
-	if _, err := io.ReadFull(reader, rawModes); err != nil {
-		log.Printf("SetPanelButtonModes.Parse(): read failed", err)
-		return nil, err
-	}
-
-	r := &SetPanelButtonModes{make([]string, SET_PANEL_BUTTON_MODES_COUNT)}
-	for i, rawMode := range rawModes {
-		r.Modes[i] = ButtonModeByteToString(rawMode)
-	}
-
-	return r, nil
-}
-
-func (msg *SetPanelButtonModes) Write(writer io.Writer) {
-	rawModes := make([]uint8, SET_PANEL_BUTTON_MODES_COUNT)
-	for i, mode := range msg.Modes {
-		rawModes[i] = ButtonModeStringToByte(mode)
-	}
-	binary.Write(writer, binary.BigEndian, rawModes)
-}
-
 // ------
 
 type SetPanelButtonModesResponse struct {
-	Success bool
-}
-
-type SetPanelButtonModesResponseRaw struct {
-	Flag uint8
+	Success bool `sbus:"success"`
 }
 
 func (*SetPanelButtonModesResponse) Opcode() uint16 { return 0xe00b }
-
-func (*SetPanelButtonModesResponse) Parse(reader io.Reader) (interface{}, error) {
-	var rr SetPanelButtonModesResponseRaw
-	if err := binary.Read(reader, binary.BigEndian, &rr); err != nil {
-		log.Printf("SetPanelButtonModesResponseRaw.Parse(): error reading the header: %v", err)
-		return nil, err
-	}
-	if success, err := SuccessFlagToBool(rr.Flag); err != nil {
-		return nil, err
-	} else {
-		return &SetPanelButtonModesResponse{success}, nil
-	}
-}
-
-func (msg *SetPanelButtonModesResponse) Write(writer io.Writer) {
-	flag := BoolToSuccessFlag(msg.Success)
-	rr := SetPanelButtonModesResponseRaw{flag}
-	binary.Write(writer, binary.BigEndian, &rr)
-}
 
 func init () {
 	RegisterMessage(func () Message { return new(SingleChannelControlCommand) })

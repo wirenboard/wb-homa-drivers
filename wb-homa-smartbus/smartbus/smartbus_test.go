@@ -463,7 +463,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 				TargetDeviceID: SAMPLE_DDP_DEVICE_ID,
 			},
 			&SetPanelButtonModes{
-				Modes: []string {
+				Modes: [16]string {
 					"Invalid",
 					"SingleOnOff",
 					"SingleOnOff",

@@ -138,7 +138,7 @@ func (dgramIO *DatagramIO) doSend(msg SmartbusMessage) {
 	log.Println("outip:", dgramIO.smartbusGwAddress.IP[15])
 	binary.Write(buf, binary.BigEndian, dgramIO.outgoingIP[:4])
 	binary.Write(buf, binary.BigEndian, udpSignature[:len(udpSignature) - 2])
-	WriteMessage(buf, msg)
+	WritePacket(buf, msg)
 	if _, err := dgramIO.conn.WriteToUDP(buf.Bytes(), &dgramIO.smartbusGwAddress); err != nil {
 		log.Printf("UDP SEND ERROR: %s", err)
 	}

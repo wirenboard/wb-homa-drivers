@@ -30,50 +30,9 @@ type MessageHeader struct {
 	TargetDeviceID uint8
 }
 
-type Message interface {
-	Opcode() uint16
-}
-
-type MessageWriter interface {
-	Write(writer io.Writer)
-}
-
-type MessageParser interface {
-	Parse(reader io.Reader) (interface{}, error)
-}
-
-type PacketParser func(io.Reader) (interface{}, error)
-
-func MakeSimplePacketParser(construct func() Message) PacketParser {
-	return func(reader io.Reader) (interface{}, error) {
-		msg := construct()
-		if err := binary.Read(reader, binary.BigEndian, msg); err != nil {
-			log.Printf("error reading the message: %v", err)
-			return nil, err
-		}
-		return msg, nil
-	}
-}
-
-var recognizedMessages map[uint16]PacketParser = make(map[uint16]PacketParser)
-
 type MutexLike interface {
 	Lock()
 	Unlock()
-}
-
-func RegisterMessage(construct func () Message) {
-	msg := construct()
-	msgParser, hasParser := msg.(MessageParser)
-	var parser PacketParser
-	if hasParser {
-		parser = func(reader io.Reader) (interface{}, error) {
-			return msgParser.Parse(reader)
-		}
-	} else {
-		parser = MakeSimplePacketParser(construct)
-	}
-	recognizedMessages[msg.Opcode()] = parser
 }
 
 type SmartbusMessage struct {
@@ -81,7 +40,7 @@ type SmartbusMessage struct {
 	Message interface{}
 }
 
-func WriteMessageRaw(writer io.Writer, header MessageHeader, writeMsg func(writer io.Writer)) {
+func WritePacketRaw(writer io.Writer, header MessageHeader, writeMsg func(writer io.Writer)) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	binary.Write(buf, binary.BigEndian, uint16(0xaaaa)) // signature
 	binary.Write(buf, binary.BigEndian, uint8(0)) // len placeholder
@@ -95,17 +54,25 @@ func WriteMessageRaw(writer io.Writer, header MessageHeader, writeMsg func(write
 	writer.Write(buf.Bytes())
 }
 
-func WriteMessage(writer io.Writer, fullMsg SmartbusMessage) {
+func WritePacket(writer io.Writer, fullMsg SmartbusMessage) {
 	header := fullMsg.Header // make a copy because Opcode field is modified
 	msg := fullMsg.Message.(Message)
 	header.Opcode = msg.Opcode()
 
-	WriteMessageRaw(writer, header, func (writer io.Writer) {
-		msgWriter, isWriter := msg.(MessageWriter)
-		if isWriter {
-			msgWriter.Write(writer)
+	WritePacketRaw(writer, header, func (writer io.Writer) {
+		var err error
+		var preprocessed interface{}
+		preprocess, hasPreprocess := msg.(PreprocessedMessage)
+		if hasPreprocess {
+			preprocessed, err = preprocess.ToRaw()
+			if err == nil {
+				err = WriteMessage(writer, preprocessed)
+			}
 		} else {
-			binary.Write(writer, binary.BigEndian, msg)
+			err = WriteMessage(writer, msg)
+		}
+		if (err != nil) {
+			panic(fmt.Sprintf("WriteMessage() failed: %v", err))
 		}
 	})
 }
@@ -227,7 +194,7 @@ func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
 func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan SmartbusMessage) {
 	for msg := range ch {
 		mutex.Lock()
-		WriteMessage(writer, msg)
+		WritePacket(writer, msg)
 		mutex.Unlock()
 	}
 }
