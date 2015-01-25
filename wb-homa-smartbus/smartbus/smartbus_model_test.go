@@ -54,14 +54,23 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 			SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
 		relay_ep.Observe(handler)
 		relay_to_all_dev := relay_ep.GetBroadcastDevice()
+		relay_to_app_dev := relay_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
 
 		driver.Start()
 		VerifyVirtualRelays(broker)
+		handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
+		relay_to_app_dev.ReadMACAddressResponse(
+			[8]byte{
+				0x53, 0x03, 0x00, 0x00,
+				0x00, 0x00, 0x42, 0x42,
+			},
+			[]uint8 {})
+		broker.Verify(
+			"driver -> /devices/zonebeast011c/meta/name: [Zone Beast 01:1c] (QoS 1, retained)",
+		)
 
 		relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("---x"))
 		broker.Verify(
-			"driver -> /devices/zonebeast011c/meta/name: [Zone Beast 01:1c] (QoS 1, retained)",
-
 			"driver -> /devices/zonebeast011c/controls/Channel 1/meta/type: [switch] (QoS 1, retained)",
 			"driver -> /devices/zonebeast011c/controls/Channel 1/meta/order: [1] (QoS 1, retained)",
 			"driver -> /devices/zonebeast011c/controls/Channel 1: [0] (QoS 1, retained)",
@@ -125,12 +134,18 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 
 		driver.Start()
 		VerifyVirtualRelays(broker)
-
-		// FIXME: should use proper device discovery
-		ddp_to_app_dev.QueryModules()
-
+		handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
+		ddp_to_app_dev.ReadMACAddressResponse(
+			[8]byte{
+				0x53, 0x03, 0x00, 0x00,
+				0x00, 0x00, 0x30, 0xc3,
+			},
+			[]uint8 {
+				0x20, 0x42, 0x42,
+			})
 		broker.Verify(
 			"driver -> /devices/ddp0114/meta/name: [DDP 01:14] (QoS 1, retained)")
+
 		for i := 1; i <= PANEL_BUTTON_COUNT; i++ {
 			handler.Verify(fmt.Sprintf(
 				"03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment %d/1>", i))

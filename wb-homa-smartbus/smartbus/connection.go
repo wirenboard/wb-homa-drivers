@@ -212,3 +212,11 @@ func (dev *SmartbusDevice) SetPanelButtonModes(modes [PANEL_BUTTON_COUNT]string)
 func (dev *SmartbusDevice) SetPanelButtonModesResponse(success bool) {
 	dev.Send(&SetPanelButtonModesResponse{success})
 }
+
+func (dev *SmartbusDevice) ReadMACAddress() {
+	dev.Send(&ReadMACAddress{})
+}
+
+func (dev *SmartbusDevice) ReadMACAddressResponse(macAddress [8]uint8, remark []uint8) {
+	dev.Send(&ReadMACAddressResponse{macAddress, remark})
+}

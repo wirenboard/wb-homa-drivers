@@ -82,6 +82,33 @@ func WriteZoneStatusField(writer io.Writer, value reflect.Value) error {
 
 // ------
 
+func ReadRemarkField(reader io.Reader, value reflect.Value) error {
+	buf := make([]uint8, 64)
+	n, err := reader.Read(buf)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n == 64 {
+		// FIXME: the limit is actually perhaps less than 64,
+		// but spec is very onclear concerning it
+		return errors.New("remark field too long")
+	}
+	value.Set(reflect.ValueOf(buf[:n]))
+	return nil
+}
+
+func WriteRemarkField(writer io.Writer, value reflect.Value) error {
+	buf := value.Interface().([]uint8)
+	if len(buf) >= 64 {
+		// FIXME: the limit is actually perhaps less than 64,
+		// but spec is very onclear concerning it
+		return errors.New("remark field too long")
+	}
+	return binary.Write(writer, binary.BigEndian, buf)
+}
+
+// ------
+
 type FieldReadFunc func (reader io.Reader, value reflect.Value) error
 type FieldWriteFunc func (writer io.Writer, value reflect.Value) error
 
@@ -186,6 +213,7 @@ var converterMap map[string]converter = map[string]converter{
 				"SeparateLeftRightCombinationOnOff",
 				"LeftOffRightOn",
 			})),
+	"remark": {ReadRemarkField, WriteRemarkField},
 };
 
 func ReadTaggedField(reader io.Reader, value reflect.Value, tag string) error {

@@ -151,6 +151,26 @@ func (f *MessageFormatter) OnSetPanelButtonModesResponse(msg *SetPanelButtonMode
 	f.log(hdr, "<SetPanelButtonModesResponse %v>", msg.Success)
 }
 
+func (f *MessageFormatter) OnReadMACAddress(msg *ReadMACAddress,
+	hdr *MessageHeader) {
+	f.log(hdr, "<ReadMACAddress>")
+}
+
+func (f *MessageFormatter) OnReadMACAddressResponse(msg *ReadMACAddressResponse,
+	hdr *MessageHeader) {
+	macParts := make([]string, len(msg.MAC))
+	for i, v := range msg.MAC {
+		macParts[i] = fmt.Sprintf("%02x", v)
+	}
+	remarkParts := make([]string, len(msg.Remark))
+	for i, v := range msg.Remark {
+		remarkParts[i] = fmt.Sprintf("%02x", v)
+	}
+	f.log(hdr, "<ReadMACAddressResponse %s [%s]>",
+		strings.Join(macParts, ":"),
+		strings.Join(remarkParts, " "))
+}
+
 type MessageDumper struct {
 	MessageFormatter
 }

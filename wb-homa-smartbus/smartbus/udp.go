@@ -171,11 +171,11 @@ func (dgramIO *DatagramIO) Start() chan SmartbusMessage {
 			udpFrom := from.(*net.UDPAddr)
 			log.Println("initial packet from: ", udpFrom)
 			log.Println(hex.Dump(b[:n]))
+			dgramIO.processUdpPacket(b[:n])
 			if (dgramIO.maybeDiscoverOutgoingIP(*udpFrom)) {
 				ready <- struct{}{}
 				break
 			}
-			dgramIO.processUdpPacket(b[:n])
 		}
 		for {
 			n, err := dgramIO.conn.Read(b)

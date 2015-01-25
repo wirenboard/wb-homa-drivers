@@ -547,6 +547,84 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 			0xbb, // CRC(lo)
 		},
 	},
+	{
+		Name: "ReadMACAddress",
+		Opcode: 0xf003,
+		SmartbusMessage: SmartbusMessage{
+			MessageHeader{
+				OrigSubnetID: SAMPLE_APP_SUBNET,
+				OrigDeviceID: SAMPLE_APP_DEVICE_ID,
+				OrigDeviceType: SAMPLE_APP_DEVICE_TYPE,
+				TargetSubnetID: BROADCAST_SUBNET,
+				TargetDeviceID: BROADCAST_DEVICE,
+			},
+			&ReadMACAddress{},
+		},
+		Packet: [] byte {
+			0xaa, // Sync1
+			0xaa, // Sync2
+			0x0b, // Len
+			0x03, // OrigSubnetID
+			0xfe, // OrigDeviceID
+			0xff, // OrigDeviceType(hi)
+			0xfe, // OrigDeviceType(lo)
+			0xf0, // Opcode(hi)
+			0x03, // Opcode(lo)
+			0xff, // TargetSubnetID
+			0xff, // TargetDeviceID
+			0xae, // CRC(hi)
+			0x8d, // CRC(lo)
+		},
+	},
+	{
+		Name: "ReadMACAddressResponse",
+		Opcode: 0xf004,
+		SmartbusMessage: SmartbusMessage{
+			MessageHeader{
+				OrigSubnetID: SAMPLE_SUBNET,
+				OrigDeviceID: SAMPLE_DDP_DEVICE_ID,
+				OrigDeviceType: SAMPLE_DDP_DEVICE_TYPE,
+				TargetSubnetID: SAMPLE_APP_SUBNET,
+				TargetDeviceID: SAMPLE_APP_DEVICE_ID,
+			},
+			&ReadMACAddressResponse{
+				MAC: [8]uint8 {
+					0x53, 0x03, 0x00, 0x00,
+					0x00, 0x00, 0x30, 0xc3,
+				},
+				Remark: []uint8 {
+					0x32, 0x2c, 0x32, 0x30,
+				},
+			},
+		},
+		Packet: []uint8{
+			0xaa, // Sync1
+			0xaa, // Sync2
+			0x17, // Len
+			0x01, // OrigSubnetID
+			0x14, // OrigDeviceID
+			0x00, // OrigDeviceType(hi)
+			0x95, // OrigDeviceType(lo)
+			0xf0, // Opcode(hi)
+			0x04, // Opcode(lo)
+			0x03, // TargetSubnetID
+			0xfe, // TargetDeviceID
+			0x53, // [data] MAC1
+			0x03, // [data] MAC2
+			0x00, // [data] MAC3
+			0x00, // [data] MAC4
+			0x00, // [data] MAC5
+			0x00, // [data] MAC6
+			0x30, // [data] MAC7
+			0xc3, // [data] MAC8
+			0x32, // [data] Remark1
+			0x2c, // [data] Remark2
+			0x32, // [data] Remark3
+			0x30, // [data] Remark4
+			0xd2, // CRC(hi)
+			0x05, // CRC(lo)
+		},
+	},
 }
 
 // http://smarthomebus.com/dealers/Protocols/Smart%20Bus%20Commands%20V5.10.pdf page 88
@@ -834,6 +912,7 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	app_ep := conn2.MakeSmartbusEndpoint(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID, SAMPLE_APP_DEVICE_TYPE)
 	app_ep.Observe(app_handler)
 	app_to_ddp_dev := app_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
+	app_to_all_dev := app_ep.GetBroadcastDevice()
 
 	ddp_to_relay_dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
 	relay_handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
@@ -906,6 +985,44 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	ddp_to_app_dev.SetPanelButtonModesResponse(true)
 	app_handler.Verify("01/14 (type 0095) -> 03/fe: <SetPanelButtonModesResponse true>")
 
+	app_to_all_dev.ReadMACAddress()
+	ddp_handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
+
+	ddp_to_app_dev.ReadMACAddressResponse(
+		[8]byte{
+			0x53, 0x03, 0x00, 0x00,
+			0x00, 0x00, 0x30, 0xc3,
+		},
+		[]uint8 {
+			0x32, 0x2c, 0x32, 0x30,
+		})
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+		"<ReadMACAddressResponse 53:03:00:00:00:00:30:c3 [32 2c 32 30]>")
+
+	ddp_to_app_dev.ReadMACAddressResponse(
+		[8]byte{
+			0x53, 0x03, 0x00, 0x00,
+			0x00, 0x00, 0x30, 0xc3,
+		},
+		[]uint8 {})
+	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+		"<ReadMACAddressResponse 53:03:00:00:00:00:30:c3 []>")
+
 	conn1.Close()
 	conn2.Close()
 }
+
+/*
+FIXME: broadcast detection doesn't seem to work
+2015/01/25 09:09:20 parsing frame:
+00000000  0b 03 fe ff fe f0 03 ff  ff ae 8d                 |...........|
+2015/01/25 09:09:20 failed to parse smartbus packet: opcode f003 not recognized
+2015/01/25 09:09:20 parsing frame:
+00000000  13 01 64 04 b1 f0 04 03  fe 53 02 00 00 00 00 69  |..d......S.....i|
+00000010  c2 1f df                                          |...|
+2015/01/25 09:09:20 failed to parse smartbus packet: opcode f004 not recognized
+2015/01/25 09:09:22 parsing frame:
+00000000  17 01 14 00 95 f0 04 03  fe 53 03 00 00 00 00 30  |.........S.....0|
+00000010  c3 32 2c 32 30 d2 05                              |.2,20..|
+2015/01/25 09:09:22 failed to parse smartbus packet: opcode f004 not recognized
+*/

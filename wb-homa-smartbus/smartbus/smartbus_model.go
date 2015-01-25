@@ -84,6 +84,7 @@ type SmartbusModel struct {
 	deviceType uint16
 	ep *SmartbusEndpoint
 	virtualRelays *VirtualRelayDevice
+	broadcastDev *SmartbusDevice
 }
 
 func NewSmartbusModel(connector Connector, subnetID uint8,
@@ -110,8 +111,10 @@ func (model *SmartbusModel) Start() error {
 	model.ep.Observe(NewMessageDumper("MESSAGE FOR US"))
 	model.ep.AddInputSniffer(NewMessageDumper("NOT FOR US"))
 	model.ep.AddOutputSniffer(NewMessageDumper("OUTGOING"))
+	model.broadcastDev = model.ep.GetBroadcastDevice()
 	model.Observer.OnNewDevice(model.virtualRelays)
 	model.virtualRelays.Publish()
+	model.broadcastDev.ReadMACAddress() // discover devices
 	return err
 }
 
@@ -139,7 +142,9 @@ func (model *SmartbusModel) ensureDevice(header *MessageHeader) RealDeviceModel 
 
 func (model *SmartbusModel) OnAnything(msg Message, header *MessageHeader) {
 	dev := model.ensureDevice(header)
-	visit(dev, msg, "On")
+	if dev != nil {
+		visit(dev, msg, "On")
+	}
 }
 
 func (model *SmartbusModel) SetVirtualRelayOn(channelNo int, on bool) {
@@ -168,6 +173,10 @@ func (dm *DeviceModelBase) Title() string {
 
 func (dev *DeviceModelBase) Observe(observer DeviceObserver) {
 	dev.Observer = observer
+}
+
+func (dev *DeviceModelBase) OnReadMACAddressResponse(msg *ReadMACAddressResponse) {
+	log.Printf("Got MAC address query response from %s (%s)", dev.Name(), dev.Title())
 }
 
 type ZoneBeastDeviceModel struct {
@@ -291,9 +300,18 @@ func ddpControlName(buttonNo uint8) string {
 
 func (dm *DDPDeviceModel) Type() uint16 { return 0x0095 }
 
-func (dm *DDPDeviceModel) OnQueryModules(msg *QueryModules) {
+func (dm *DDPDeviceModel) OnReadMACAddressResponse(msg *ReadMACAddressResponse) {
 	// NOTE: something like this can be used for button 'learning':
 	// dm.smartDev.QueryModulesResponse(QUERY_MODULES_DEV_RELAY, 0x08)
+	if dm.isNew {
+		dm.isNew = false
+		dm.smartDev.QueryPanelButtonAssignment(1, 1)
+	}
+}
+
+func (dm *DDPDeviceModel) OnQueryModules(msg *QueryModules) {
+	// for the case when the DDP was plugged in
+	// after driver init
 	if dm.isNew {
 		dm.isNew = false
 		dm.smartDev.QueryPanelButtonAssignment(1, 1)

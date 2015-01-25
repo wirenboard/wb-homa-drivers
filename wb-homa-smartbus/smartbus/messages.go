@@ -233,6 +233,23 @@ type SetPanelButtonModesResponse struct {
 
 func (*SetPanelButtonModesResponse) Opcode() uint16 { return 0xe00b }
 
+// ------
+
+type ReadMACAddress struct {}
+
+func (*ReadMACAddress) Opcode() uint16 { return 0xf003 }
+
+// ------
+
+type ReadMACAddressResponse struct {
+	MAC [8]uint8
+	Remark []uint8 `sbus:"remark"`
+}
+
+func (*ReadMACAddressResponse) Opcode() uint16 { return 0xf004 }
+
+// ------
+
 func init () {
 	RegisterMessage(func () Message { return new(SingleChannelControlCommand) })
 	RegisterMessage(func () Message { return new(SingleChannelControlResponse) })
@@ -247,4 +264,6 @@ func init () {
 	RegisterMessage(func () Message { return new(AssignPanelButtonResponse) })
 	RegisterMessage(func () Message { return new(SetPanelButtonModes) })
 	RegisterMessage(func () Message { return new(SetPanelButtonModesResponse) })
+	RegisterMessage(func () Message { return new(ReadMACAddress) })
+	RegisterMessage(func () Message { return new(ReadMACAddressResponse) })
 }

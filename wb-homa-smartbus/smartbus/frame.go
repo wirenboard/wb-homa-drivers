@@ -106,7 +106,7 @@ func ReadSync(reader io.Reader, mutex MutexLike) error {
 
 func ParseFrame(frame []byte) (*SmartbusMessage, error) {
 	log.Printf("parsing frame:\n%s", hex.Dump(frame))
-	buf := bytes.NewBuffer(frame[1:]) // skip len
+	buf := bytes.NewBuffer(frame[1:len(frame) - 2]) // skip len
 	var header MessageHeader
 	if err := binary.Read(buf, binary.BigEndian, &header); err != nil {
 		return nil, err
