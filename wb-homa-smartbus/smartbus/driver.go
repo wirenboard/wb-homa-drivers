@@ -57,7 +57,6 @@ func (model *ModelBase) Observe(observer ModelObserver) {
 	model.Observer = observer
 }
 
-// fixme: move DeviceBase to fake_model.go (as a part of FakeModel)
 type DeviceBase struct {
 	DevName string
 	DevTitle string
@@ -83,7 +82,7 @@ type Driver struct {
 	messageCh chan MQTTMessage
 	quit chan struct{}
 	deviceMap map[string]DeviceModel
-	nextOrder int
+	nextOrder map[string]int
 }
 
 func NewDriver(model Model, makeClient MQTTClientFactory) (drv *Driver) {
@@ -91,7 +90,7 @@ func NewDriver(model Model, makeClient MQTTClientFactory) (drv *Driver) {
 		model: model,
 		messageCh: make(chan MQTTMessage),
 		quit: make(chan struct{}),
-		nextOrder: 1,
+		nextOrder: make(map[string]int),
 		deviceMap: make(map[string]DeviceModel),
 	}
 	drv.client = makeClient(drv.handleMessage)
@@ -132,10 +131,15 @@ func (drv *Driver) OnNewDevice(dev DeviceModel) {
 }
 
 func (drv *Driver) OnNewControl(dev DeviceModel, controlName, paramType, value string) {
+	devName := dev.Name()
+	nextOrder, found := drv.nextOrder[devName]
+	if !found {
+		nextOrder = 1
+	}
 	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "type"), paramType)
 	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "order"),
-		strconv.Itoa(drv.nextOrder))
-	drv.nextOrder++ // FIXME: should start the order from 1 for each device
+		strconv.Itoa(nextOrder))
+	drv.nextOrder[devName] = nextOrder + 1
 	drv.publishValue(dev, controlName, value)
 	// TBD: subscribe for non-read-only controls only
 	log.Printf("subscribe to: %s", drv.controlTopic(dev, controlName, "on"))

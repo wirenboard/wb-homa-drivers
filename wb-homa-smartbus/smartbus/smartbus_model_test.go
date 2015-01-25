@@ -29,6 +29,24 @@ func doTestSmartbusDriver(t *testing.T,
 	thunk(conn, driver, broker, handler, client)
 }
 
+func VerifyVirtualRelays(broker *FakeMQTTBroker) {
+	expected := make([]string, 0, 100)
+	expected = append(
+		expected,
+		"driver -> /devices/sbusvrelay/meta/name: [Smartbus Virtual Relays] (QoS 1, retained)")
+	for i := 1; i <= 15; i++ {
+		path := fmt.Sprintf("/devices/sbusvrelay/controls/VirtualRelay%d", i)
+		expected = append(
+			expected,
+			fmt.Sprintf("driver -> %s/meta/type: [text] (QoS 1, retained)", path),
+			fmt.Sprintf("driver -> %s/meta/order: [%d] (QoS 1, retained)", path, i),
+			fmt.Sprintf("driver -> %s: [0] (QoS 1, retained)", path),
+			fmt.Sprintf("Subscribe -- driver: %s/on", path),
+		)
+	}
+        broker.Verify(expected...)
+}
+
 func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 	doTestSmartbusDriver(t, func (conn *SmartbusConnection, driver *Driver, broker *FakeMQTTBroker, handler *FakeHandler, client *FakeMQTTClient) {
 
@@ -38,6 +56,7 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 		relay_to_all_dev := relay_ep.GetBroadcastDevice()
 
 		driver.Start()
+		VerifyVirtualRelays(broker)
 
 		relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("---x"))
 		broker.Verify(
@@ -105,8 +124,11 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 		ddp_to_app_dev := ddp_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
 
 		driver.Start()
+		VerifyVirtualRelays(broker)
+
 		// FIXME: should use proper device discovery
 		ddp_to_app_dev.QueryModules()
+
 		broker.Verify(
 			"driver -> /devices/ddp0114/meta/name: [DDP 01:14] (QoS 1, retained)")
 		for i := 1; i <= PANEL_BUTTON_COUNT; i++ {
@@ -151,6 +173,34 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 		handler.Verify("03/fe (type fffe) -> 01/14: <AssignPanelButton 2/1/59/03/fe/10/100/0/0>")
 		ddp_to_app_dev.AssignPanelButtonResponse(2, 1)
 		broker.Verify("driver -> /devices/ddp0114/controls/Page1Button2: [10] (QoS 1, retained)")
+
+		ddp_to_app_dev.SingleChannelControl(10, LIGHT_LEVEL_ON, 0)
+		handler.Verify("03/fe (type fffe) -> 01/14: " +
+			"<SingleChannelControlResponse 10/true/100/" +
+			"---------x----->")
+		broker.Verify(
+			"driver -> /devices/sbusvrelay/controls/VirtualRelay10: [1] (QoS 1, retained)")
+
+		ddp_to_app_dev.SingleChannelControl(12, LIGHT_LEVEL_ON, 0)
+		handler.Verify("03/fe (type fffe) -> 01/14: " +
+			"<SingleChannelControlResponse 12/true/100/" +
+			"---------x-x--->")
+		broker.Verify(
+			"driver -> /devices/sbusvrelay/controls/VirtualRelay12: [1] (QoS 1, retained)")
+
+		ddp_to_app_dev.SingleChannelControl(12, LIGHT_LEVEL_OFF, 0)
+		handler.Verify("03/fe (type fffe) -> 01/14: " +
+			"<SingleChannelControlResponse 12/true/0/" +
+			"---------x----->")
+		broker.Verify(
+			"driver -> /devices/sbusvrelay/controls/VirtualRelay12: [0] (QoS 1, retained)")
+
+		ddp_to_app_dev.SingleChannelControl(10, LIGHT_LEVEL_OFF, 0)
+		handler.Verify("03/fe (type fffe) -> 01/14: " +
+			"<SingleChannelControlResponse 10/true/0/" +
+			"--------------->")
+		broker.Verify(
+			"driver -> /devices/sbusvrelay/controls/VirtualRelay10: [0] (QoS 1, retained)")
 	})
 }
 

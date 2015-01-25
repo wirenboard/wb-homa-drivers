@@ -26,6 +26,55 @@ func RegisterDeviceModelType(construct DeviceConstructor) {
 	smartbusDeviceModelTypes[construct(nil, nil).Type()] = construct
 }
 
+type VirtualRelayDevice struct {
+	DeviceBase
+	channelStatus [NUM_VIRTUAL_RELAYS]bool
+}
+
+func (dm *VirtualRelayDevice) Publish() {
+	for i, status := range dm.channelStatus {
+		v := "0"
+		if status {
+			v = "1"
+		}
+		controlName := fmt.Sprintf("VirtualRelay%d", i + 1)
+		dm.Observer.OnNewControl(dm, controlName, "text", v)
+	}
+}
+
+func (dm *VirtualRelayDevice) SetRelayOn(channelNo int, on bool) {
+	if channelNo < 1 || channelNo > NUM_VIRTUAL_RELAYS {
+		log.Printf("WARNING: invalid virtual relay channel %d", channelNo)
+		return
+	}
+	if dm.channelStatus[channelNo - 1] == on {
+		return
+	}
+	dm.channelStatus[channelNo - 1] = on
+	v := "0"
+	if on {
+		v = "1"
+	}
+	controlName := fmt.Sprintf("VirtualRelay%d", channelNo)
+	dm.Observer.OnValue(dm, controlName, v)
+}
+
+func (dm *VirtualRelayDevice) RelayStatus() []bool {
+	return dm.channelStatus[:]
+}
+
+func (dm *VirtualRelayDevice) SendValue(name, value string) bool {
+	// virtual relays cannot be changed
+	return false
+}
+
+func NewVirtualRelayDevice () *VirtualRelayDevice {
+	r := &VirtualRelayDevice{}
+	r.DevName = "sbusvrelay"
+	r.DevTitle = "Smartbus Virtual Relays"
+	return r
+}
+
 type SmartbusModel struct {
 	ModelBase
 	connector Connector
@@ -34,6 +83,7 @@ type SmartbusModel struct {
 	deviceID uint8
 	deviceType uint16
 	ep *SmartbusEndpoint
+	virtualRelays *VirtualRelayDevice
 }
 
 func NewSmartbusModel(connector Connector, subnetID uint8,
@@ -44,6 +94,7 @@ func NewSmartbusModel(connector Connector, subnetID uint8,
 		deviceID: deviceID,
 		deviceType: deviceType,
 		deviceMap: make(map[uint16]RealDeviceModel),
+		virtualRelays: NewVirtualRelayDevice(),
 	}
 	return
 }
@@ -59,6 +110,8 @@ func (model *SmartbusModel) Start() error {
 	model.ep.Observe(NewMessageDumper("MESSAGE FOR US"))
 	model.ep.AddInputSniffer(NewMessageDumper("NOT FOR US"))
 	model.ep.AddOutputSniffer(NewMessageDumper("OUTGOING"))
+	model.Observer.OnNewDevice(model.virtualRelays)
+	model.virtualRelays.Publish()
 	return err
 }
 
@@ -87,6 +140,14 @@ func (model *SmartbusModel) ensureDevice(header *MessageHeader) RealDeviceModel 
 func (model *SmartbusModel) OnAnything(msg Message, header *MessageHeader) {
 	dev := model.ensureDevice(header)
 	visit(dev, msg, "On")
+}
+
+func (model *SmartbusModel) SetVirtualRelayOn(channelNo int, on bool) {
+	model.virtualRelays.SetRelayOn(channelNo, on)
+}
+
+func (model *SmartbusModel) VirtualRelayStatus() []bool {
+	return model.virtualRelays.RelayStatus()
 }
 
 type DeviceModelBase struct {
@@ -133,6 +194,7 @@ func (dm *ZoneBeastDeviceModel) SendValue(name, value string) bool {
 	channelNo, err := strconv.Atoi(strings.TrimPrefix(name, "Channel "))
 	if err != nil {
 		log.Printf("bad channel name: %s", name)
+		return false
 	}
 	level := uint8(LIGHT_LEVEL_OFF)
 	if value == "1" {
@@ -297,6 +359,12 @@ func (dm *DDPDeviceModel) OnAssignPanelButtonResponse(msg *AssignPanelButtonResp
 	// FIXME (retry)
 	dm.pendingAssignmentButtonNo = -1
 	dm.pendingAssignment = -1
+}
+
+func (dm *DDPDeviceModel) OnSingleChannelControlCommand(msg *SingleChannelControlCommand) {
+	dm.model.SetVirtualRelayOn(int(msg.ChannelNo), msg.Level > 0)
+	dm.smartDev.SingleChannelControlResponse(msg.ChannelNo, true, msg.Level,
+		dm.model.VirtualRelayStatus())
 }
 
 func (dm *DDPDeviceModel) SendValue(name, value string) bool {
