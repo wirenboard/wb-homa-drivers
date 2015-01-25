@@ -29,7 +29,7 @@ type Model interface {
 	Observe(observer ModelObserver)
 }
 
-type Device interface {
+type DeviceModel interface {
 	Name() string
 	Title() string
 	// SendValue sends the specified control value to the target device
@@ -41,12 +41,12 @@ type Device interface {
 // TBD: Use ModelObserver interface
 
 type ModelObserver interface {
-	OnNewDevice(dev Device)
+	OnNewDevice(dev DeviceModel)
 }
 
 type DeviceObserver interface {
-	OnNewControl(dev Device, name, paramType, value string)
-	OnValue(dev Device, name, value string)
+	OnNewControl(dev DeviceModel, name, paramType, value string)
+	OnValue(dev DeviceModel, name, value string)
 }
 
 type ModelBase struct {
@@ -57,6 +57,7 @@ func (model *ModelBase) Observe(observer ModelObserver) {
 	model.Observer = observer
 }
 
+// fixme: move DeviceBase to fake_model.go (as a part of FakeModel)
 type DeviceBase struct {
 	DevName string
 	DevTitle string
@@ -75,12 +76,13 @@ func (dev *DeviceBase) Observe(observer DeviceObserver) {
 	dev.Observer = observer
 }
 
+// Driver transfers data between Model with MQTTClient
 type Driver struct {
 	model Model
 	client MQTTClient
 	messageCh chan MQTTMessage
 	quit chan struct{}
-	deviceMap map[string]Device
+	deviceMap map[string]DeviceModel
 	nextOrder int
 }
 
@@ -90,7 +92,7 @@ func NewDriver(model Model, makeClient MQTTClientFactory) (drv *Driver) {
 		messageCh: make(chan MQTTMessage),
 		quit: make(chan struct{}),
 		nextOrder: 1,
-		deviceMap: make(map[string]Device),
+		deviceMap: make(map[string]DeviceModel),
 	}
 	drv.client = makeClient(drv.handleMessage)
 	drv.model.Observe(drv)
@@ -101,12 +103,12 @@ func (drv *Driver) handleMessage(message MQTTMessage) {
 	drv.messageCh <- message
 }
 
-func (drv *Driver) topic(dev Device, sub ...string) string {
+func (drv *Driver) topic(dev DeviceModel, sub ...string) string {
 	parts := append(append([]string(nil), "/devices", dev.Name()), sub...)
 	return strings.Join(parts, "/")
 }
 
-func (drv *Driver) controlTopic(dev Device, controlName string, sub ...string) string {
+func (drv *Driver) controlTopic(dev DeviceModel, controlName string, sub ...string) string {
 	parts := append(append([]string(nil), "controls", controlName), sub...)
 	return drv.topic(dev, parts...)
 }
@@ -119,17 +121,17 @@ func (drv *Driver) publishMeta(topic string, payload string) {
 	drv.publish(topic, payload, 1)
 }
 
-func (drv *Driver) publishValue(dev Device, controlName, value string) {
+func (drv *Driver) publishValue(dev DeviceModel, controlName, value string) {
 	drv.publish(drv.controlTopic(dev, controlName), value, 1)
 }
 
-func (drv *Driver) OnNewDevice(dev Device) {
+func (drv *Driver) OnNewDevice(dev DeviceModel) {
 	drv.deviceMap[dev.Name()] = dev
 	drv.publishMeta(drv.topic(dev, "meta", "name"), dev.Title())
 	dev.Observe(drv)
 }
 
-func (drv *Driver) OnNewControl(dev Device, controlName, paramType, value string) {
+func (drv *Driver) OnNewControl(dev DeviceModel, controlName, paramType, value string) {
 	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "type"), paramType)
 	drv.publishMeta(drv.controlTopic(dev, controlName, "meta", "order"),
 		strconv.Itoa(drv.nextOrder))
@@ -140,7 +142,7 @@ func (drv *Driver) OnNewControl(dev Device, controlName, paramType, value string
 	drv.client.Subscribe(drv.controlTopic(dev, controlName, "on"))
 }
 
-func (drv *Driver) OnValue(dev Device, controlName, value string) {
+func (drv *Driver) OnValue(dev DeviceModel, controlName, value string) {
 	drv.publishValue(dev, controlName, value)
 }
 

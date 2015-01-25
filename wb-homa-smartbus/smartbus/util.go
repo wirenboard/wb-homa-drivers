@@ -5,12 +5,9 @@ import (
 	"reflect"
 )
 
-func visit(visitor interface{}, thing interface{}, prefix string, args... interface{}) {
-	typeName := reflect.Indirect(reflect.ValueOf(thing)).Type().Name()
-	methodName := prefix + typeName
+func doVisit(visitor interface{}, thing interface{}, methodName string, args []interface{}) bool {
 	if method, found := reflect.TypeOf(visitor).MethodByName(methodName); !found {
-		log.Printf("visit: no visitor method for %s", typeName)
-		return
+		return false
 	} else {
 		moreValues := make([]reflect.Value, len(args))
 		for i, arg := range(args) {
@@ -20,5 +17,16 @@ func visit(visitor interface{}, thing interface{}, prefix string, args... interf
 			reflect.ValueOf(visitor),
 			reflect.ValueOf(thing),
 		}, moreValues...))
+		return true
+	}
+}
+
+func visit(visitor interface{}, thing interface{}, prefix string, args... interface{}) {
+	typeName := reflect.Indirect(reflect.ValueOf(thing)).Type().Name()
+	methodName := prefix + typeName
+	if !doVisit(visitor, thing, methodName, args) &&
+		!doVisit(visitor, thing, prefix + "Anything", args) {
+		log.Printf("visit: no visitor method for %s", typeName)
+		return
 	}
 }

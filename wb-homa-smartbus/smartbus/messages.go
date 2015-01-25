@@ -9,7 +9,7 @@ import (
 const (
 	LIGHT_LEVEL_OFF = 0
 	LIGHT_LEVEL_ON = 100
-	SET_PANEL_BUTTON_MODES_COUNT = 16
+	PANEL_BUTTON_COUNT = 16
 )
 
 const (
@@ -18,6 +18,9 @@ const (
 	QUERY_MODULES_DEV_HVAC = 0x03
 	QUERY_MODULES_DEV_SENSORS = 0x04
 	QUERY_MODULES_DEV_Z_AUDIO = 0x05
+
+	BUTTON_COMMAND_INVALID = 0x00
+	BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL = 0x59
 
 	PANEL_CONTROL_TYPE_INVALID = 0x00
 	PANEL_CONTROL_TYPE_IR_RECEIVER = 0x01
@@ -180,7 +183,7 @@ type QueryPanelButtonAssignmentResponse struct {
 	ButtonNo uint8
 	FunctionNo uint8
 	Command uint8
-	CommandSubnetID int8
+	CommandSubnetID uint8
 	CommandDeviceID uint8
 	ChannelNo uint8
 	Level uint8
@@ -195,7 +198,7 @@ type AssignPanelButton struct {
 	ButtonNo uint8
 	FunctionNo uint8
 	Command uint8
-	CommandSubnetID int8
+	CommandSubnetID uint8
 	CommandDeviceID uint8
 	ChannelNo uint8
 	Level uint8

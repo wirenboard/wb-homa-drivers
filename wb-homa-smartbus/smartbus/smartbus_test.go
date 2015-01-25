@@ -382,7 +382,7 @@ var messageTestCases []MessageTestCase = []MessageTestCase {
 			&AssignPanelButton{
 				ButtonNo: 1,
 				FunctionNo: 1,
-				Command: 0x59,
+				Command: BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL,
 				CommandSubnetID: 0x01,
 				CommandDeviceID: 0x99,
 				ChannelNo: 1,
@@ -865,12 +865,12 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	ddp_handler.Verify("03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment 1/2>")
 
 	ddp_to_app_dev.QueryPanelButtonAssignmentResponse(
-		1, 2, 0x59, 0x01, 0x99, 8, 100, 0)
+		1, 2, BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL, 0x01, 0x99, 8, 100, 0)
 	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
 		"<QueryPanelButtonAssignmentResponse 1/2/59/01/99/8/100/0>")
 
 	app_to_ddp_dev.AssignPanelButton(
-		1, 1, 0x59, 0x01, 0x99, 1, 100, 0)
+		1, 1, BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL, 0x01, 0x99, 1, 100, 0)
 	ddp_handler.Verify("03/fe (type fffe) -> 01/14: " +
 		"<AssignPanelButton 1/1/59/01/99/1/100/0/0>") // the last 0 is 'unknown' field
 

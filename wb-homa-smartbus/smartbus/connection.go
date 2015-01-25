@@ -181,7 +181,7 @@ func (dev *SmartbusDevice) QueryPanelButtonAssignment(buttonNo uint8, functionNo
 
 func (dev *SmartbusDevice) QueryPanelButtonAssignmentResponse(
 	buttonNo uint8, functionNo uint8, command uint8,
-	commandSubnetID int8, commandDeviceID uint8,
+	commandSubnetID uint8, commandDeviceID uint8,
 	channelNo uint8, level uint8, duration uint16) {
 	dev.Send(&QueryPanelButtonAssignmentResponse{
 		buttonNo, functionNo, command,
@@ -192,7 +192,7 @@ func (dev *SmartbusDevice) QueryPanelButtonAssignmentResponse(
 
 func (dev *SmartbusDevice) AssignPanelButton(
 	buttonNo uint8, functionNo uint8, command uint8,
-	commandSubnetID int8, commandDeviceID uint8,
+	commandSubnetID uint8, commandDeviceID uint8,
 	channelNo uint8, level uint8, duration uint16) {
 	dev.Send(&AssignPanelButton{
 		buttonNo, functionNo, command,
@@ -205,7 +205,7 @@ func (dev *SmartbusDevice) AssignPanelButtonResponse(buttonNo uint8, functionNo 
 	dev.Send(&AssignPanelButtonResponse{buttonNo, functionNo})
 }
 
-func (dev *SmartbusDevice) SetPanelButtonModes(modes [SET_PANEL_BUTTON_MODES_COUNT]string) {
+func (dev *SmartbusDevice) SetPanelButtonModes(modes [PANEL_BUTTON_COUNT]string) {
 	dev.Send(&SetPanelButtonModes{modes})
 }
 
