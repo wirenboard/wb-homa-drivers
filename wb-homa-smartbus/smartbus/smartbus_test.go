@@ -893,70 +893,70 @@ func TestSmartbusEndpointReceive(t *testing.T) {
 func TestSmartbusEndpointSendReceive(t *testing.T) {
 	p, r := net.Pipe()
 
-	ddp_handler := NewFakeHandler(t)
+	ddpHandler := NewFakeHandler(t)
 	conn1 := NewSmartbusConnection(NewStreamIO(p))
-	ddp_ep := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
-	ddp_ep.Observe(ddp_handler)
-	ddp_to_relay_dev := ddp_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
-	ddp_to_app_dev := ddp_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
-	ddp_to_all_dev := ddp_ep.GetBroadcastDevice()
+	ddpEp := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
+	ddpEp.Observe(ddpHandler)
+	ddpToRelayDev := ddpEp.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
+	ddpToAppDev := ddpEp.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
+	ddpToAllDev := ddpEp.GetBroadcastDevice()
 
-	relay_handler := NewFakeHandler(t)
+	relayHandler := NewFakeHandler(t)
 	conn2 := NewSmartbusConnection(NewStreamIO(r))
 	relay_ep := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
-	relay_ep.Observe(relay_handler)
-	relay_to_ddp_dev := relay_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
-	relay_to_all_dev := relay_ep.GetBroadcastDevice()
+	relay_ep.Observe(relayHandler)
+	relayToDDPDev := relay_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
+	relayToAllDev := relay_ep.GetBroadcastDevice()
 
-	app_handler := NewFakeHandler(t)
+	appHandler := NewFakeHandler(t)
 	app_ep := conn2.MakeSmartbusEndpoint(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID, SAMPLE_APP_DEVICE_TYPE)
-	app_ep.Observe(app_handler)
-	app_to_ddp_dev := app_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
-	app_to_all_dev := app_ep.GetBroadcastDevice()
+	app_ep.Observe(appHandler)
+	appToDDPDev := app_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
+	appToAllDev := app_ep.GetBroadcastDevice()
 
-	ddp_to_relay_dev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
-	relay_handler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
+	ddpToRelayDev.SingleChannelControl(7, LIGHT_LEVEL_ON, 0)
+	relayHandler.Verify("01/14 (type 0095) -> 01/1c: <SingleChannelControlCommand 7/100/0>")
 
-	relay_to_all_dev.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
+	relayToAllDev.SingleChannelControlResponse(7, true, LIGHT_LEVEL_ON,
 		parseChannelStatus("---------------"))
- 	ddp_handler.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/100/--------------->")
+ 	ddpHandler.Verify("01/1c (type 139c) -> ff/ff: <SingleChannelControlResponse 7/true/100/--------------->")
 
-	relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
-	ddp_handler.Verify("01/1c (type 139c) -> ff/ff: <ZoneBeastBroadcast [0]/------x-------->")
+	relayToAllDev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("------x--------"))
+	ddpHandler.Verify("01/1c (type 139c) -> ff/ff: <ZoneBeastBroadcast [0]/------x-------->")
 
 	// DDP commands
-	ddp_to_all_dev.QueryModules()
+	ddpToAllDev.QueryModules()
 	// fixme: actually it goes to 01/1f
-	app_handler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
-	relay_handler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
+	appHandler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
+	relayHandler.Verify("01/14 (type 0095) -> ff/ff: <QueryModules>")
 
-	relay_to_ddp_dev.QueryModulesResponse(QUERY_MODULES_DEV_RELAY, 0x0a)
+	relayToDDPDev.QueryModulesResponse(QUERY_MODULES_DEV_RELAY, 0x0a)
 	// note that channel number (10) is stringified as decimal
-	ddp_handler.Verify("01/1c (type 139c) -> 01/14: <QueryModulesResponse 01/1c/02/10/00/00>")
+	ddpHandler.Verify("01/1c (type 139c) -> 01/14: <QueryModulesResponse 01/1c/02/10/00/00>")
 
-	ddp_to_app_dev.PanelControlResponse(PANEL_CONTROL_TYPE_COOLING_SET_POINT, 25)
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: <PanelControlResponse Cooling Set Point=25>")
+	ddpToAppDev.PanelControlResponse(PANEL_CONTROL_TYPE_COOLING_SET_POINT, 25)
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: <PanelControlResponse Cooling Set Point=25>")
 
-	ddp_to_relay_dev.QueryFanController(7)
-	relay_handler.Verify("01/14 (type 0095) -> 01/1c: <QueryFanController 7>")
+	ddpToRelayDev.QueryFanController(7)
+	relayHandler.Verify("01/14 (type 0095) -> 01/1c: <QueryFanController 7>")
 
-	app_to_ddp_dev.QueryPanelButtonAssignment(1, 2)
-	ddp_handler.Verify("03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment 1/2>")
+	appToDDPDev.QueryPanelButtonAssignment(1, 2)
+	ddpHandler.Verify("03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment 1/2>")
 
-	ddp_to_app_dev.QueryPanelButtonAssignmentResponse(
+	ddpToAppDev.QueryPanelButtonAssignmentResponse(
 		1, 2, BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL, 0x01, 0x99, 8, 100, 0)
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: " +
 		"<QueryPanelButtonAssignmentResponse 1/2/59/01/99/8/100/0>")
 
-	app_to_ddp_dev.AssignPanelButton(
+	appToDDPDev.AssignPanelButton(
 		1, 1, BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL, 0x01, 0x99, 1, 100, 0)
-	ddp_handler.Verify("03/fe (type fffe) -> 01/14: " +
+	ddpHandler.Verify("03/fe (type fffe) -> 01/14: " +
 		"<AssignPanelButton 1/1/59/01/99/1/100/0/0>") // the last 0 is 'unknown' field
 
-	ddp_to_app_dev.AssignPanelButtonResponse(1, 1)
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: <AssignPanelButtonResponse 1/1>")
+	ddpToAppDev.AssignPanelButtonResponse(1, 1)
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: <AssignPanelButtonResponse 1/1>")
 
-	app_to_ddp_dev.SetPanelButtonModes(
+	appToDDPDev.SetPanelButtonModes(
 		[16]string {
 			"Invalid",
 			"SingleOnOff",
@@ -975,20 +975,20 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 			"Invalid",
 			"Invalid",
 		})
-	ddp_handler.Verify("03/fe (type fffe) -> 01/14: " +
+	ddpHandler.Verify("03/fe (type fffe) -> 01/14: " +
 		"<SetPanelButtonModes " +
 		"1/1:Invalid,1/2:SingleOnOff,1/3:SingleOnOff,1/4:SingleOnOff," +
 		"2/1:CombinationOn,2/2:Invalid,2/3:Invalid,2/4:Invalid," +
 		"3/1:Invalid,3/2:SingleOnOff,3/3:SingleOnOff,3/4:SingleOnOff," +
 		"4/1:SingleOnOff,4/2:Invalid,4/3:Invalid,4/4:Invalid>")
 
-	ddp_to_app_dev.SetPanelButtonModesResponse(true)
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: <SetPanelButtonModesResponse true>")
+	ddpToAppDev.SetPanelButtonModesResponse(true)
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: <SetPanelButtonModesResponse true>")
 
-	app_to_all_dev.ReadMACAddress()
-	ddp_handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
+	appToAllDev.ReadMACAddress()
+	ddpHandler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
 
-	ddp_to_app_dev.ReadMACAddressResponse(
+	ddpToAppDev.ReadMACAddressResponse(
 		[8]byte{
 			0x53, 0x03, 0x00, 0x00,
 			0x00, 0x00, 0x30, 0xc3,
@@ -996,16 +996,16 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 		[]uint8 {
 			0x32, 0x2c, 0x32, 0x30,
 		})
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: " +
 		"<ReadMACAddressResponse 53:03:00:00:00:00:30:c3 [32 2c 32 30]>")
 
-	ddp_to_app_dev.ReadMACAddressResponse(
+	ddpToAppDev.ReadMACAddressResponse(
 		[8]byte{
 			0x53, 0x03, 0x00, 0x00,
 			0x00, 0x00, 0x30, 0xc3,
 		},
 		[]uint8 {})
-	app_handler.Verify("01/14 (type 0095) -> 03/fe: " +
+	appHandler.Verify("01/14 (type 0095) -> 03/fe: " +
 		"<ReadMACAddressResponse 53:03:00:00:00:00:30:c3 []>")
 
 	conn1.Close()

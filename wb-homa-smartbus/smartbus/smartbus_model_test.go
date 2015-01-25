@@ -50,16 +50,16 @@ func VerifyVirtualRelays(broker *FakeMQTTBroker) {
 func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 	doTestSmartbusDriver(t, func (conn *SmartbusConnection, driver *Driver, broker *FakeMQTTBroker, handler *FakeHandler, client *FakeMQTTClient) {
 
-		relay_ep := conn.MakeSmartbusEndpoint(
+		relayEp := conn.MakeSmartbusEndpoint(
 			SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
-		relay_ep.Observe(handler)
-		relay_to_all_dev := relay_ep.GetBroadcastDevice()
-		relay_to_app_dev := relay_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
+		relayEp.Observe(handler)
+		relayToAllDev := relayEp.GetBroadcastDevice()
+		relaytoAppDev := relayEp.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
 
 		driver.Start()
 		VerifyVirtualRelays(broker)
 		handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
-		relay_to_app_dev.ReadMACAddressResponse(
+		relaytoAppDev.ReadMACAddressResponse(
 			[8]byte{
 				0x53, 0x03, 0x00, 0x00,
 				0x00, 0x00, 0x42, 0x42,
@@ -69,7 +69,7 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 			"driver -> /devices/zonebeast011c/meta/name: [Zone Beast 01:1c] (QoS 1, retained)",
 		)
 
-		relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("---x"))
+		relayToAllDev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("---x"))
 		broker.Verify(
 			"driver -> /devices/zonebeast011c/controls/Channel 1/meta/type: [switch] (QoS 1, retained)",
 			"driver -> /devices/zonebeast011c/controls/Channel 1/meta/order: [1] (QoS 1, retained)",
@@ -92,7 +92,7 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 			"Subscribe -- driver: /devices/zonebeast011c/controls/Channel 4/on",
 		)
 
-		relay_to_all_dev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("x---"))
+		relayToAllDev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("x---"))
 		broker.Verify(
 			"driver -> /devices/zonebeast011c/controls/Channel 1: [1] (QoS 1, retained)",
 			"driver -> /devices/zonebeast011c/controls/Channel 4: [0] (QoS 1, retained)",
@@ -101,7 +101,7 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 		client.Publish(MQTTMessage{"/devices/zonebeast011c/controls/Channel 2/on", "1", 1, false})
 		// note that SingleChannelControlResponse carries pre-command channel status
 		handler.Verify("03/fe (type fffe) -> 01/1c: <SingleChannelControlCommand 2/100/0>")
-		relay_to_all_dev.SingleChannelControlResponse(2, true, LIGHT_LEVEL_ON, parseChannelStatus("x---"))
+		relayToAllDev.SingleChannelControlResponse(2, true, LIGHT_LEVEL_ON, parseChannelStatus("x---"))
 		broker.Verify(
 			"tst -> /devices/zonebeast011c/controls/Channel 2/on: [1] (QoS 1)",
 			"driver -> /devices/zonebeast011c/controls/Channel 2: [1] (QoS 1, retained)",
@@ -109,7 +109,7 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 
 		client.Publish(MQTTMessage{"/devices/zonebeast011c/controls/Channel 1/on", "0", 1, false})
 		handler.Verify("03/fe (type fffe) -> 01/1c: <SingleChannelControlCommand 1/0/0>")
-		relay_to_all_dev.SingleChannelControlResponse(1, true, LIGHT_LEVEL_OFF, parseChannelStatus("xx--"))
+		relayToAllDev.SingleChannelControlResponse(1, true, LIGHT_LEVEL_OFF, parseChannelStatus("xx--"))
 		broker.Verify(
 			"tst -> /devices/zonebeast011c/controls/Channel 1/on: [0] (QoS 1)",
 			"driver -> /devices/zonebeast011c/controls/Channel 1: [0] (QoS 1, retained)",
@@ -127,15 +127,15 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 
 func TestSmartbusDriverDDPHandling(t *testing.T) {
 	doTestSmartbusDriver(t, func (conn *SmartbusConnection, driver *Driver, broker *FakeMQTTBroker, handler *FakeHandler, client *FakeMQTTClient) {
-		ddp_ep := conn.MakeSmartbusEndpoint(
+		ddpEp := conn.MakeSmartbusEndpoint(
 			SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
-		ddp_ep.Observe(handler)
-		ddp_to_app_dev := ddp_ep.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
+		ddpEp.Observe(handler)
+		ddpToAppDev := ddpEp.GetSmartbusDevice(SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID)
 
 		driver.Start()
 		VerifyVirtualRelays(broker)
 		handler.Verify("03/fe (type fffe) -> ff/ff: <ReadMACAddress>")
-		ddp_to_app_dev.ReadMACAddressResponse(
+		ddpToAppDev.ReadMACAddressResponse(
 			[8]byte{
 				0x53, 0x03, 0x00, 0x00,
 				0x00, 0x00, 0x30, 0xc3,
@@ -151,11 +151,11 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 				"03/fe (type fffe) -> 01/14: <QueryPanelButtonAssignment %d/1>", i))
 			assignment := -1
 			if i <= 10 {
-				ddp_to_app_dev.QueryPanelButtonAssignmentResponse(
+				ddpToAppDev.QueryPanelButtonAssignmentResponse(
 					uint8(i), 1, BUTTON_COMMAND_INVALID, 0, 0, 0, 0, 0)
 			} else {
 				assignment = i - 10
-				ddp_to_app_dev.QueryPanelButtonAssignmentResponse(
+				ddpToAppDev.QueryPanelButtonAssignmentResponse(
 					uint8(i), 1, BUTTON_COMMAND_SINGLE_CHANNEL_LIGHTING_CONTROL,
 					SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID,
 					uint8(assignment), 100, 0)
@@ -171,7 +171,7 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 		}
 
 		// second QueryModules shouldn't cause anything
-		ddp_to_app_dev.QueryModules()
+		ddpToAppDev.QueryModules()
 		handler.Verify()
 		broker.Verify()
 
@@ -183,34 +183,34 @@ func TestSmartbusDriverDDPHandling(t *testing.T) {
 			"2/1:Invalid,2/2:Invalid,2/3:Invalid,2/4:Invalid," +
 			"3/1:Invalid,3/2:Invalid,3/3:SingleOnOff,3/4:SingleOnOff," +
 			"4/1:SingleOnOff,4/2:SingleOnOff,4/3:SingleOnOff,4/4:SingleOnOff>")
-		ddp_to_app_dev.SetPanelButtonModesResponse(true)
+		ddpToAppDev.SetPanelButtonModesResponse(true)
 		broker.Verify("tst -> /devices/ddp0114/controls/Page1Button2/on: [10] (QoS 1)")
 		handler.Verify("03/fe (type fffe) -> 01/14: <AssignPanelButton 2/1/59/03/fe/10/100/0/0>")
-		ddp_to_app_dev.AssignPanelButtonResponse(2, 1)
+		ddpToAppDev.AssignPanelButtonResponse(2, 1)
 		broker.Verify("driver -> /devices/ddp0114/controls/Page1Button2: [10] (QoS 1, retained)")
 
-		ddp_to_app_dev.SingleChannelControl(10, LIGHT_LEVEL_ON, 0)
+		ddpToAppDev.SingleChannelControl(10, LIGHT_LEVEL_ON, 0)
 		handler.Verify("03/fe (type fffe) -> 01/14: " +
 			"<SingleChannelControlResponse 10/true/100/" +
 			"---------x----->")
 		broker.Verify(
 			"driver -> /devices/sbusvrelay/controls/VirtualRelay10: [1] (QoS 1, retained)")
 
-		ddp_to_app_dev.SingleChannelControl(12, LIGHT_LEVEL_ON, 0)
+		ddpToAppDev.SingleChannelControl(12, LIGHT_LEVEL_ON, 0)
 		handler.Verify("03/fe (type fffe) -> 01/14: " +
 			"<SingleChannelControlResponse 12/true/100/" +
 			"---------x-x--->")
 		broker.Verify(
 			"driver -> /devices/sbusvrelay/controls/VirtualRelay12: [1] (QoS 1, retained)")
 
-		ddp_to_app_dev.SingleChannelControl(12, LIGHT_LEVEL_OFF, 0)
+		ddpToAppDev.SingleChannelControl(12, LIGHT_LEVEL_OFF, 0)
 		handler.Verify("03/fe (type fffe) -> 01/14: " +
 			"<SingleChannelControlResponse 12/true/0/" +
 			"---------x----->")
 		broker.Verify(
 			"driver -> /devices/sbusvrelay/controls/VirtualRelay12: [0] (QoS 1, retained)")
 
-		ddp_to_app_dev.SingleChannelControl(10, LIGHT_LEVEL_OFF, 0)
+		ddpToAppDev.SingleChannelControl(10, LIGHT_LEVEL_OFF, 0)
 		handler.Verify("03/fe (type fffe) -> 01/14: " +
 			"<SingleChannelControlResponse 10/true/0/" +
 			"--------------->")
