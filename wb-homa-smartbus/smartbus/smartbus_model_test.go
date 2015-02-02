@@ -14,7 +14,7 @@ func doTestSmartbusDriver(t *testing.T,
 
 	broker := NewFakeMQTTBroker(t)
 	model := NewSmartbusModel(func () (SmartbusIO, error) {
-		return NewStreamIO(p), nil
+		return NewStreamIO(p, nil), nil
 	}, SAMPLE_APP_SUBNET, SAMPLE_APP_DEVICE_ID, SAMPLE_APP_DEVICE_TYPE)
 	client := broker.MakeClient("tst", func (msg MQTTMessage) {
 		t.Logf("tst: message %v", msg)
@@ -25,7 +25,7 @@ func doTestSmartbusDriver(t *testing.T,
 	})
 
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(NewStreamIO(r))
+	conn := NewSmartbusConnection(NewStreamIO(r, nil))
 	thunk(conn, driver, broker, handler, client)
 }
 

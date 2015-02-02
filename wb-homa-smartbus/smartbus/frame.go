@@ -40,6 +40,15 @@ type SmartbusMessage struct {
 	Message interface{}
 }
 
+func WritePreBuiltFrame(writer io.Writer, frame []byte) {
+	// writing the buffer in parts may cause missed frames
+	bs := make([]byte, len(frame) + 2)
+	bs[0] = 0xaa
+	bs[1] = 0xaa
+	copy(bs[2:], frame)
+	writer.Write(bs)
+}
+
 func WriteFrameRaw(writer io.Writer, header MessageHeader, writeMsg func(writer io.Writer)) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	binary.Write(buf, binary.BigEndian, uint16(0xaaaa)) // signature
@@ -180,8 +189,11 @@ func ReadSmartbusRaw(reader io.Reader, mutex MutexLike, frameHandler func (frame
 	}
 }
 
-func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
+func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage, rawCh chan []byte) {
 	ReadSmartbusRaw(reader, mutex, func (frame[] byte) {
+		if rawCh != nil {
+			rawCh <- frame
+		}
 		if msg, err := ParseFrame(frame); err != nil {
 			log.Printf("failed to parse smartbus frame: %s", err)
 		} else {
@@ -191,10 +203,17 @@ func ReadSmartbus(reader io.Reader, mutex MutexLike, ch chan SmartbusMessage) {
 	close(ch)
 }
 
-func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan SmartbusMessage) {
+func WriteSmartbus(writer io.Writer, mutex MutexLike, ch chan interface{}) {
 	for msg := range ch {
 		mutex.Lock()
-		WriteFrame(writer, msg)
+		switch msg.(type) {
+		case SmartbusMessage:
+			WriteFrame(writer, msg.(SmartbusMessage))
+		case []byte:
+			WritePreBuiltFrame(writer, msg.([]byte))
+		default:
+			panic("unsupported message object type")
+		}
 		mutex.Unlock()
 	}
 }
@@ -208,20 +227,22 @@ type SmartbusIO interface {
 type SmartbusStreamIO struct {
 	stream io.ReadWriteCloser
 	readCh chan SmartbusMessage
-	writeCh chan SmartbusMessage
+	writeCh chan interface{}
+	rawCh chan []byte
 	mutex sync.Mutex
 }
 
-func NewStreamIO(stream io.ReadWriteCloser) *SmartbusStreamIO {
+func NewStreamIO(stream io.ReadWriteCloser, rawCh chan []byte) *SmartbusStreamIO {
 	return &SmartbusStreamIO{
 		stream: stream,
 		readCh: make(chan SmartbusMessage),
-		writeCh: make(chan SmartbusMessage),
+		writeCh: make(chan interface{}),
+		rawCh: rawCh,
 	}
 }
 
 func (streamIO *SmartbusStreamIO) Start() chan SmartbusMessage {
-	go ReadSmartbus(streamIO.stream, &streamIO.mutex, streamIO.readCh)
+	go ReadSmartbus(streamIO.stream, &streamIO.mutex, streamIO.readCh, nil)
 	go WriteSmartbus(streamIO.stream, &streamIO.mutex, streamIO.writeCh)
 	return streamIO.readCh
 }

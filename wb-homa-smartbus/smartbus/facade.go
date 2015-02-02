@@ -25,7 +25,7 @@ func connect(serialAddress string) (SmartbusIO, error) {
 		}); err != nil {
 			return nil, err
 		} else {
-			return NewStreamIO(serial), nil
+			return NewStreamIO(serial, nil), nil
 		}
 	case serialAddress == "udp":
 		if dgramIO, err := NewDatagramIO(); err != nil {
@@ -37,14 +37,14 @@ func connect(serialAddress string) (SmartbusIO, error) {
 		if conn, err := net.Dial("tcp", serialAddress[6:]); err != nil {
 			return nil, err
 		} else {
-			return NewStreamIO(conn), nil
+			return NewStreamIO(conn, nil), nil
 		}
 	}
 
 	if conn, err := net.Dial("tcp", serialAddress); err != nil {
 		return nil, err
 	} else {
-		return NewStreamIO(conn), nil
+		return NewStreamIO(conn, nil), nil
 	}
 }
 

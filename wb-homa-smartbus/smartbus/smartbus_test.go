@@ -722,21 +722,25 @@ func TestSingleFrame(t *testing.T) {
 		p, r := io.Pipe()
 
 		ch := make(chan SmartbusMessage)
+		rawCh := make(chan []byte)
 		mtx := NewFakeMutex(t)
-		go ReadSmartbus(p, mtx, ch)
+		go ReadSmartbus(p, mtx, ch, rawCh)
 
 		n, err := r.Write(mtc.Packet)
 		r.Close()
 		assert.Equal(t, nil, err)
 		assert.Equal(t, len(mtc.Packet), n)
 
+		rawFrame := <- rawCh
+		assert.Equal(t, mtc.Packet[2:], rawFrame)
+
 		VerifyReadSingle(t, mtc, ch)
 		mtx.VerifyUnlocked(1, "unlocked after ReadSmartbus")
 
 		p, r = io.Pipe()
-		ch = make(chan SmartbusMessage)
-		go WriteSmartbus(r, mtx, ch)
-		ch <- mtc.SmartbusMessage
+		writeCh := make(chan interface{})
+		go WriteSmartbus(r, mtx, writeCh)
+		writeCh <- mtc.SmartbusMessage
 		bs := make([]byte, len(mtc.Packet))
 		if _, err := io.ReadFull(p, bs); err != nil {
 			t.Fatalf("failed to read the datagram")
@@ -744,8 +748,26 @@ func TestSingleFrame(t *testing.T) {
 		VerifyWrite(t, mtc, bs)
 		mtx.WaitForUnlock()
 		mtx.VerifyUnlocked(2, "unlocked after WriteSmartbus")
-		close(ch)
+		close(writeCh)
 	}
+}
+
+func TestWriteRaw(t *testing.T) {
+	for _, mtc := range messageTestCases {
+		p, r := io.Pipe()
+		ch := make(chan interface{})
+		mtx := NewFakeMutex(t)
+		go WriteSmartbus(r, mtx, ch)
+		ch <- mtc.Packet[2:]
+		bs := make([]byte, len(mtc.Packet))
+		if _, err := io.ReadFull(p, bs); err != nil {
+			t.Fatalf("failed to read the datagram")
+		}
+		VerifyWrite(t, mtc, bs)
+		mtx.WaitForUnlock()
+		mtx.VerifyUnlocked(1, "unlocked after WriteSmartbus")
+		close(ch)
+	}	
 }
 
 func TestMultiRead(t *testing.T) {
@@ -759,9 +781,12 @@ func TestMultiRead(t *testing.T) {
 	}
 
 	ch := make(chan SmartbusMessage)
+	rawCh := make(chan []byte)
 	mtx := NewFakeMutex(t)
-	go ReadSmartbus(buf, mtx, ch)
+	go ReadSmartbus(buf, mtx, ch, rawCh)
 	for _, mtc := range messageTestCases {
+		rawFrame := <- rawCh
+		assert.Equal(t, mtc.Packet[2:], rawFrame)
 		msg := <- ch
 		VerifyRead(t, mtc, msg)
 	}
@@ -800,7 +825,7 @@ func TestResync(t *testing.T) {
 	r := bytes.NewBuffer(bs)
 	ch := make(chan SmartbusMessage)
 	mtx := NewFakeMutex(t)
-	go ReadSmartbus(r, mtx, ch)
+	go ReadSmartbus(r, mtx, ch, nil)
 	VerifyReadSingle(t, messageTestCases[0], ch)
 	mtx.VerifyUnlocked(4, "unlocked after ReadSmartbus") // one lock for each initial sync byte
 }
@@ -810,7 +835,7 @@ func TestReadLocking(t *testing.T) {
 	p, r := io.Pipe()
 	ch := make(chan SmartbusMessage)
 	mtx := NewFakeMutex(t)
-	go ReadSmartbus(p, mtx, ch)
+	go ReadSmartbus(p, mtx, ch, nil)
 
 	time.Sleep(100 * time.Millisecond)
 	mtx.VerifyUnlocked(0, "initially unlocked")
@@ -856,7 +881,7 @@ func TestSmartbusEndpointSend(t *testing.T) {
 	p, r := net.Pipe() // we need bidirectional pipe here
 
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(NewStreamIO(p))
+	conn := NewSmartbusConnection(NewStreamIO(p, nil))
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
 	ep.Observe(handler)
 	dev := ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
@@ -877,7 +902,7 @@ func TestSmartbusEndpointSend(t *testing.T) {
 func TestSmartbusEndpointReceive(t *testing.T) {
 	p, r := net.Pipe()
 	handler := NewFakeHandler(t)
-	conn := NewSmartbusConnection(NewStreamIO(p))
+	conn := NewSmartbusConnection(NewStreamIO(p, nil))
 	ep := conn.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
 	ep.Observe(handler)
 
@@ -894,7 +919,7 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	p, r := net.Pipe()
 
 	ddpHandler := NewFakeHandler(t)
-	conn1 := NewSmartbusConnection(NewStreamIO(p))
+	conn1 := NewSmartbusConnection(NewStreamIO(p, nil))
 	ddpEp := conn1.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID, SAMPLE_DDP_DEVICE_TYPE)
 	ddpEp.Observe(ddpHandler)
 	ddpToRelayDev := ddpEp.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID)
@@ -902,7 +927,7 @@ func TestSmartbusEndpointSendReceive(t *testing.T) {
 	ddpToAllDev := ddpEp.GetBroadcastDevice()
 
 	relayHandler := NewFakeHandler(t)
-	conn2 := NewSmartbusConnection(NewStreamIO(r))
+	conn2 := NewSmartbusConnection(NewStreamIO(r, nil))
 	relay_ep := conn2.MakeSmartbusEndpoint(SAMPLE_SUBNET, SAMPLE_RELAY_DEVICE_ID, SAMPLE_RELAY_DEVICE_TYPE)
 	relay_ep.Observe(relayHandler)
 	relayToDDPDev := relay_ep.GetSmartbusDevice(SAMPLE_SUBNET, SAMPLE_DDP_DEVICE_ID)
