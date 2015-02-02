@@ -20,7 +20,6 @@ var udpSignature []byte = []byte {
 }
 
 type DatagramIO struct {
-	nets []net.IPNet
 	conn *net.UDPConn
 	outgoingIP net.IP
 	smartbusGwAddress net.UDPAddr
@@ -37,83 +36,26 @@ func allBroadcast (b []byte) bool {
 	return true
 }
 
-var v6Prefix = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff}
-
-func broadcast(ip net.IP, mask net.IPMask) net.IP {
-	if len(mask) == net.IPv6len && len(ip) == net.IPv4len && allBroadcast(mask[:12]) {
-		mask = mask[12:]
-	}
-	if len(mask) == net.IPv4len && len(ip) == net.IPv6len && bytes.Equal(ip[:12], v6Prefix) {
-		ip = ip[12:]
-	}
-	n := len(ip)
-	if n != len(mask) {
-		return nil
-	}
-	r := make(net.IP, 16)
-	copy(r, v6Prefix)
-	j := 16 - n
-	for i := 0; i < n; i++ {
-		r[j] = ip[i] | ^mask[i]
-		j++
-	}
-	return r
-}
-
 func NewDatagramIO () (*DatagramIO, error) {
-	if nets, err := getNetworks(); err != nil {
-		return nil, err
-	} else {
-		addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:" + strconv.Itoa(SmartbusPort))
-		if err != nil {
-			return nil, err
-		}
-		conn, err := net.ListenUDP("udp", addr)
-		if err != nil {
-			return nil, err
-		}
-		return &DatagramIO{
-			nets: nets,
-			conn: conn,
-			readCh: make(chan SmartbusMessage),
-			writeCh: make(chan SmartbusMessage),
-		}, nil
-	}
-}
-
-func getNetworks () ([]net.IPNet, error) {
-	addrs, err := net.InterfaceAddrs()
+	addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:" + strconv.Itoa(SmartbusPort))
 	if err != nil {
 		return nil, err
 	}
-	var nets []net.IPNet
-	for _, addr := range addrs {
-            switch v := addr.(type) {
-            case *net.IPNet:
-		    if v.IP.To4() != nil {
-			    nets = append(nets, *v)
-		    }
-            }
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
 	}
-	return nets, nil
-}
-
-func (dgramIO *DatagramIO) maybeDiscoverOutgoingIP(udpAddr net.UDPAddr) bool {
-	for _, ifAddr := range dgramIO.nets {
-		if ifAddr.IP.Mask(ifAddr.Mask).Equal(udpAddr.IP.Mask(ifAddr.Mask)) {
-			log.Println("matching src address:", ifAddr.IP)
-			dgramIO.outgoingIP = ifAddr.IP
-			dgramIO.smartbusGwAddress = net.UDPAddr{
-				broadcast(udpAddr.IP, ifAddr.Mask),
-				SmartbusPort,
-				"",
-			}
-			log.Println("smartbusGwAddress:", dgramIO.smartbusGwAddress)
-			return true
-		}
-	}
-
-	return false
+	return &DatagramIO{
+		conn: conn,
+		readCh: make(chan SmartbusMessage),
+		writeCh: make(chan SmartbusMessage),
+		outgoingIP: net.IPv4(255, 255, 255, 255),
+		smartbusGwAddress: net.UDPAddr{
+			net.IPv4(255, 255, 255, 255),
+			6000,
+			"",
+		},
+	}, nil
 }
 
 func (dgramIO *DatagramIO) processUdpPacket(packet []byte) {
@@ -145,7 +87,6 @@ func (dgramIO *DatagramIO) doSend(msg SmartbusMessage) {
 }
 
 func (dgramIO *DatagramIO) Start() chan SmartbusMessage {
-	ready := make(chan struct{})
 	go func () {
 		var err error
 		defer func () {
@@ -162,22 +103,6 @@ func (dgramIO *DatagramIO) Start() chan SmartbusMessage {
 		}()
 		b := make([]byte, 8192)
 		for {
-			log.Println("waiting...")
-			n, from, err := dgramIO.conn.ReadFrom(b)
-			if err != nil {
-				log.Printf("udp oops: %s", err)
-				return
-			}
-			udpFrom := from.(*net.UDPAddr)
-			log.Println("initial packet from: ", udpFrom)
-			log.Println(hex.Dump(b[:n]))
-			dgramIO.processUdpPacket(b[:n])
-			if (dgramIO.maybeDiscoverOutgoingIP(*udpFrom)) {
-				ready <- struct{}{}
-				break
-			}
-		}
-		for {
 			n, err := dgramIO.conn.Read(b)
 			if err != nil {
 				return
@@ -186,7 +111,6 @@ func (dgramIO *DatagramIO) Start() chan SmartbusMessage {
 		}
 	}()
 	go func () {
-		<- ready
 		for msg := range dgramIO.writeCh {
 			dgramIO.doSend(msg)
 		}
