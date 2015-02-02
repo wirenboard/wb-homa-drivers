@@ -182,6 +182,7 @@ func (dev *DeviceModelBase) OnReadMACAddressResponse(msg *ReadMACAddressResponse
 type ZoneBeastDeviceModel struct {
 	DeviceModelBase
 	channelStatus []bool
+	skipBroadcast bool
 }
 
 func NewZoneBeastDeviceModel(model *SmartbusModel, smartDev *SmartbusDevice) RealDeviceModel {
@@ -193,6 +194,7 @@ func NewZoneBeastDeviceModel(model *SmartbusModel, smartDev *SmartbusDevice) Rea
 			smartDev: smartDev,
 		},
 		make([]bool, 0, 100),
+		false,
 	}
 }
 
@@ -222,10 +224,15 @@ func (dm *ZoneBeastDeviceModel) OnSingleChannelControlResponse(msg *SingleChanne
 	}
 
 	dm.updateSingleChannel(int(msg.ChannelNo - 1), msg.Level != 0)
+	// ZoneBeast may send an outdated broadcast after SingleChannelControlResponse (?)
+	dm.skipBroadcast = true
 }
 
 func (dm *ZoneBeastDeviceModel) OnZoneBeastBroadcast(msg *ZoneBeastBroadcast) {
-	dm.updateChannelStatus(msg.ChannelStatus)
+	if !dm.skipBroadcast {
+		dm.updateChannelStatus(msg.ChannelStatus)
+	}
+	dm.skipBroadcast = false
 }
 
 func (dm *ZoneBeastDeviceModel) updateSingleChannel(n int, isOn bool) {

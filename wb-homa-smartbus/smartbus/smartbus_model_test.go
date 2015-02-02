@@ -110,12 +110,11 @@ func TestSmartbusDriverZoneBeastHandling(t *testing.T) {
 		client.Publish(MQTTMessage{"/devices/zonebeast011c/controls/Channel 1/on", "0", 1, false})
 		handler.Verify("03/fe (type fffe) -> 01/1c: <SingleChannelControlCommand 1/0/0>")
 		relayToAllDev.SingleChannelControlResponse(1, true, LIGHT_LEVEL_OFF, parseChannelStatus("xx--"))
+		relayToAllDev.ZoneBeastBroadcast([]byte{ 0 }, parseChannelStatus("x---")) // outdated response -- must be ignored
 		broker.Verify(
 			"tst -> /devices/zonebeast011c/controls/Channel 1/on: [0] (QoS 1)",
 			"driver -> /devices/zonebeast011c/controls/Channel 1: [0] (QoS 1, retained)",
 		)
-
-		// TBD: off (ch 1)
 
 		driver.Stop()
 		conn.Close()
