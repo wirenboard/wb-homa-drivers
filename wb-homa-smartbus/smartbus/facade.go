@@ -1,7 +1,10 @@
 package smartbus
 
 import (
+	"io"
 	"net"
+	"log"
+	"errors"
 	"strings"
         serial "github.com/ivan4th/goserial"
 )
@@ -14,7 +17,33 @@ const (
 	DRIVER_CLIENT_ID = "smartbus"
 )
 
-func connect(serialAddress string) (SmartbusIO, error) {
+func createStreamIO(stream io.ReadWriteCloser, provideUdpGateway bool) (SmartbusIO, error) {
+	if !provideUdpGateway {
+		return NewStreamIO(stream, nil), nil
+	}
+	rawUdpReadCh := make(chan []byte)
+	rawSerialReadCh := make(chan []byte)
+	log.Println("using UDP gateway mode")
+	dgramIO, err := NewDatagramIO(rawUdpReadCh)
+	if err != nil {
+		return nil, err
+	}
+	streamIO := NewStreamIO(stream, rawSerialReadCh)
+	dgramIO.Start()
+	go func () {
+		for frame := range rawUdpReadCh {
+			streamIO.SendRaw(frame)
+		}
+	}()
+	go func () {
+		for frame := range rawSerialReadCh {
+			dgramIO.SendRaw(frame)
+		}
+	}()
+	return streamIO, nil
+}
+
+func connect(serialAddress string, provideUdpGateway bool) (SmartbusIO, error) {
 	switch {
 	case strings.HasPrefix(serialAddress, "/"):
 		if serial, err := serial.OpenPort(&serial.Config{
@@ -25,10 +54,13 @@ func connect(serialAddress string) (SmartbusIO, error) {
 		}); err != nil {
 			return nil, err
 		} else {
-			return NewStreamIO(serial, nil), nil
+			return createStreamIO(serial, provideUdpGateway)
 		}
 	case serialAddress == "udp":
-		if dgramIO, err := NewDatagramIO(); err != nil {
+		if provideUdpGateway {
+			return nil, errors.New("cannot provide UDP gw in udp device access mode")
+		}
+		if dgramIO, err := NewDatagramIO(nil); err != nil {
 			return nil, err
 		} else {
 			return dgramIO, nil
@@ -37,7 +69,7 @@ func connect(serialAddress string) (SmartbusIO, error) {
 		if conn, err := net.Dial("tcp", serialAddress[6:]); err != nil {
 			return nil, err
 		} else {
-			return NewStreamIO(conn, nil), nil
+			return createStreamIO(conn, provideUdpGateway)
 		}
 	}
 
@@ -48,9 +80,9 @@ func connect(serialAddress string) (SmartbusIO, error) {
 	}
 }
 
-func NewSmartbusTCPDriver(serialAddress, brokerAddress string) (*Driver, error) {
+func NewSmartbusTCPDriver(serialAddress, brokerAddress string, provideUdpGateway bool) (*Driver, error) {
 	model := NewSmartbusModel(func () (SmartbusIO, error) {
-		return connect(serialAddress)
+		return connect(serialAddress, provideUdpGateway)
 	}, DRIVER_SUBNET, DRIVER_DEVICE_ID, DRIVER_DEVICE_TYPE)
 	driver := NewDriver(model, func (handler MQTTMessageHandler) MQTTClient {
 		return NewPahoMQTTClient(brokerAddress, DRIVER_CLIENT_ID, handler)

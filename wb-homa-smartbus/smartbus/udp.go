@@ -24,7 +24,8 @@ type DatagramIO struct {
 	outgoingIP net.IP
 	smartbusGwAddress net.UDPAddr
 	readCh chan SmartbusMessage
-	writeCh chan SmartbusMessage
+	writeCh chan interface{}
+	rawReadCh chan []byte
 }
 
 func allBroadcast (b []byte) bool {
@@ -36,7 +37,7 @@ func allBroadcast (b []byte) bool {
 	return true
 }
 
-func NewDatagramIO () (*DatagramIO, error) {
+func NewDatagramIO (rawReadCh chan []byte) (*DatagramIO, error) {
 	addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:" + strconv.Itoa(SmartbusPort))
 	if err != nil {
 		return nil, err
@@ -48,7 +49,8 @@ func NewDatagramIO () (*DatagramIO, error) {
 	return &DatagramIO{
 		conn: conn,
 		readCh: make(chan SmartbusMessage),
-		writeCh: make(chan SmartbusMessage),
+		writeCh: make(chan interface{}),
+		rawReadCh: rawReadCh,
 		outgoingIP: net.IPv4(255, 255, 255, 255),
 		smartbusGwAddress: net.UDPAddr{
 			net.IPv4(255, 255, 255, 255),
@@ -67,6 +69,10 @@ func (dgramIO *DatagramIO) processUdpPacket(packet []byte) {
 		log.Println("invalid udp packet:", hex.Dump(packet))
 		return
 	}
+	if dgramIO.rawReadCh != nil {
+		dgramIO.rawReadCh <- packet[len(udpSignature) + 4:]
+		return
+	}
 	if msg, err := ParseFrame(packet[len(udpSignature) + 4:]); err != nil {
 		log.Printf("failed to parse smartbus packet: %s", err)
 	} else {
@@ -74,13 +80,19 @@ func (dgramIO *DatagramIO) processUdpPacket(packet []byte) {
 	}
 }
 
-func (dgramIO *DatagramIO) doSend(msg SmartbusMessage) {
+func (dgramIO *DatagramIO) doSend(msg interface{}) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	// dgramIO.smartbusGwAddress.IP[15] = 255
-	log.Println("outip:", dgramIO.smartbusGwAddress.IP[15])
 	binary.Write(buf, binary.BigEndian, dgramIO.outgoingIP[:4])
 	binary.Write(buf, binary.BigEndian, udpSignature[:len(udpSignature) - 2])
-	WriteFrame(buf, msg)
+	switch msg.(type) {
+	case SmartbusMessage:
+		WriteFrame(buf, msg.(SmartbusMessage))
+	case []byte:
+		WritePreBuiltFrame(buf, msg.([]byte))
+	default:
+		panic("udp: unsupported message object type")
+	}
 	if _, err := dgramIO.conn.WriteToUDP(buf.Bytes(), &dgramIO.smartbusGwAddress); err != nil {
 		log.Printf("UDP SEND ERROR: %s", err)
 	}
@@ -119,6 +131,10 @@ func (dgramIO *DatagramIO) Start() chan SmartbusMessage {
 }
 
 func (dgramIO *DatagramIO) Send(msg SmartbusMessage) {
+	dgramIO.writeCh <- msg
+}
+
+func (dgramIO *DatagramIO) SendRaw(msg []byte) {
 	dgramIO.writeCh <- msg
 }
 
