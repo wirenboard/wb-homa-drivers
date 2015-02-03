@@ -40,6 +40,7 @@ private:
     int GpioMuxA;
     int GpioMuxB;
     int GpioMuxC;
+    std::ifstream AdcValStream;
     friend class TSysfsADCChannel;
 };
 
