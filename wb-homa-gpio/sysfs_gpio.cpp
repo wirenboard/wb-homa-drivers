@@ -3,6 +3,10 @@
 #include <iostream>
 #include <sstream>
 #include "sysfs_gpio.h"
+#include<fcntl.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<unistd.h>
 
 using namespace std;
 
@@ -10,8 +14,10 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     : Gpio(gpio)
     , Inverted(inverted)
     , Exported(false)
+    , InterruptSupport(false)
     , CachedValue(-1)
-{
+{   
+    ev_d.events= EPOLLET;
 
     //~ if (Export() == 0) {
         //~ Exported = true;
@@ -126,7 +132,39 @@ int TSysfsGpio::GetValue(){
     getvalgpio.close();
     return ret;
 }
+int TSysfsGpio::InterruptUp() {
+    string path="/sys/class/gpio/gpio";
+    int _fd;
+    string path_to_edge = path + to_string(Gpio) + "/edge";
+    string path_to_value=path + to_string(Gpio) + "/value";
+    if ( access( path.c_str(), F_OK) == -1 ) return -1;
+    ofstream setInterrupt(path.c_str());
+    if (!setInterrupt.is_open()){
+        cout << " OPERATION FAILED: Unable to set the interrupt of GPIO"<< Gpio <<" ."<< endl;
+        setInterrupt.close();
+        return -1;
+    }
+    setInterrupt << "both" << endl;
+    InterruptSupport = true;
+    _fd=open(path_to_value.c_str(), O_RDONLY | O_NONBLOCK );
+    if (_fd <= 0 ) {
+        cout << "cannot open value for GPIO" << Gpio <<endl;
+    }
+    ev_d.data.fd=_fd;
+    return 0;
+}
 
+ bool TSysfsGpio::getInterruptSupport() {
+    return InterruptSupport;
+}
+
+int TSysfsGpio::getFileDes() {
+    return ev_d.data.fd;
+}
+
+struct epoll_event* TSysfsGpio::getEpollStruct() {
+    return &ev_d;
+}
 TSysfsGpio::~TSysfsGpio(){
     //~ if (IsExported()) {
         //~ Unexport();

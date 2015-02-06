@@ -14,8 +14,12 @@
 #include "sysfs_gpio.h"
 #include "common/utils.h"
 #include "common/mqtt_wrapper.h"
+#include<mutex>
+
 
 using namespace std;
+
+mutex gpio_lock;
 
 enum class TGpioDirection {
     Input,
@@ -53,6 +57,7 @@ class TMQTTGpioHandler : public TMQTTWrapper
 		void OnSubscribe(int mid, int qos_count, const int *granted_qos);
 
         void UpdateChannelValues();
+        void InitInterrupts(int epfd);
         string GetChannelTopic(const TGpioDesc& gpio_desc);
 
     private:
@@ -102,7 +107,7 @@ void TMQTTGpioHandler::OnConnect(int rc)
         // Meta
         Publish(NULL, prefix + "/meta/name", Config.DeviceName, 0, true);
 
-
+        gpio_lock.lock();
         for (const auto& channel_desc : Channels) {
             const auto& gpio_desc = channel_desc.first;
 
@@ -115,7 +120,7 @@ void TMQTTGpioHandler::OnConnect(int rc)
             else
                 Subscribe(NULL, control_prefix + "/on");
         }
-
+        gpio_lock.unlock();
 //~ /devices/293723-demo/controls/Demo-Switch 0
 //~ /devices/293723-demo/controls/Demo-Switch/on 1
 //~ /devices/293723-demo/controls/Demo-Switch/meta/type switch
@@ -138,6 +143,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
           (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
           (tokens[5] == "on") )
     {
+        gpio_lock.lock();
         for (TChannelDesc& channel_desc : Channels) {
             const auto& gpio_desc = channel_desc.first;
             if (gpio_desc.Direction != TGpioDirection::Output)
@@ -153,6 +159,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                 }
             }
         }
+        gpio_lock.unlock();
     }
 }
 
@@ -167,6 +174,7 @@ string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) {
 }
 
 void TMQTTGpioHandler::UpdateChannelValues() {
+    gpio_lock.lock();
     for (TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
         auto& gpio_handler = channel_desc.second;
@@ -184,7 +192,26 @@ void TMQTTGpioHandler::UpdateChannelValues() {
                 Publish(NULL, GetChannelTopic(gpio_desc), to_string(value), 0, true); // Publish current value (make retained)
         }
     }
+    gpio_lock.unlock();
+}
 
+void TMQTTGpioHandler::InitInterrupts(int epfd){
+   gpio_lock.lock(); 
+   int n; 
+    for ( auto& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+         auto& gpio_handler = channel_desc.second;
+        
+        gpio_handler.InterruptUp();
+        if (gpio_handler.getInterruptSupport()) {
+             n=epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.getFileDes(),gpio_handler.getEpollStruct());
+            if (n != 0 ) {
+                cout<<"epoll_ctl gained error with GPIO"<<gpio_desc.Gpio<<endl;
+            }
+        }
+    }
+    gpio_lock.unlock();
+    
 }
 
 
@@ -196,7 +223,8 @@ int main(int argc, char *argv[])
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
     string config_fname;
-
+    int epfd;
+    struct epoll_event events[20];
 
     int c;
     //~ int digit_optind = 0;
@@ -294,15 +322,17 @@ int main(int argc, char *argv[])
     mqtt_config.Id = "wb-gpio";
     std::shared_ptr<TMQTTGpioHandler> mqtt_handler(new TMQTTGpioHandler(mqtt_config, handler_config));
     mqtt_handler->Init();
+    
+    rc= mqtt_handler->loop_start(); 
+    if (rc != 0 ) {
+        cout << "couldn't start mosquitto_loop_start ! " << rc << endl;
+    }else {
+        epfd = epoll_create(1);
+        mqtt_handler->InitInterrupts(epfd);
 
-	while(1){
-		rc = mqtt_handler->loop();
-        //~ cout << "break in a loop! " << rc << endl;
-		if(rc != 0) {
-			mqtt_handler->reconnect();
-		} else {
-            // update current values
-
+        while(1){
+            n= epoll_wait(epfd,events,20,15);
+                
             mqtt_handler->UpdateChannelValues();
         }
 	}

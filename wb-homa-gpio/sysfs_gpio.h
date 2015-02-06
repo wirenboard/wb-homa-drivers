@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include<sys/epoll.h>
+
 using namespace std;
 
 class TSysfsGpio
@@ -16,8 +18,11 @@ public:
     int SetValue(int val);
     // returns GPIO value (0 or 1), or negative number in case of error
     int GetValue();
-
-     // returns GPIO value (0 or 1) or default in case of error
+    int InterruptUp();
+    bool getInterruptSupport() ;
+    int getFileDes();
+    struct epoll_event* getEpollStruct() ;
+        // returns GPIO value (0 or 1) or default in case of error
     inline int GetValueOrDefault(int def = 0)
         { int val =  GetValue(); return (val < 0) ? def : val; }
 
@@ -33,12 +38,13 @@ public:
 private:
     // invert value if needed
     inline int PrepareValue(int value) { return value ^ Inverted;};
-private:
+    private:
     int Gpio;
     bool Inverted;
     bool Exported;
+    bool InterruptSupport;
+    struct epoll_event ev_d;
 
     int CachedValue;
-
 
 };
