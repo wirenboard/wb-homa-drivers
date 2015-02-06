@@ -15,10 +15,12 @@
 #include "common/utils.h"
 #include "common/mqtt_wrapper.h"
 #include<mutex>
-
+#include<chrono>
 
 using namespace std;
-
+using  std::chrono::duration_cast;
+using  std::chrono::milliseconds;
+using  std::chrono::steady_clock;
 mutex gpio_lock;
 
 enum class TGpioDirection {
@@ -59,10 +61,13 @@ class TMQTTGpioHandler : public TMQTTWrapper
         void UpdateChannelValues();
         void InitInterrupts(int epfd);
         string GetChannelTopic(const TGpioDesc& gpio_desc);
+        void HoldInterrupts(int count, struct epoll_event* events);
 
     private:
         THandlerConfig Config;
         vector<TChannelDesc> Channels;
+
+        void updateValue(const TGpioDesc& gpio_desc,TSysfsGpio& gpio_handler); 
 
 };
 
@@ -173,12 +178,7 @@ string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) {
     return (controls_prefix + gpio_desc.Name);
 }
 
-void TMQTTGpioHandler::UpdateChannelValues() {
-    gpio_lock.lock();
-    for (TChannelDesc& channel_desc : Channels) {
-        const auto& gpio_desc = channel_desc.first;
-        auto& gpio_handler = channel_desc.second;
-
+void TMQTTGpioHandler::updateValue( const TGpioDesc& gpio_desc,TSysfsGpio& gpio_handler) { 
         // vv order matters
         int cached = gpio_handler.GetCachedValue();
         int value = gpio_handler.GetValue();
@@ -191,8 +191,15 @@ void TMQTTGpioHandler::UpdateChannelValues() {
             if ((cached < 0) || (cached != value))
                 Publish(NULL, GetChannelTopic(gpio_desc), to_string(value), 0, true); // Publish current value (make retained)
         }
-    }
-    gpio_lock.unlock();
+}
+void TMQTTGpioHandler::UpdateChannelValues() {
+    for (TChannelDesc& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+        auto& gpio_handler = channel_desc.second;
+        gpio_lock.lock();
+        updateValue(gpio_desc,gpio_handler);
+        gpio_lock.unlock();
+       }
 }
 
 void TMQTTGpioHandler::InitInterrupts(int epfd){
@@ -204,7 +211,7 @@ void TMQTTGpioHandler::InitInterrupts(int epfd){
         
         gpio_handler.InterruptUp();
         if (gpio_handler.getInterruptSupport()) {
-             n=epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.getFileDes(),gpio_handler.getEpollStruct());
+             n=epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.getFileDes(),&gpio_handler.getEpollStruct());
             if (n != 0 ) {
                 cout<<"epoll_ctl gained error with GPIO"<<gpio_desc.Gpio<<endl;
             }
@@ -214,6 +221,21 @@ void TMQTTGpioHandler::InitInterrupts(int epfd){
     
 }
 
+void TMQTTGpioHandler::HoldInterrupts(int count, struct epoll_event* events){
+    int i;
+    for ( auto& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+        auto& gpio_handler = channel_desc.second;
+        for (i=0; i < count; i++){
+            if (gpio_handler.getFileDes() == events[i].data.fd) {
+                gpio_lock.lock();
+                updateValue(gpio_desc, gpio_handler);             
+                gpio_lock.unlock();
+            }
+        }
+    }
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -226,7 +248,7 @@ int main(int argc, char *argv[])
     int epfd;
     struct epoll_event events[20];
 
-    int c;
+    int c,n;
     //~ int digit_optind = 0;
     //~ int aopt = 0, bopt = 0;
     //~ char *copt = 0, *dopt = 0;
@@ -329,11 +351,17 @@ int main(int argc, char *argv[])
     }else {
         epfd = epoll_create(1);
         mqtt_handler->InitInterrupts(epfd);
-
+        steady_clock::time_point start;
+        int interval;
         while(1){
-            n= epoll_wait(epfd,events,20,15);
-                
-            mqtt_handler->UpdateChannelValues();
+            start=steady_clock::now();
+            n= epoll_wait(epfd,events,20,500);
+            interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
+            if ( interval > 400) {  
+                mqtt_handler->UpdateChannelValues();
+            }else {
+                mqtt_handler->HoldInterrupts(n,events);
+            }
         }
 	}
 
