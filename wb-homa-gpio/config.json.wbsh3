@@ -4,6 +4,12 @@
 
     "channels" : [
         {
+            "gpio" : 1,
+            "name" : "dry_19",
+            "direction" : "input",
+            "inverted" : true
+        },
+        {
             "gpio" : 52,
             "name" : "FET_1",
             "inverted" : false

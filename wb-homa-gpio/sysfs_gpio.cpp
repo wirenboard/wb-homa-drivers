@@ -7,6 +7,8 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<unistd.h>
+#include<string.h>
+#include<errno.h>
 
 using namespace std;
 
@@ -14,8 +16,13 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     : Gpio(gpio)
     , Inverted(inverted)
     , Exported(false)
-    , InterruptSupport(false)
+    , InterruptionSupport(false)
     , CachedValue(-1)
+    , FileDes(-1)
+    , g_mutex()
+    , in(false)
+    , interval(0)
+    , counts(0)
 {   
     ev_d.events= EPOLLET;
 
@@ -27,9 +34,45 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
 
 }
 
+/*TSysfsGpio::TSysfsGpio(const TSysfsGpio& other) 
+    : Gpio(other.Gpio)
+    , Inverted(other.Inverted)
+    , Exported(other.Exported)
+    , InterruptionSupport(other.InterruptionSupport)
+    , CachedValue(other.CachedValue)
+    , FileDes(-1)
+    , g_mutex()
+    , in(other.in)
+    , interval(other.interval)
+    , counts(other.counts)
+{
+    this->ev_d.events= EPOLLET;
+    this->ev_d.data.fd=other.ev_d.data.fd;
+}*/
+
+TSysfsGpio::TSysfsGpio( TSysfsGpio&& tmp)
+    : Gpio(tmp.Gpio)
+    , Inverted(tmp.Inverted)
+    , Exported(tmp.Exported)
+    , InterruptionSupport(tmp.InterruptionSupport)
+    , CachedValue(tmp.CachedValue)
+    , FileDes(tmp.FileDes)
+    , g_mutex()
+    , in(tmp.in)
+    , interval(tmp.interval)
+    , counts(tmp.counts)
+{ 
+    ev_d.events = EPOLLET;
+    ev_d.data.fd = tmp.ev_d.data.fd;
+    tmp.FileDes = -1;
+    tmp.ev_d.data.fd= -1;
+}
+
+
 int TSysfsGpio::Export()
 {
     string export_str = "/sys/class/gpio/export";
+    string path_to_value= "/sys/class/gpio/gpio" + to_string(Gpio) + "/value";
     ofstream exportgpio(export_str.c_str());
     if (!exportgpio.is_open()){
         cerr << " OPERATION FAILED: Unable to export GPIO"<< Gpio <<" ."<< endl;
@@ -39,9 +82,18 @@ int TSysfsGpio::Export()
     exportgpio << Gpio ; //write GPIO number to export
     exportgpio << "\n";
     exportgpio.close(); //close export file
-    cout << "exported " << Gpio << endl;
-
+    // open file descriptro of value file and keep it in FileDes and ev_data.fd
+    int _fd=open(path_to_value.c_str(), O_RDWR | O_NONBLOCK );
+    if (_fd <= 0 ) {
+        cout << strerror(errno) << endl;
+        cout << "cannot open value for GPIO" << Gpio <<endl;
+    }
+    FileDes=_fd;
+    ev_d.data.fd=_fd;
+    cout << "exported " << Gpio << " filedes is " << FileDes << endl;
+    
     Exported = true;
+    
     return 0;
 }
 
@@ -57,6 +109,9 @@ int TSysfsGpio::Unexport()
     unexportgpio << Gpio ; //write GPIO number to unexport
     unexportgpio.close(); //close unexport file
     cout << "unexported " << Gpio << endl;
+    if (FileDes >= 0 ) {
+        close (FileDes) ;
+    }
     return 0;
 }
 
@@ -77,8 +132,10 @@ int TSysfsGpio::SetDirection(bool input)
     //write direction to direction file
     if (input) {
         setdirgpio << "in";
+        in=true;
     } else {
         setdirgpio << "out";
+        in=false;
     }
 
     setdirgpio.close(); // close direction file
@@ -87,85 +144,112 @@ int TSysfsGpio::SetDirection(bool input)
 
 int TSysfsGpio::SetValue(int value)
 {
-    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << endl;
+    std::lock_guard<std::mutex> lock(g_mutex);
+    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << "pid is " << getpid() << "filedis is " << FileDes << endl;
+    char buf= '0';
     string setval_str = "/sys/class/gpio/gpio";
     setval_str +=  to_string(Gpio) + "/value";
-    ofstream setvalgpio(setval_str.c_str()); // open value file for gpio
-    if (!setvalgpio.is_open()){
-        cout << " OPERATION FAILED: Unable to set the value of GPIO"<< Gpio <<" ."<< endl;
-        setvalgpio.close();
+    //ofstream setvalgpio(setval_str.c_str()); 
+        
+    int prep_value = PrepareValue(value);
+    if (prep_value == 1 ) buf='1';
+    //setvalgpio << prep_value ;
+    //setvalgpio.close();
+    if (lseek(FileDes, 0, SEEK_SET) == -1 ){
+        cout << "lseek returned -1" << endl;
+    }
+    if (write(FileDes, &buf, sizeof(char)) <= 0 ){//write value to value file, FileDes has been initialized in Export
+        cout << strerror(errno);
+        cout << " OPERATION SetValue FAILED: Unable to set the value of GPIO"<< Gpio << " ."<< "filedis is " << FileDes <<  endl;
+        //setvalgpio.close();
         return -1;
     }
 
-    int prep_value = PrepareValue(value);
-    setvalgpio << prep_value ;//write value to value file
-    setvalgpio.close();// close value file
 
     CachedValue = prep_value;
     return 0;
 }
 
 int TSysfsGpio::GetValue(){
-
-    string val;
+    lock_guard<mutex> lock(g_mutex);
+    char buf='0';
+    //string val;
     int ret;
-    string getval_str = "/sys/class/gpio/gpio";
-    getval_str += to_string(Gpio) + "/value";
-    ifstream getvalgpio(getval_str.c_str());// open value file for gpio
-
-    if (getvalgpio < 0){
-        cout << " OPERATION FAILED: Unable to get value of GPIO"<< Gpio <<" ."<< endl;
-        getvalgpio.close();
+    string Getval_str = "/sys/class/gpio/gpio";
+    Getval_str += to_string(Gpio) + "/value";
+    //ifstream Getvalgpio(Getval_str.c_str());
+    if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
+        cout << "lseek returned -1 " << endl;
+    }
+    if (read(FileDes, &buf, sizeof(char)) <= 0){ //read gpio value
+        cout << " OPERATION GetValue FAILED: Unable to Get value of GPIO"<< Gpio <<" filedes is " << FileDes << "pid is " << getpid() << "."<< endl;
+        perror("error is ");
+        //Getvalgpio.close();
         return -1;
     }
+    //Getvalgpio >> val ;  
 
-    getvalgpio >> val ;  //read gpio value
-
-    if (val != "0") {
+    if (buf != '0') {
         ret = PrepareValue(1);
     } else {
         ret = PrepareValue(0);
     }
-
     CachedValue = ret;
-
-    getvalgpio.close();
+    //Getvalgpio.close();
     return ret;
 }
-int TSysfsGpio::InterruptUp() {
+int TSysfsGpio::InterruptionUp() {
     string path="/sys/class/gpio/gpio";
-    int _fd;
     string path_to_edge = path + to_string(Gpio) + "/edge";
     string path_to_value=path + to_string(Gpio) + "/value";
-    if ( access( path.c_str(), F_OK) == -1 ) return -1;
-    ofstream setInterrupt(path.c_str());
-    if (!setInterrupt.is_open()){
-        cout << " OPERATION FAILED: Unable to set the interrupt of GPIO"<< Gpio <<" ."<< endl;
-        setInterrupt.close();
-        return -1;
+    if ( access( path_to_edge.c_str(), F_OK) == -1 ) return -1;
+    if (in) {// if direction is input we will write to edge file
+        ofstream setInterruption(path_to_edge.c_str());
+        if (!setInterruption.is_open()){
+            cout << " OPERATION FAILED: Unable to set the Interruption of GPIO"<< Gpio <<" ."<< endl;
+            setInterruption.close();
+            return -1;
+        }
+        setInterruption << "both";
+        setInterruption.close();
+        InterruptionSupport = true;
+    }else {
+        InterruptionSupport= false;
     }
-    setInterrupt << "both" << endl;
-    InterruptSupport = true;
-    _fd=open(path_to_value.c_str(), O_RDONLY | O_NONBLOCK );
-    if (_fd <= 0 ) {
-        cout << "cannot open value for GPIO" << Gpio <<endl;
-    }
-    ev_d.data.fd=_fd;
+    
     return 0;
 }
 
- bool TSysfsGpio::getInterruptSupport() {
-    return InterruptSupport;
+ bool TSysfsGpio::GetInterruptionSupport() {
+    return InterruptionSupport;
 }
 
-int TSysfsGpio::getFileDes() {
-    return ev_d.data.fd;
+int TSysfsGpio::GetFileDes() {
+    return FileDes;
 }
 
-struct epoll_event* TSysfsGpio::getEpollStruct() {
-    return &ev_d;
+struct epoll_event& TSysfsGpio::GetEpollStruct() {
+    return ev_d;
 }
+
+void TSysfsGpio::GetInterval(){
+    if (counts != 0) {
+        std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
+        interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - previous).count();
+        counts++;
+        previous=time_now;
+        cout << "DEBUG: GPIO:" << Gpio << "interval= " << interval << "counts= " << counts << endl;
+    }else {
+       counts=1;
+       previous = std::chrono::steady_clock::now();
+    }
+}
+
 TSysfsGpio::~TSysfsGpio(){
+    if ( FileDes >= 0 ) {
+        close(FileDes);
+    }
+
     //~ if (IsExported()) {
         //~ Unexport();
     //~ }
