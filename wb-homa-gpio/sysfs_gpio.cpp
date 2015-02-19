@@ -21,6 +21,7 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     , FileDes(-1)
     , g_mutex()
     , in(false)
+    , Debouncing(true)
     , interval(0)
     , counts(0)
 {   
@@ -59,9 +60,11 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio&& tmp)
     , FileDes(tmp.FileDes)
     , g_mutex()
     , in(tmp.in)
+    , Debouncing(true)
     , interval(tmp.interval)
     , counts(tmp.counts)
 { 
+    cout << "MOVING NOW GPIO " << Gpio << endl;
     ev_d.events = EPOLLET;
     ev_d.data.fd = tmp.ev_d.data.fd;
     tmp.FileDes = -1;
@@ -210,7 +213,7 @@ int TSysfsGpio::InterruptionUp() {
             setInterruption.close();
             return -1;
         }
-        setInterruption << "both";
+        setInterruption << GetFront();
         setInterruption.close();
         InterruptionSupport = true;
     }else {
@@ -232,23 +235,49 @@ struct epoll_event& TSysfsGpio::GetEpollStruct() {
     return ev_d;
 }
 
+bool TSysfsGpio::IsDebouncing(){
+    if (counts == 0) return false; 
+    std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
+    long long inter = std::chrono::duration_cast<std::chrono::microseconds> (time_now - previous).count();
+    if ( inter > 1000) 
+        Debouncing = false;
+    else
+        Debouncing = true;
+    return Debouncing;
+}
+
 void TSysfsGpio::GetInterval(){
     if (counts != 0) {
         std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
         interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - previous).count();
         counts++;
         previous=time_now;
-        cout << "DEBUG: GPIO:" << Gpio << "interval= " << interval << "counts= " << counts << endl;
     }else {
-       counts=1;
-       previous = std::chrono::steady_clock::now();
-    }
+        counts=1;
+        previous = std::chrono::steady_clock::now();
+    } 
+    PublishInterval();
+    cout << "DEBUG: GPIO:" << Gpio << "interval= " << interval << "counts= " << counts << endl;
 }
 
+map<int, float>  TSysfsGpio::PublishInterval(){
+    map<int,float> Map; 
+    return Map; 
+}
+string TSysfsGpio::GetFront(){
+    if ( front == "") 
+        return "both";
+    else 
+        return front;
+}
+void TSysfsGpio::SetFront(string s){
+    front = s;
+}
 TSysfsGpio::~TSysfsGpio(){
     if ( FileDes >= 0 ) {
         close(FileDes);
     }
+
 
     //~ if (IsExported()) {
         //~ Unexport();
