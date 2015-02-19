@@ -17,7 +17,7 @@ Description: Wiren Board Smart Home MQTT ADC driver (WB-specific) compatible wit
 
 Package: wb-homa-modbus
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, bsdutils
 Description: Wiren Board Smart Home MQTT Modbus-RTU driver compatible with HomA conventions
 
 Package: wb-homa-w1
