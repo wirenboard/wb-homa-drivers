@@ -16,16 +16,17 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     : Gpio(gpio)
     , Inverted(inverted)
     , Exported(false)
-    , InterruptionSupport(false)
+    , InterruptSupport(false)
     , CachedValue(-1)
     , FileDes(-1)
-    , g_mutex()
-    , in(false)
+    , G_mutex()
+    , In(false)
     , Debouncing(true)
-    , interval(0)
-    , counts(0)
+    , Interval(0)
+    , Counts(0)
+    , InterruptEdge("")
 {   
-    ev_d.events= EPOLLET;
+    Ev_d.events= EPOLLET;
 
     //~ if (Export() == 0) {
         //~ Exported = true;
@@ -39,13 +40,13 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     : Gpio(other.Gpio)
     , Inverted(other.Inverted)
     , Exported(other.Exported)
-    , InterruptionSupport(other.InterruptionSupport)
+    , InterruptSupport(other.InterruptSupport)
     , CachedValue(other.CachedValue)
     , FileDes(-1)
     , g_mutex()
     , in(other.in)
     , interval(other.interval)
-    , counts(other.counts)
+    , Counts(other.Counts)
 {
     this->ev_d.events= EPOLLET;
     this->ev_d.data.fd=other.ev_d.data.fd;
@@ -55,20 +56,21 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio&& tmp)
     : Gpio(tmp.Gpio)
     , Inverted(tmp.Inverted)
     , Exported(tmp.Exported)
-    , InterruptionSupport(tmp.InterruptionSupport)
+    , InterruptSupport(tmp.InterruptSupport)
     , CachedValue(tmp.CachedValue)
     , FileDes(tmp.FileDes)
-    , g_mutex()
-    , in(tmp.in)
+    , G_mutex()
+    , In(tmp.In)
     , Debouncing(true)
-    , interval(tmp.interval)
-    , counts(tmp.counts)
+    , Interval(tmp.Interval)
+    , Counts(tmp.Counts)
+    , InterruptEdge(tmp.InterruptEdge)
 { 
     cout << "MOVING NOW GPIO " << Gpio << endl;
-    ev_d.events = EPOLLET;
-    ev_d.data.fd = tmp.ev_d.data.fd;
+    Ev_d.events = EPOLLET;
+    Ev_d.data.fd = tmp.Ev_d.data.fd;
     tmp.FileDes = -1;
-    tmp.ev_d.data.fd= -1;
+    tmp.Ev_d.data.fd= -1;
 }
 
 
@@ -92,7 +94,7 @@ int TSysfsGpio::Export()
         cout << "cannot open value for GPIO" << Gpio <<endl;
     }
     FileDes=_fd;
-    ev_d.data.fd=_fd;
+    Ev_d.data.fd=_fd;
     cout << "exported " << Gpio << " filedes is " << FileDes << endl;
     
     Exported = true;
@@ -135,10 +137,10 @@ int TSysfsGpio::SetDirection(bool input)
     //write direction to direction file
     if (input) {
         setdirgpio << "in";
-        in=true;
+        In=true;
     } else {
         setdirgpio << "out";
-        in=false;
+        In=false;
     }
 
     setdirgpio.close(); // close direction file
@@ -147,7 +149,7 @@ int TSysfsGpio::SetDirection(bool input)
 
 int TSysfsGpio::SetValue(int value)
 {
-    std::lock_guard<std::mutex> lock(g_mutex);
+    std::lock_guard<std::mutex> lock(G_mutex);
     cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << "pid is " << getpid() << "filedis is " << FileDes << endl;
     char buf= '0';
     string setval_str = "/sys/class/gpio/gpio";
@@ -174,7 +176,7 @@ int TSysfsGpio::SetValue(int value)
 }
 
 int TSysfsGpio::GetValue(){
-    lock_guard<mutex> lock(g_mutex);
+    lock_guard<mutex> lock(G_mutex);
     char buf='0';
     //string val;
     int ret;
@@ -201,30 +203,30 @@ int TSysfsGpio::GetValue(){
     //Getvalgpio.close();
     return ret;
 }
-int TSysfsGpio::InterruptionUp() {
+int TSysfsGpio::InterruptUp() {
     string path="/sys/class/gpio/gpio";
     string path_to_edge = path + to_string(Gpio) + "/edge";
     string path_to_value=path + to_string(Gpio) + "/value";
     if ( access( path_to_edge.c_str(), F_OK) == -1 ) return -1;
-    if (in) {// if direction is input we will write to edge file
-        ofstream setInterruption(path_to_edge.c_str());
-        if (!setInterruption.is_open()){
-            cout << " OPERATION FAILED: Unable to set the Interruption of GPIO"<< Gpio <<" ."<< endl;
-            setInterruption.close();
+    if (In) {// if direction is input we will write to edge file
+        ofstream setInterrupt(path_to_edge.c_str());
+        if (!setInterrupt.is_open()){
+            cout << " OPERATION FAILED: Unable to set the Interrupt of GPIO"<< Gpio <<" ."<< endl;
+            setInterrupt.close();
             return -1;
         }
-        setInterruption << GetFront();
-        setInterruption.close();
-        InterruptionSupport = true;
+        setInterrupt << "both";
+        setInterrupt.close();
+        InterruptSupport = true;
     }else {
-        InterruptionSupport= false;
+        InterruptSupport= false;
     }
     
     return 0;
 }
 
- bool TSysfsGpio::GetInterruptionSupport() {
-    return InterruptionSupport;
+ bool TSysfsGpio::GetInterruptSupport() {
+    return InterruptSupport;
 }
 
 int TSysfsGpio::GetFileDes() {
@@ -232,14 +234,14 @@ int TSysfsGpio::GetFileDes() {
 }
 
 struct epoll_event& TSysfsGpio::GetEpollStruct() {
-    return ev_d;
+    return Ev_d;
 }
 
 bool TSysfsGpio::IsDebouncing(){
-    if (counts == 0) return false; 
+    if (Counts == 0) return false; 
     std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
-    long long inter = std::chrono::duration_cast<std::chrono::microseconds> (time_now - previous).count();
-    if ( inter > 1000) 
+    long long debouncing_interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - Previous_Interrupt_Time).count();
+    if ( debouncing_interval > 1000) //if interval of impulses is bigger than 1000 microseconds we consider it is not a debounnce
         Debouncing = false;
     else
         Debouncing = true;
@@ -247,31 +249,38 @@ bool TSysfsGpio::IsDebouncing(){
 }
 
 void TSysfsGpio::GetInterval(){
-    if (counts != 0) {
+    if (Counts != 0) {
         std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
-        interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - previous).count();
-        counts++;
-        previous=time_now;
+        Interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - Previous_Interrupt_Time).count();
+        Counts++;
+        Previous_Interrupt_Time = time_now;
     }else {
-        counts=1;
-        previous = std::chrono::steady_clock::now();
+        Counts=1;
+        Previous_Interrupt_Time = std::chrono::steady_clock::now();
     } 
-    PublishInterval();
-    cout << "DEBUG: GPIO:" << Gpio << "interval= " << interval << "counts= " << counts << endl;
+    cout << "DEBUG: GPIO:" << Gpio << "interval= " << Interval << "counts= " << Counts << endl;
 }
 
-map<int, float>  TSysfsGpio::PublishInterval(){
-    map<int,float> Map; 
-    return Map; 
+vector<string> TSysfsGpio::MetaType(){
+    vector<string> output_vector;
+    output_vector.push_back("switch");
+    return output_vector;
 }
-string TSysfsGpio::GetFront(){
-    if ( front == "") 
+vector<TPublishPair>  TSysfsGpio::GpioPublish(){
+    GetInterval();// remember interval
+    vector<TPublishPair> output_vector;
+    int output_value = !!CachedValue;
+    output_vector.push_back(make_pair("", to_string(output_value)));//output saved value 
+    return output_vector; 
+}
+string TSysfsGpio::GetInterruptEdge(){
+    if ( InterruptEdge == "") 
         return "both";
     else 
-        return front;
+        return InterruptEdge;
 }
-void TSysfsGpio::SetFront(string s){
-    front = s;
+void TSysfsGpio::SetInterruptEdge (string s){
+    InterruptEdge = s;
 }
 TSysfsGpio::~TSysfsGpio(){
     if ( FileDes >= 0 ) {

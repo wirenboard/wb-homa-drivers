@@ -3,11 +3,14 @@
 #include<sys/epoll.h>
 #include<mutex>
 #include<chrono>
-#include<map>
+#include<vector>
 #include<memory>
+#include<utility>
+#include<iostream>
 
 using namespace std;
 
+typedef pair<string, string> TPublishPair;
 class TSysfsGpio
 {
 public:
@@ -25,10 +28,10 @@ public:
     // returns GPIO value (0 or 1), or negative number in case of error
     int GetValue();
     
-    int InterruptionUp();// trying to write to edge file and checking is it input gpio
+    int InterruptUp();// trying to write to edge file and checking is it input gpio
     
     //returns true if gpio support interruption
-    bool GetInterruptionSupport() ;
+    bool GetInterruptSupport() ;
     //returns gpio value file description
     int GetFileDes();
     struct epoll_event& GetEpollStruct() ;
@@ -44,10 +47,11 @@ public:
     inline int GetCachedValue() { return CachedValue; };
     inline int GetCachedValueOrDefault(int def = 0) {  return (CachedValue < 0) ? def : CachedValue; }
         
-    virtual map <int, float> PublishInterval(); //getting what nessesary for  publishing to the mqtt broker according to type
+    virtual vector<string> MetaType(); // what publish to meta/type 
+    virtual vector<TPublishPair> GpioPublish(); //getting what nessesary for  publishing to controls
     virtual void GetInterval();// measure time interval between interruptions
-    string GetFront(); // returning front of the impulse, that we're trying to catch
-    void SetFront(string s); // set front of the impulse
+    string GetInterruptEdge(); // returning front of the impulse, that we're trying to catch
+    void SetInterruptEdge(string s); // set front of the impulse
     bool IsDebouncing(); // if interval between two interruptions is less than 1 milisecond it will return true;
 
 private:
@@ -57,33 +61,30 @@ private:
     int Gpio;
     bool Inverted;
     bool Exported;
-    bool InterruptionSupport;
-    struct epoll_event ev_d;
+    bool InterruptSupport;
+    struct epoll_event Ev_d;
 
     int CachedValue;
     int FileDes;
-    mutable mutex g_mutex;
-    bool in;//direction true=in false=out
-    std::chrono::steady_clock::time_point previous;
+    mutable mutex G_mutex;
+    bool In;//direction true=in false=out
+    std::chrono::steady_clock::time_point Previous_Interrupt_Time;
     bool Debouncing;
 protected: 
-    long long unsigned int interval;
-    long unsigned int counts;
-    string front;
+    long long unsigned int Interval;
+    long unsigned int Counts;
+    string InterruptEdge;
 
 };
 
-class TSysfsGpioNew : public TSysfsGpio {
+class TSysfsWattMeter : public TSysfsGpio {
     public:
-        explicit TSysfsGpioNew(int gpio, bool inverted, string type, int multiplier);
-        TSysfsGpioNew(const TSysfsGpioNew& other) = delete;
-        TSysfsGpioNew(TSysfsGpioNew&& tmp) ;
-        ~TSysfsGpioNew();
-        map<int, float> PublishInterval();
-        void PublishWattMeterInterval();
-        void InitWattMeter();
-        inline float GetTotal( ){ return Total; }; // return total enegry
-        inline float GetPower() { return Power; }; // return current power
+        explicit TSysfsWattMeter(int gpio, bool inverted, string type, int multiplier);
+        TSysfsWattMeter(const TSysfsWattMeter& other) = delete;
+        TSysfsWattMeter(TSysfsWattMeter&& tmp) ;
+        ~TSysfsWattMeter();
+        vector<string> MetaType();
+        vector<TPublishPair> GpioPublish();   
     
     private:
         string Type;
