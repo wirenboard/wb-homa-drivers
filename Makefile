@@ -56,7 +56,7 @@ $(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp $(COMMON_H)
 $(GPIO_DIR)/sysfs_watt_meter.o : $(GPIO_DIR)/sysfs_watt_meter.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_gpio_watt_meter.o  $(COMMON_O)
+$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_watt_meter.o  $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Modbus
