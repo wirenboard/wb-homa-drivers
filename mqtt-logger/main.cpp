@@ -9,9 +9,11 @@
 #include<stdexcept>
 #include<mosquittopp.h>
 #include<ctime>
+#include<stdio.h>
+#include<unistd.h>
 
 using namespace std;
-class  TLoggerConfig{
+class  TLoggerConfig{// class for parsing config
     public:
         inline void SetPath(string s) { Path_to_log = s; }
         inline string GetPath() { return Path_to_log; }
@@ -23,7 +25,9 @@ class  TLoggerConfig{
         inline int GetTimeout() { return Timeout; }
         inline bool GetFullDump() { return FullDump; }
         inline void SetFullDump(bool b) { FullDump = b; }
-        void SetIntFromString(int& i, string s);
+        static void SetIntFromString(int& i, string s);
+        inline int GetNumber() { return Number; }
+        inline void SetNumber(string s) { SetIntFromString(Number, s); }
     
     
     private: 
@@ -32,9 +36,10 @@ class  TLoggerConfig{
         bool DumpSupport;
         int Timeout;
         bool FullDump;
+        int Number;
 };
 
-void TLoggerConfig::SetIntFromString ( int& i, string s ){
+void TLoggerConfig::SetIntFromString(int& i, string s ){
     try {
         if (s != "")  
             i = stoi(s.c_str());
@@ -68,6 +73,7 @@ class MQTTLogger: public TMQTTWrapper
         unsigned int Timeout;// timeout after which we will do dump logs
         bool FullDump;// if full_dump yes we doing full dump after timeout 
         ofstream Output;
+        int Number; // number of old log files;
 };
 
 MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig log_config)
@@ -79,6 +85,8 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
         cerr << "Cannot open log file for writting " << Path_To_Log << endl;
         exit (-1);
     }
+    Max = 1024 * log_config.GetSize();
+    Number = log_config.GetNumber();
     Connect();
 }
 
@@ -99,6 +107,27 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
     std::time_t tt = std::chrono::system_clock::to_time_t(current_time);
 
     Output << topic + " " +  payload << ctime( &tt) << endl;
+    if (Output.tellp() > Max){
+        Output.close();
+        int i;
+        for (i = Number-1; i > 0; i--){
+            if (access((Path_To_Log + "." + to_string(i)).c_str(), F_OK) != -1){// check if old log file exists
+                if (rename((Path_To_Log + "." + to_string(i)).c_str(), (Path_To_Log + "." + to_string(i+1)).c_str()) != 0){
+                    cerr << "can't create old log file \n";
+                    exit(-1);
+            }
+        }
+        }
+        if (rename(Path_To_Log.c_str(), (Path_To_Log + ".1").c_str()) != 0){
+            cerr << "can't create old log file \n";
+            exit(-1);
+        }
+        Output.open(Path_To_Log);
+        if (!Output.is_open()){
+            cerr << "Cannot open log file for writting " << Path_To_Log << endl;
+            exit (-1);
+        }
+    }
 }
 
 int main (int argc, char* argv[])
@@ -115,8 +144,13 @@ int main (int argc, char* argv[])
     log_config.SetDumpSupport (false);
     log_config.SetTimeout("0");
     log_config.SetFullDump(true);
-    while ( (c = getopt(argc, argv, "h:p:H:t:d:s:f:") ) != -1 ){
+    log_config.SetNumber("2");
+    while ( (c = getopt(argc, argv, "h:p:H:t:d:s:f:n:") ) != -1 ){
         switch(c){
+            case 'n':
+                printf ("option n with value '%s'\n", optarg);
+                log_config.SetNumber(string(optarg));
+                break;
             case 'f':
                 printf ("option f with value '%s'\n", optarg);
                 log_config.SetPath(string(optarg));
@@ -128,7 +162,7 @@ int main (int argc, char* argv[])
                 break;
             case 'p':
                 printf ( "option p with value '%s'\n",optarg);
-                log_config.SetIntFromString(mqtt_config.Port, string(optarg));
+                TLoggerConfig::SetIntFromString(mqtt_config.Port, string(optarg));
                 break;
             case 'H':
                 printf ("option h with value '%s'\n", optarg);
@@ -200,6 +234,7 @@ int main (int argc, char* argv[])
             mqtt_logger->reconnect();
         else{
             interval = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - previous_time).count();
+            
         }
     }
 
