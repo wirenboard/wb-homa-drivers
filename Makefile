@@ -31,13 +31,15 @@ NINJABRIDGE_DIR=wb-homa-ninja-bridge
 NINJABRIDGE_BIN=wb-homa-ninja-bridge
 TEST_DIR=test
 TEST_BIN=wb-homa-test
+LOGGER=mqtt-logger
+LOGGER_BIN=mqtt-logger
 
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
 .PHONY: all clean test
 
-all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -144,6 +146,12 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
   $(TEST_DIR)/testlog.o $(TEST_DIR)/modbus_test.o $(TEST_DIR)/fake_modbus.o \
   $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
+
+#mqtt-logger
+$(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@
+$(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
 
 test: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
