@@ -19,12 +19,8 @@ class  TLoggerConfig{// class for parsing config
         inline string GetPath() { return Path_to_log; }
         inline void SetSize(string s) { SetIntFromString(Size, s); };
         inline int GetSize() { return Size; }
-        inline void SetDumpSupport(bool b) { DumpSupport = b; }
-        inline bool GetDumpSupport() { return DumpSupport; }
-        inline void SetTimeout(string s) {  SetIntFromString(Timeout, s); }
-        inline int GetTimeout() { return Timeout; }
-        inline bool GetFullDump() { return FullDump; }
-        inline void SetFullDump(bool b) { FullDump = b; }
+        inline bool GetFullLog() { return FullLog; }
+        inline void SetFullLog(bool b) { FullLog = b; }
         static void SetIntFromString(int& i, string s);
         inline int GetNumber() { return Number; }
         inline void SetNumber(string s) { SetIntFromString(Number, s); }
@@ -33,9 +29,7 @@ class  TLoggerConfig{// class for parsing config
     private: 
         string Path_to_log;
         int Size;
-        bool DumpSupport;
-        int Timeout;
-        bool FullDump;
+        bool FullLog;
         int Number;
 };
 
@@ -74,6 +68,7 @@ class MQTTLogger: public TMQTTWrapper
         bool FullDump;// if full_dump yes we doing full dump after timeout 
         ofstream Output;
         int Number; // number of old log files;
+        string Mask;
 };
 
 MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig log_config)
@@ -87,6 +82,10 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
     }
     Max = 1024 * log_config.GetSize();
     Number = log_config.GetNumber();
+    if (log_config.GetFullLog())
+        Mask = "/#";
+    else 
+        Mask = "/devices/+/controls/#";
     Connect();
 }
 
@@ -94,7 +93,7 @@ MQTTLogger::~MQTTLogger() {}
 
 void MQTTLogger::OnConnect(int rc){
     cout << "HELLO there\n";
-    Subscribe(NULL, "/#");  
+    Subscribe(NULL, Mask);  
 }
 
 void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos){
@@ -127,6 +126,8 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
             cerr << "Cannot open log file for writting " << Path_To_Log << endl;
             exit (-1);
         }
+        mosquittopp::unsubscribe(NULL, Mask.c_str());
+        Subscribe(NULL, Mask);  
     }
 }
 
@@ -142,10 +143,10 @@ int main (int argc, char* argv[])
     log_config.SetPath("/var/log/mqtt.log");
     log_config.SetSize("200");
     log_config.SetDumpSupport (false);
-    log_config.SetTimeout("0");
-    log_config.SetFullDump(true);
+    //log_config.SetTimeout("0");
+    log_config.SetFullLog(true);
     log_config.SetNumber("2");
-    while ( (c = getopt(argc, argv, "h:p:H:t:d:s:f:n:") ) != -1 ){
+    while ( (c = getopt(argc, argv, "hp:H:s:f:n:") ) != -1 ){
         switch(c){
             case 'n':
                 printf ("option n with value '%s'\n", optarg);
@@ -154,11 +155,6 @@ int main (int argc, char* argv[])
             case 'f':
                 printf ("option f with value '%s'\n", optarg);
                 log_config.SetPath(string(optarg));
-                break;
-            case 't':
-                printf ("option t with value '%s'\n", optarg);
-                log_config.SetDumpSupport(true);
-                log_config.SetTimeout(string(optarg));
                 break;
             case 'p':
                 printf ( "option p with value '%s'\n",optarg);
@@ -172,23 +168,25 @@ int main (int argc, char* argv[])
                 printf ("option s with value '%s'\n",optarg);
                 log_config.SetSize(string(optarg));
                 break;
-            case 'd':
-                printf ("option d with value '%s'\n",optarg);
+            case 'o':
+                printf ("option o with value '%s'\n",optarg);
                 ((string(optarg) == "y") || (string(optarg) == "yes")) ? log_config.SetFullDump(true): log_config.SetFullDump(false); 
                 break;
             case '?':
                 break;
             case 'h':
                 printf ( "help menu\n");
-            default:
                 //printf ("?? Getopt returned character code 0%o ??\n",c);
                 printf("Usage:\n mqtt_logger [options]\n");
                 printf("Options:\n");
-                printf("\t-t TIMEOUT\t Timeoute (seconds) before rotation ( default: not set )\n");
-                printf("\t-p PORT\t set to what port mqtt_logger should connect (default: 1883)\n");
-                printf("\t-H IP\t set to what IP mqtt_logger should connect (default: localhost)\n");
-                printf("\t-d y|n\t choose yes|y = 'full dump' or only controls ( default yes)\n");
-                printf("\tp-s SIZE\t Max size (KB) before rotation ( default: 200KB)\n");
+                printf("\t-n NUMBER \t\t\t Number of old log files to remain(default 2) \n");
+                printf("\t-o        \t\t\t Only controls to log\n");
+                //printf("\t-t TIMEOUT\t\t\t Timeoute (seconds) before rotation ( default: not set )\n");
+                printf("\t-p PORT   \t\t\t set to what port mqtt_logger should connect (default: 1883)\n");
+                printf("\t-H IP     \t\t\t set to what IP mqtt_logger should connect (default: localhost)\n");
+                //printf("\t-d y|n    \t\t\t choose yes|y = 'full dump' or only controls ( default yes)\n");
+                printf("\t-s SIZE  \t\t\t Max size (KB) before rotation ( default: 200KB)\n");
+                return 0;
         }
     }
     /*    try {
