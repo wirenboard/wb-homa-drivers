@@ -47,17 +47,18 @@ public:
     inline int GetCachedValue() { return CachedValue; };
     inline int GetCachedValueOrDefault(int def = 0) {  return (CachedValue < 0) ? def : CachedValue; }
         
-    virtual vector<string> MetaType(); // what publish to meta/type 
+    virtual vector<TPublishPair> MetaType(); // what publish to meta/type 
     virtual vector<TPublishPair> GpioPublish(); //getting what nessesary for  publishing to controls
     virtual void GetInterval();// measure time interval between interruptions
     string GetInterruptEdge(); // returning front of the impulse, that we're trying to catch
     void SetInterruptEdge(string s); // set front of the impulse
     bool IsDebouncing(); // if interval between two interruptions is less than 1 milisecond it will return true;
+protected:
+// invert value if needed
+    inline int PrepareValue(int value) { return value ^ Inverted;};
 
 private:
-    // invert value if needed
-    inline int PrepareValue(int value) { return value ^ Inverted;};
-    private:
+        private:
     int Gpio;
     bool Inverted;
     bool Exported;
@@ -83,7 +84,7 @@ class TSysfsWattMeter : public TSysfsGpio {
         TSysfsWattMeter(const TSysfsWattMeter& other) = delete;
         TSysfsWattMeter(TSysfsWattMeter&& tmp) ;
         ~TSysfsWattMeter();
-        vector<string> MetaType();
+        vector<TPublishPair> MetaType();
         vector<TPublishPair> GpioPublish();   
     
     private:

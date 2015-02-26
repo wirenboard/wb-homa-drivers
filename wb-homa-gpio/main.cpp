@@ -123,9 +123,9 @@ void TMQTTGpioHandler::OnConnect(int rc)
             //~ cout << "GPIO: " << gpio_desc.Name << endl;
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
             std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
-            vector<string> what_to_publish (gpio_handler->MetaType());
-            for ( string tmp : what_to_publish)
-                Publish(NULL, control_prefix + "/meta/type", tmp, 0, true);
+            vector<TPublishPair> what_to_publish (gpio_handler->MetaType());
+            for ( TPublishPair tmp : what_to_publish)
+                Publish(NULL, control_prefix +tmp.first + "/meta/type", tmp.second, 0, true);
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
@@ -187,7 +187,6 @@ void TMQTTGpioHandler::UpdateValue( const TGpioDesc& gpio_desc,std::shared_ptr<T
         // look at previous value and compare it with current
         int cached = gpio_handler->GetCachedValue();
         int value = gpio_handler->GetValue();
-
         if (value >= 0) {
             // Buggy GPIO driver may yield any non-zero number instead of 1,
             // so make sure it's either 1 or 0 here.

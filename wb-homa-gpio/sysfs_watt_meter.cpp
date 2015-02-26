@@ -10,8 +10,7 @@ TSysfsWattMeter::TSysfsWattMeter(int gpio, bool inverted, string type, int multi
     , Multiplier(multiplier)
     , Total(0)
 {   
-    cout << "New constructor Gpio is " << gpio << endl;
-    SetInterruptEdge("falling");
+    SetInterruptEdge("rising");
 }
 
 TSysfsWattMeter::TSysfsWattMeter( TSysfsWattMeter&& tmp)
@@ -20,13 +19,12 @@ TSysfsWattMeter::TSysfsWattMeter( TSysfsWattMeter&& tmp)
     , Multiplier(tmp.Multiplier)
     , Total(tmp.Total)
 { 
-    cout << "MOVE constructor is here !" << endl;
 }
 
-vector<string> TSysfsWattMeter::MetaType(){
-    vector<string> output_vector;
-    output_vector.push_back("power");
-    output_vector.push_back("power_consumption");
+vector<TPublishPair> TSysfsWattMeter::MetaType(){
+    vector<TPublishPair> output_vector;
+    output_vector.push_back(make_pair("/_current","power"));
+    output_vector.push_back(make_pair("/_total", "power_consumption"));
     return output_vector;
 }
 vector<TPublishPair> TSysfsWattMeter::GpioPublish(){
@@ -39,8 +37,8 @@ vector<TPublishPair> TSysfsWattMeter::GpioPublish(){
     GetInterval();
     Power = 1000 * Multiplier * 3600.0 / Interval;
     Total = (float) Counts / Multiplier;
-    output_vector.push_back(make_pair("_total", to_string(Total)));
-    output_vector.push_back(make_pair("_current", to_string(Power)));
+    output_vector.push_back(make_pair("/_total", to_string(Total)));
+    output_vector.push_back(make_pair("/_current", to_string(Power)));
     return output_vector;
 }
 

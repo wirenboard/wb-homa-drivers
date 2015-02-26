@@ -261,9 +261,9 @@ void TSysfsGpio::GetInterval(){
     cout << "DEBUG: GPIO:" << Gpio << "interval= " << Interval << "counts= " << Counts << endl;
 }
 
-vector<string> TSysfsGpio::MetaType(){
-    vector<string> output_vector;
-    output_vector.push_back("switch");
+vector<TPublishPair> TSysfsGpio::MetaType(){
+    vector<TPublishPair> output_vector;
+    output_vector.push_back(make_pair("", "switch"));
     return output_vector;
 }
 vector<TPublishPair>  TSysfsGpio::GpioPublish(){
