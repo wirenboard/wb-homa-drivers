@@ -153,7 +153,7 @@ $(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
 $(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-test: $(TEST_DIR)/$(TEST_BIN)
+test_need_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
@@ -168,6 +168,7 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
+	-rm -f $(LOGGER)/*.o $(LOGGER)/$(LOGGER_BIN)
 
 
 
@@ -187,4 +188,6 @@ install: all
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
+	install -m 0644  $(LOGGER)/mqtt-logger.conf $(DESTDIR)/etc/mqtt-logger.conf
+	install -m 0755  $(LOGGER)/$(LOGGER_BIN) $(DESTDIR)/usr/bin/$(LOGGER_BIN)
 

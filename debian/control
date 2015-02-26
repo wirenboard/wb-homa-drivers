@@ -34,3 +34,8 @@ Package: wb-homa-drivers
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, wb-homa-gpio, wb-homa-adc, wb-homa-modbus, wb-homa-w1, wb-homa-ninja-bridge
 Description: Wiren Board Smart Home MQTT drivers, metapackage for compatibility
+
+Package: mqtt-logger
+Architecture: any
+Depends: limosquittopp1, libmosquitto1
+Description: logger for mqtt messages
