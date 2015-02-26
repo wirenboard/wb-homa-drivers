@@ -19,8 +19,8 @@ class  TLoggerConfig{// class for parsing config
         inline string GetPath() { return Path_to_log; }
         inline void SetSize(string s) { SetIntFromString(Size, s); };
         inline int GetSize() { return Size; }
-        inline bool GetFullLog() { return FullLog; }
-        inline void SetFullLog(bool b) { FullLog = b; }
+        inline void SetMask(string s) { Mask = s; }
+        inline string GetMask() { return Mask; }
         static void SetIntFromString(int& i, string s);
         inline int GetNumber() { return Number; }
         inline void SetNumber(string s) { SetIntFromString(Number, s); }
@@ -29,7 +29,7 @@ class  TLoggerConfig{// class for parsing config
     private: 
         string Path_to_log;
         int Size;
-        bool FullLog;
+        string Mask;
         int Number;
 };
 
@@ -82,10 +82,7 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
     }
     Max = 1024 * log_config.GetSize();
     Number = log_config.GetNumber();
-    if (log_config.GetFullLog())
-        Mask = "/#";
-    else 
-        Mask = "/devices/+/controls/#";
+    Mask = log_config.GetMask();
     Connect();
 }
 
@@ -97,6 +94,10 @@ void MQTTLogger::OnConnect(int rc){
 }
 
 void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos){
+    if ((*granted_qos < 1 ) ){
+        cerr << "incorrect mask" << endl;
+        exit (-1);
+    }
     cout << "subscription succeded\n";
 }
 void MQTTLogger::OnMessage(const struct mosquitto_message *message){
@@ -142,9 +143,7 @@ int main (int argc, char* argv[])
 
     log_config.SetPath("/var/log/mqtt.log");
     log_config.SetSize("200");
-    log_config.SetDumpSupport (false);
     //log_config.SetTimeout("0");
-    log_config.SetFullLog(true);
     log_config.SetNumber("2");
     while ( (c = getopt(argc, argv, "hp:H:s:f:n:") ) != -1 ){
         switch(c){
@@ -168,10 +167,6 @@ int main (int argc, char* argv[])
                 printf ("option s with value '%s'\n",optarg);
                 log_config.SetSize(string(optarg));
                 break;
-            case 'o':
-                printf ("option o with value '%s'\n",optarg);
-                ((string(optarg) == "y") || (string(optarg) == "yes")) ? log_config.SetFullDump(true): log_config.SetFullDump(false); 
-                break;
             case '?':
                 break;
             case 'h':
@@ -180,7 +175,7 @@ int main (int argc, char* argv[])
                 printf("Usage:\n mqtt_logger [options]\n");
                 printf("Options:\n");
                 printf("\t-n NUMBER \t\t\t Number of old log files to remain(default 2) \n");
-                printf("\t-o        \t\t\t Only controls to log\n");
+                //printf("\t-o        \t\t\t Only controls to log\n");
                 //printf("\t-t TIMEOUT\t\t\t Timeoute (seconds) before rotation ( default: not set )\n");
                 printf("\t-p PORT   \t\t\t set to what port mqtt_logger should connect (default: 1883)\n");
                 printf("\t-H IP     \t\t\t set to what IP mqtt_logger should connect (default: localhost)\n");
@@ -188,6 +183,15 @@ int main (int argc, char* argv[])
                 printf("\t-s SIZE  \t\t\t Max size (KB) before rotation ( default: 200KB)\n");
                 return 0;
         }
+    }
+    if (optind == argc ){
+        printf("too few arguments, Where is mask?\n");
+        return -1;
+    }
+    log_config.SetMask(string (argv[optind]));
+    if (optind +1 < argc ) {
+        printf("too many arguments\n");
+        return -1;
     }
     /*    try {
             if (config_fname_timeout != "")  
