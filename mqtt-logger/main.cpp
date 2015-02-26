@@ -11,6 +11,7 @@
 #include<ctime>
 #include<stdio.h>
 #include<unistd.h>
+#include<sstream>
 
 using namespace std;
 class  TLoggerConfig{// class for parsing config
@@ -24,6 +25,7 @@ class  TLoggerConfig{// class for parsing config
         static void SetIntFromString(int& i, string s);
         inline int GetNumber() { return Number; }
         inline void SetNumber(string s) { SetIntFromString(Number, s); }
+        void SetOption(string key, string value);
     
     
     private: 
@@ -45,6 +47,22 @@ void TLoggerConfig::SetIntFromString(int& i, string s ){
             exit(-1);
         }
 
+}
+
+void TLoggerConfig::SetOption( string key, string value){
+    if (key == "n") {
+        SetIntFromString(Number, value);
+        return;
+    }
+    if (key == "s"){
+        SetIntFromString(Size, value);
+        return;
+    }
+    if (key == "f"){
+        SetPath(value);
+        return;
+    }
+    cerr << "incorrect option " << key << " in config file\n";
 }
 class MQTTLogger: public TMQTTWrapper 
 {
@@ -89,15 +107,10 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
 MQTTLogger::~MQTTLogger() {}
 
 void MQTTLogger::OnConnect(int rc){
-    cout << "HELLO there\n";
     Subscribe(NULL, Mask);  
 }
 
 void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos){
-    if ((*granted_qos < 1 ) ){
-        cerr << "incorrect mask" << endl;
-        exit (-1);
-    }
     cout << "subscription succeded\n";
 }
 void MQTTLogger::OnMessage(const struct mosquitto_message *message){
@@ -140,11 +153,25 @@ int main (int argc, char* argv[])
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
     int c;
-
+    string conf_file = "/etc/default/mqtt-logger";
+    ifstream input_stream(conf_file, ifstream::in);
+    string line;
     log_config.SetPath("/var/log/mqtt.log");
     log_config.SetSize("200");
     //log_config.SetTimeout("0");
     log_config.SetNumber("2");
+    
+    while (getline(input_stream, line)){
+        if (line[0] == '#') continue; // don't look at comments
+        istringstream read_from_line(line);
+        string key;
+        if (getline(read_from_line, key, '=')){// options shoulde be declared throuh '='
+            string value;
+            if (getline(read_from_line, value)){
+                log_config.SetOption(key, value);
+            }
+        }
+    }
     while ( (c = getopt(argc, argv, "hp:H:s:f:n:") ) != -1 ){
         switch(c){
             case 'n':

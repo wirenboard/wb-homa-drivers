@@ -1,6 +1,6 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          wb-homa-modbus
+# Provides:          mqtt-logger
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Required-Start: $remote_fs
@@ -22,7 +22,7 @@ DESC="Logger for MQTT messages"
 NAME=wb-homa-mqtt-logger
 DAEMON=/usr/bin/$NAME
 CONFIG_FILE="/etc/mqtt-logger.conf"
-DAEMON_ARGS="-c $CONFIG_FILE"
+DAEMON_ARGS="/#"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

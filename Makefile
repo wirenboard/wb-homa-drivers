@@ -188,6 +188,5 @@ install: all
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
-	install -m 0644  $(LOGGER)/mqtt-logger.conf $(DESTDIR)/etc/mqtt-logger.conf
 	install -m 0755  $(LOGGER)/$(LOGGER_BIN) $(DESTDIR)/usr/bin/$(LOGGER_BIN)
 

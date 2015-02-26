@@ -37,5 +37,5 @@ Description: Wiren Board Smart Home MQTT drivers, metapackage for compatibility
 
 Package: mqtt-logger
 Architecture: any
-Depends: limosquittopp1, libmosquitto1
+Depends: libmosquittopp1, libmosquitto1
 Description: logger for mqtt messages
