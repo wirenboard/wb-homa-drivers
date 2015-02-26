@@ -66,7 +66,6 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio&& tmp)
     , Counts(tmp.Counts)
     , InterruptEdge(tmp.InterruptEdge)
 { 
-    cout << "MOVING NOW GPIO " << Gpio << endl;
     Ev_d.events = EPOLLET;
     Ev_d.data.fd = tmp.Ev_d.data.fd;
     tmp.FileDes = -1;
@@ -90,8 +89,8 @@ int TSysfsGpio::Export()
     // open file descriptro of value file and keep it in FileDes and ev_data.fd
     int _fd=open(path_to_value.c_str(), O_RDWR | O_NONBLOCK );
     if (_fd <= 0 ) {
-        cout << strerror(errno) << endl;
-        cout << "cannot open value for GPIO" << Gpio <<endl;
+        cerr << strerror(errno) << endl;
+        cerr << "cannot open value for GPIO" << Gpio <<endl;
     }
     FileDes=_fd;
     Ev_d.data.fd=_fd;
@@ -129,7 +128,7 @@ int TSysfsGpio::SetDirection(bool input)
 
     ofstream setdirgpio(setdir_str.c_str()); // open direction file for gpio
     if (setdirgpio < 0){
-        cout << " OPERATION FAILED: Unable to set direction of GPIO"<< Gpio <<" ."<< endl;
+        cerr << " OPERATION FAILED: Unable to set direction of GPIO"<< Gpio <<" ."<< endl;
         setdirgpio.close();
         return -1;
     }
@@ -161,11 +160,11 @@ int TSysfsGpio::SetValue(int value)
     //setvalgpio << prep_value ;
     //setvalgpio.close();
     if (lseek(FileDes, 0, SEEK_SET) == -1 ){
-        cout << "lseek returned -1" << endl;
+        cerr << "lseek returned -1" << endl;
     }
     if (write(FileDes, &buf, sizeof(char)) <= 0 ){//write value to value file, FileDes has been initialized in Export
-        cout << strerror(errno);
-        cout << " OPERATION SetValue FAILED: Unable to set the value of GPIO"<< Gpio << " ."<< "filedis is " << FileDes <<  endl;
+        cerr << strerror(errno);
+        cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO"<< Gpio << " ."<< "filedis is " << FileDes <<  endl;
         //setvalgpio.close();
         return -1;
     }
@@ -184,10 +183,10 @@ int TSysfsGpio::GetValue(){
     Getval_str += to_string(Gpio) + "/value";
     //ifstream Getvalgpio(Getval_str.c_str());
     if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
-        cout << "lseek returned -1 " << endl;
+        cerr << "lseek returned -1 " << endl;
     }
     if (read(FileDes, &buf, sizeof(char)) <= 0){ //read gpio value
-        cout << " OPERATION GetValue FAILED: Unable to Get value of GPIO"<< Gpio <<" filedes is " << FileDes << "pid is " << getpid() << "."<< endl;
+        cerr << " OPERATION GetValue FAILED: Unable to Get value of GPIO"<< Gpio <<" filedes is " << FileDes << "pid is " << getpid() << "."<< endl;
         perror("error is ");
         //Getvalgpio.close();
         return -1;
@@ -211,7 +210,7 @@ int TSysfsGpio::InterruptUp() {
     if (In) {// if direction is input we will write to edge file
         ofstream setInterrupt(path_to_edge.c_str());
         if (!setInterrupt.is_open()){
-            cout << " OPERATION FAILED: Unable to set the Interrupt of GPIO"<< Gpio <<" ."<< endl;
+            cerr << " OPERATION FAILED: Unable to set the Interrupt of GPIO"<< Gpio <<" ."<< endl;
             setInterrupt.close();
             return -1;
         }

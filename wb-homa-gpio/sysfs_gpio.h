@@ -8,6 +8,8 @@
 #include<utility>
 #include<iostream>
 
+#define WATT_METER "watt_meter"
+
 using namespace std;
 
 typedef pair<string, string> TPublishPair;
@@ -78,12 +80,12 @@ protected:
 
 };
 
-class TSysfsWattMeter : public TSysfsGpio {
+class TSysfsGpioBaseCounter : public TSysfsGpio {
     public:
-        explicit TSysfsWattMeter(int gpio, bool inverted, string type, int multiplier);
-        TSysfsWattMeter(const TSysfsWattMeter& other) = delete;
-        TSysfsWattMeter(TSysfsWattMeter&& tmp) ;
-        ~TSysfsWattMeter();
+        explicit TSysfsGpioBaseCounter(int gpio, bool inverted, string type, int multiplier);
+        TSysfsGpioBaseCounter(const TSysfsGpioBaseCounter& other) = delete;
+        TSysfsGpioBaseCounter(TSysfsGpioBaseCounter&& tmp) ;
+        ~TSysfsGpioBaseCounter();
         vector<TPublishPair> MetaType();
         vector<TPublishPair> GpioPublish();   
     
@@ -92,5 +94,9 @@ class TSysfsWattMeter : public TSysfsGpio {
         int Multiplier;
         float Total;
         float Power;
+        string Topic1;
+        string Topic2;
+        string Value_Topic1;
+        string Value_Topic2;
 
 };

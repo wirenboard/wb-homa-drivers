@@ -17,7 +17,6 @@
 #include<chrono>
 #include<thread>
 
-#define WATT_METER "watt_meter"
 
 using namespace std;
 using  std::chrono::duration_cast;
@@ -90,7 +89,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         if (gpio_desc.Type == "")
                 gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted));
         if (gpio_desc.Type == WATT_METER)
-                gpio_handler.reset( new TSysfsWattMeter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.Type, gpio_desc.Multiplier));
+                gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.Type, gpio_desc.Multiplier));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
@@ -166,7 +165,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                     // echo, retained
                     Publish(NULL, GetChannelTopic(gpio_desc), payload, 0, true);
                 }else {
-                    cout << "DEBUG : couldn't set value" << endl;
+                    cerr << "DEBUG : couldn't set value" << endl;
                     }
             }
         }
@@ -206,7 +205,9 @@ void TMQTTGpioHandler::UpdateChannelValues() {
     for (TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
-        UpdateValue(gpio_desc,gpio_handler);
+        if ( !gpio_handler->GetInterruptSupport()) {// do not check gpio with interrupt suppport here
+            UpdateValue(gpio_desc,gpio_handler);
+            }
     }
 }
 
@@ -220,7 +221,7 @@ void TMQTTGpioHandler::InitInterrupts(int epfd){
         if (gpio_handler.GetInterruptSupport()) {
              n = epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.GetFileDes(),&gpio_handler.GetEpollStruct());// adding new instance to epoll
             if (n != 0 ) {
-                cout<<"epoll_ctl gained error with GPIO"<<gpio_desc.Gpio<<endl;
+                cerr<<"epoll_ctl gained error with GPIO"<<gpio_desc.Gpio<<endl;
             }
         }
     }
@@ -358,7 +359,7 @@ int main(int argc, char *argv[])
     
     rc= mqtt_handler->loop_start(); 
     if (rc != 0 ) {
-        cout << "couldn't start mosquitto_loop_start ! " << rc << endl;
+        cerr << "couldn't start mosquitto_loop_start ! " << rc << endl;
     }else {
         epfd = epoll_create(1);// creating epoll for Interrupts
         mqtt_handler->InitInterrupts(epfd);

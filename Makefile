@@ -13,6 +13,8 @@ LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp
 COMMON_DIR=common
 
 GPIO_DIR=wb-homa-gpio
+LOGGER=mqtt-logger
+LOGGER_BIN=mqtt-logger
 GPIO_BIN=wb-homa-gpio
 MODBUS_DIR=wb-homa-modbus
 MODBUS_BIN=wb-homa-modbus
@@ -35,7 +37,7 @@ TEST_BIN=wb-homa-test
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean
+.PHONY: all clean test_needed_fix
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
@@ -53,10 +55,10 @@ $(GPIO_DIR)/main.o : $(GPIO_DIR)/main.cpp $(COMMON_H)
 $(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/sysfs_watt_meter.o : $(GPIO_DIR)/sysfs_watt_meter.cpp $(COMMON_H)
+$(GPIO_DIR)/sysfs_gpio_base_counter.o : $(GPIO_DIR)/sysfs_gpio_base_counter.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_watt_meter.o  $(COMMON_O)
+$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_gpio_base_counter.o  $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Modbus
@@ -148,7 +150,7 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
   $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
 
-tet: $(TEST_DIR)/$(TEST_BIN)
+test_needed_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
