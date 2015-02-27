@@ -4,14 +4,14 @@
 
 using namespace std;
 
-TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string type, int multiplier)
-    : TSysfsGpio( gpio, inverted)
+TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string interrupt_edge, string type, int multiplier)
+    : TSysfsGpio( gpio, inverted, interrupt_edge)
     , Type(type)
     , Multiplier(multiplier)
     , Total(0)
 {   
     if (Type == WATT_METER) {
-        SetInterruptEdge("rising");
+        if (InterruptEdge == "") SetInterruptEdge("rising");// if user forgot to set interrupt edge, set default rising
         Topic2 = "/_current";
         Value_Topic2 = "power";
         Topic1 = "/_total";
@@ -36,9 +36,11 @@ vector<TPublishPair> TSysfsGpioBaseCounter::MetaType(){
 vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish(){
     vector<TPublishPair> output_vector;
     int value = !!GetCachedValue();
-    if ((GetInterruptEdge() == "rising") && ( value == 0))
+    int compare_value = (GetInverted()) ? 1: 0;
+    if ((GetInterruptEdge() == "rising") && ( value == compare_value))
         return output_vector;
-    if ((GetInterruptEdge() == "falling") && (value == 1))
+    compare_value = !compare_value;
+    if ((GetInterruptEdge() == "falling") && (value == compare_value))
         return output_vector;
     GetInterval();
     Power = 1000 * Multiplier * 3600.0 / Interval;

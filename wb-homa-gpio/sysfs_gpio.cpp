@@ -12,7 +12,7 @@
 
 using namespace std;
 
-TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
+TSysfsGpio::TSysfsGpio(int gpio, bool inverted,string interrupt_edge)
     : Gpio(gpio)
     , Inverted(inverted)
     , Exported(false)
@@ -27,6 +27,7 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted)
     , InterruptEdge("")
 {   
     Ev_d.events= EPOLLET;
+    SetInterruptEdge(interrupt_edge);
 
     //~ if (Export() == 0) {
         //~ Exported = true;

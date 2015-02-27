@@ -16,7 +16,7 @@ typedef pair<string, string> TPublishPair;
 class TSysfsGpio
 {
 public:
-    explicit TSysfsGpio(int gpio, bool inverted = false);
+    explicit TSysfsGpio(int gpio, bool inverted = false,string interrupt_edge = "");
     TSysfsGpio(const TSysfsGpio& other) = delete;
     TSysfsGpio(TSysfsGpio&& tmp);
     ~TSysfsGpio();
@@ -44,6 +44,7 @@ public:
     inline int GetGpio() { return Gpio; };
     inline bool IsExported() { return Exported; };
     inline void SetInverted (bool inverted = true) {Inverted = inverted;};
+    inline bool GetInverted () { return Inverted; }
 
     //returns GPIO values (0 or 1) or negative in case of error
     inline int GetCachedValue() { return CachedValue; };
@@ -55,6 +56,7 @@ public:
     string GetInterruptEdge(); // returning front of the impulse, that we're trying to catch
     void SetInterruptEdge(string s); // set front of the impulse
     bool IsDebouncing(); // if interval between two interruptions is less than 1 milisecond it will return true;
+    inline int GetCounts() { return Counts; }
 protected:
 // invert value if needed
     inline int PrepareValue(int value) { return value ^ Inverted;};
@@ -82,7 +84,7 @@ protected:
 
 class TSysfsGpioBaseCounter : public TSysfsGpio {
     public:
-        explicit TSysfsGpioBaseCounter(int gpio, bool inverted, string type, int multiplier);
+        explicit TSysfsGpioBaseCounter(int gpio, bool inverted, string interrupt_edge, string type, int multiplier);
         TSysfsGpioBaseCounter(const TSysfsGpioBaseCounter& other) = delete;
         TSysfsGpioBaseCounter(TSysfsGpioBaseCounter&& tmp) ;
         ~TSysfsGpioBaseCounter();

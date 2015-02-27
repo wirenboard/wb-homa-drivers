@@ -34,6 +34,7 @@ struct TGpioDesc
     bool Inverted = false;
     string Name = "";
     TGpioDirection Direction = TGpioDirection::Output;
+    string InterruptEdge = "";
     string Type = "";
     int Multiplier;
 };
@@ -87,9 +88,9 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
     for (const TGpioDesc& gpio_desc : handler_config.Gpios) {
         std::shared_ptr<TSysfsGpio> gpio_handler(nullptr);
         if (gpio_desc.Type == "")
-                gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted));
+                gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
         if (gpio_desc.Type == WATT_METER)
-                gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.Type, gpio_desc.Multiplier));
+                gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
@@ -205,9 +206,7 @@ void TMQTTGpioHandler::UpdateChannelValues() {
     for (TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
-        if ( !gpio_handler->GetInterruptSupport()) {// do not check gpio with interrupt suppport here
-            UpdateValue(gpio_desc,gpio_handler);
-            }
+        UpdateValue(gpio_desc,gpio_handler);
     }
 }
 
@@ -343,6 +342,8 @@ int main(int argc, char *argv[])
                     gpio_desc.Type = item["type"].asString();
             if (item.isMember("multiplier"))
                 gpio_desc.Multiplier = item["multiplier"].asInt();
+            if (item.isMember("edge"))
+                gpio_desc.InterruptEdge = item["edge"].asString();
 
             handler_config.AddGpio(gpio_desc);
 
@@ -370,9 +371,6 @@ int main(int argc, char *argv[])
             n = epoll_wait(epfd,events,20,500);
             interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
             if (interval >= 500 ) {  //checking is it time to look through all gpios
-                if (n != 0) {
-                    mqtt_handler->CatchInterrupts(n,events);
-                }
                 mqtt_handler->UpdateChannelValues();
                 start = steady_clock::now();
             }else {
