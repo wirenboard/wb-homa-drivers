@@ -22,10 +22,10 @@ class  TLoggerConfig{// class for parsing config
         inline int GetSize() { return Size; }
         inline void SetMask(string s) { Mask = s; }
         inline string GetMask() { return Mask; }
-        static void SetIntFromString(int& i, string s);
+        static void SetIntFromString(int& i, string s);//auxiliary function to check if input int option is correct
         inline int GetNumber() { return Number; }
         inline void SetNumber(string s) { SetIntFromString(Number, s); }
-        void SetOption(string key, string value);
+        void SetOption(string key, string value);// set option key to value
     
     
     private: 
@@ -74,10 +74,6 @@ class MQTTLogger: public TMQTTWrapper
         void OnMessage(const struct mosquitto_message *message);
         void OnSubscribe(int mid, int qos_count, const int *granted_qos);
         
-        //void SetLogFile(string path) { path_to_log = path; } 
-        //void SetMaximum(int size);
-        //void SetTimeout(std::chrono::seconds timeout);
-        //void SetFullDump(bool fulldump);
     
     private:
         string Path_To_Log;// path to log file
@@ -86,7 +82,7 @@ class MQTTLogger: public TMQTTWrapper
         bool FullDump;// if full_dump yes we doing full dump after timeout 
         ofstream Output;
         int Number; // number of old log files;
-        string Mask;
+        string Mask;// mask wich subscribe to 
 };
 
 MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig log_config)
@@ -98,9 +94,9 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
         cerr << "Cannot open log file for writting " << Path_To_Log << endl;
         exit (-1);
     }
-    Max = 1024 * log_config.GetSize();
-    Number = log_config.GetNumber();
-    Mask = log_config.GetMask();
+    Max = 1024 * log_config.GetSize();// set the maximum size of log file
+    Number = log_config.GetNumber(); // set the number of old log files
+    Mask = log_config.GetMask();// set the mask which subscribe to 
     Connect();
 }
 
@@ -140,7 +136,7 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
             cerr << "Cannot open log file for writting " << Path_To_Log << endl;
             exit (-1);
         }
-        mosquittopp::unsubscribe(NULL, Mask.c_str());
+        mosquittopp::unsubscribe(NULL, Mask.c_str());// unsubscribe and subscribe to save all retained messages after rotate
         Subscribe(NULL, Mask);  
     }
 }
@@ -153,25 +149,10 @@ int main (int argc, char* argv[])
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
     int c;
-    string conf_file = "/etc/default/mqtt-logger";
-    ifstream input_stream(conf_file, ifstream::in);
-    string line;
     log_config.SetPath("/var/log/mqtt.log");
     log_config.SetSize("200");
-    //log_config.SetTimeout("0");
     log_config.SetNumber("2");
     
-    while (getline(input_stream, line)){
-        if (line[0] == '#') continue; // don't look at comments
-        istringstream read_from_line(line);
-        string key;
-        if (getline(read_from_line, key, '=')){// options shoulde be declared throuh '='
-            string value;
-            if (getline(read_from_line, value)){
-                log_config.SetOption(key, value);
-            }
-        }
-    }
     while ( (c = getopt(argc, argv, "hp:H:s:f:n:") ) != -1 ){
         switch(c){
             case 'n':
@@ -195,19 +176,18 @@ int main (int argc, char* argv[])
                 log_config.SetSize(string(optarg));
                 break;
             case '?':
-                break;
+                printf ("?? Getopt returned character code 0%o ??\n",c);
             case 'h':
                 printf ( "help menu\n");
-                //printf ("?? Getopt returned character code 0%o ??\n",c);
-                printf("Usage:\n mqtt_logger [options]\n");
+            default:
+                printf("Usage:\n mqtt_logger [options] mask\n");
                 printf("Options:\n");
                 printf("\t-n NUMBER \t\t\t Number of old log files to remain(default 2) \n");
-                //printf("\t-o        \t\t\t Only controls to log\n");
-                //printf("\t-t TIMEOUT\t\t\t Timeoute (seconds) before rotation ( default: not set )\n");
                 printf("\t-p PORT   \t\t\t set to what port mqtt_logger should connect (default: 1883)\n");
                 printf("\t-H IP     \t\t\t set to what IP mqtt_logger should connect (default: localhost)\n");
-                //printf("\t-d y|n    \t\t\t choose yes|y = 'full dump' or only controls ( default yes)\n");
-                printf("\t-s SIZE  \t\t\t Max size (KB) before rotation ( default: 200KB)\n");
+                printf("\t-s SIZE   \t\t\t Max size (KB) before rotation ( default: 200KB)\n");
+                printf("\t-f FILE   \t\t\t File where log will be writting to(default /var/log/mqtt-logger.log)\n"); 
+                printf("\tmask      \t\t\t Mask, what topics subscribe to(default: /#)\n");
                 return 0;
         }
     }
@@ -220,51 +200,14 @@ int main (int argc, char* argv[])
         printf("too many arguments\n");
         return -1;
     }
-    /*    try {
-            if (config_fname_timeout != "")  
-                log_config.timeout = stoi(config_fname_timeout.c_str());
-        }
-        catch (const std::invalid_argument& argument) {
-            cerr << "invalid number " << config_fname_timeout << endl;
-            return -1;
-        }catch (const std::out_of_range& argument){
-            cerr << "out of range " << config_fname_timeout << endl;
-            return -1;
-        }
-        try {
-            if (config_fname_size != "")
-                log_config.size = stoi(config_fname_size.c_str());
-        }catch (const std::invalid_argument& argument) {
-            cerr << "invalid number " << config_fname_size << endl;
-            return -1;
-        }catch (const std::out_of_range& argument){
-            cerr << "out of range  " << config_fname_size << endl;
-            return -1 ;
-        }
-        try {
-            if (config_fname_port != "")  
-                mqtt_config.Port = stoi(config_fname_port.c_str());
-        }
-        catch (const std::invalid_argument& argument) {
-            cerr << "invalid number" <<  config_fname_port << endl;
-            return -1;
-        }catch (const std::out_of_range& argument){
-            cerr << "out of range " << config_fname_port << endl;
-        }
-        */
     mosqpp::lib_init();
     std::shared_ptr<MQTTLogger> mqtt_logger(new MQTTLogger(mqtt_config, log_config));
     mqtt_logger->Init();
     while (1){
         rc = mqtt_logger->loop();
-        long int interval;
-        std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
+        //std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
         if (rc != 0)
             mqtt_logger->reconnect();
-        else{
-            interval = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - previous_time).count();
-            
-        }
     }
 
     return 0;
