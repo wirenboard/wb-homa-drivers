@@ -41,6 +41,7 @@ class TMQTTOnewireHandler : public TMQTTWrapper
     private:
         vector<TSysfsOnewireDevice> Channels;
         bool PrepareInit;// needed for cleaning mqtt messages before start working
+        string Retained_hack;// we need some message to be sure, that we got all retained messages in starting
 
 };
 
@@ -52,6 +53,8 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
     , PrepareInit(true)
 {
 	Connect();
+    
+    Retained_hack = string("/tmp/") + MQTTConfig.Id + "/retained_hack";
 
 }
 
@@ -62,16 +65,16 @@ void TMQTTOnewireHandler::OnConnect(int rc)
 	printf("Connected with code %d.\n", rc);
 	if(rc == 0){
                 // Meta
+        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
+        Publish(NULL, path, "1-wire Thermometers", 0, true);
+
+            
         if (PrepareInit){
             string controls = string("/devices/") + MQTTConfig.Id + "/controls/+";
-            string hack_topic = string("/tmp/") + MQTTConfig.Id + "/hack_topic";
             Subscribe(NULL, controls);
-            Subscribe(NULL, hack_topic);
-            Publish(NULL, hack_topic, "1", 0, false);
+            Subscribe(NULL, Retained_hack);
+            Publish(NULL, Retained_hack, "1", 0, false);
          }else{
-            string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-            Publish(NULL, path, "1-wire Thermometers", 0, true);
-
             RescanBus();
          }
 	}
@@ -140,10 +143,9 @@ void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
 {
     string topic = message->topic;
     string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
-    string hack_topic = string("/tmp/") + MQTTConfig.Id + "/hack_topic";
-    if (topic == hack_topic) {// if we get hack_message it means that we've read all retained messages
-        Publish(NULL, hack_topic, "", 0, true);
-        unsubscribe(NULL, hack_topic.c_str());
+    if (topic == Retained_hack) {// if we get hack_message it means that we've read all retained messages
+        Publish(NULL, Retained_hack, "", 0, true);
+        unsubscribe(NULL, Retained_hack.c_str());
         unsubscribe(NULL, (controls_prefix + "+").c_str());
         PrepareInit = false;
     }else {
