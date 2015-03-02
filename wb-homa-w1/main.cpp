@@ -37,6 +37,7 @@ class TMQTTOnewireHandler : public TMQTTWrapper
 
         void UpdateChannelValues();
         inline void SetPrepareInit(bool b) { PrepareInit = b; }// changing bool PrepareInit
+        inline bool GetPrepareInit() { return PrepareInit; }
     private:
         vector<TSysfsOnewireDevice> Channels;
         bool PrepareInit;// needed for cleaning mqtt messages before start working
@@ -59,14 +60,20 @@ TMQTTOnewireHandler::~TMQTTOnewireHandler() {}
 void TMQTTOnewireHandler::OnConnect(int rc)
 {
 	printf("Connected with code %d.\n", rc);
-    if (PrepareInit) 
-        return;
 	if(rc == 0){
                 // Meta
-        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-        Publish(NULL, path, "1-wire Thermometers", 0, true);
+        if (PrepareInit){
+            string controls = string("/devices/") + MQTTConfig.Id + "/controls/+";
+            string hack_topic = string("/tmp/") + MQTTConfig.Id + "/hack_topic";
+            Subscribe(NULL, controls);
+            Subscribe(NULL, hack_topic);
+            Publish(NULL, hack_topic, "1", 0, false);
+         }else{
+            string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
+            Publish(NULL, path, "1-wire Thermometers", 0, true);
 
-        RescanBus();
+            RescanBus();
+         }
 	}
 }
 
@@ -133,12 +140,19 @@ void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
 {
     string topic = message->topic;
     string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
-    string device = topic.substr(controls_prefix.length(), topic.length());
-    for (auto& current : Channels)
-        if (device.substr(3, 3 + 6*2) == current.GetDeviceId()) 
-            return;
-    device = "BUF" + device;// such as it's not real device and we need 3 symbols before device.Id, add some random symbols
-    Channels.emplace_back(device);
+    string hack_topic = string("/tmp/") + MQTTConfig.Id + "/hack_topic";
+    if (topic == hack_topic) {// if we get hack_message it means that we've read all retained messages
+        Publish(NULL, hack_topic, "", 0, true);
+        unsubscribe(NULL, hack_topic.c_str());
+        unsubscribe(NULL, (controls_prefix + "+").c_str());
+        PrepareInit = false;
+    }else {
+        string device = topic.substr(controls_prefix.length(), topic.length());
+        for (auto& current : Channels)
+            if (device == current.GetDeviceId()) 
+                return;
+        Channels.emplace_back(device);
+    }
 
 }
 
@@ -202,29 +216,19 @@ int main(int argc, char *argv[])
 
     std::shared_ptr<TMQTTOnewireHandler> mqtt_handler(new TMQTTOnewireHandler(mqtt_config));
     mqtt_handler->Init();
-	int Number = 3;
     string topic = string("/devices/") + mqtt_config.Id + "/controls/+";
-    int i;
-	mqtt_handler->Subscribe(NULL,topic);
-	for (i = 0; i< Number; i++){// waiting in a loop while all retained messages comes 
-		rc = mqtt_handler->loop();
-		if (rc != 0){
-			mqtt_handler->reconnect();
-		    mqtt_handler->Subscribe(NULL,topic);
-		}
-    }
-    mqtt_handler->unsubscribe(NULL, topic.c_str());
-    mqtt_handler->SetPrepareInit(false);
 	
-	while(1){
+    while(1){
 		rc = mqtt_handler->loop();
         //~ cout << "break in a loop! " << rc << endl;
 		if(rc != 0) {
 			mqtt_handler->reconnect();
 		} else {
             // update current values
-            mqtt_handler->RescanBus();
-            mqtt_handler->UpdateChannelValues();
+            if (!mqtt_handler->GetPrepareInit()){
+                mqtt_handler->RescanBus();
+                mqtt_handler->UpdateChannelValues();
+            }
         }
 	}
 

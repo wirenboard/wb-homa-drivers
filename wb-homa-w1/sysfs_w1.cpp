@@ -15,7 +15,7 @@ TSysfsOnewireDevice::TSysfsOnewireDevice(const string& device_name)
 {
     //FIXME: fill family number
     Family = TOnewireFamilyType::ProgResThermometer;
-    DeviceId = DeviceName.substr(3, 3+6*2);
+    DeviceId = DeviceName;
     DeviceDir = SysfsOnewireDevicesPath + DeviceName;
 }
 
