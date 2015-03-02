@@ -36,8 +36,10 @@ class TMQTTOnewireHandler : public TMQTTWrapper
         void RescanBus();
 
         void UpdateChannelValues();
+        inline void SetPrepareInit(bool b) { PrepareInit = b; }// changing bool PrepareInit
     private:
         vector<TSysfsOnewireDevice> Channels;
+        bool PrepareInit;// needed for cleaning mqtt messages before start working
 
 };
 
@@ -46,6 +48,7 @@ class TMQTTOnewireHandler : public TMQTTWrapper
 
 TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqtt_config)
     : TMQTTWrapper(mqtt_config)
+    , PrepareInit(true)
 {
 	Connect();
 
@@ -56,6 +59,8 @@ TMQTTOnewireHandler::~TMQTTOnewireHandler() {}
 void TMQTTOnewireHandler::OnConnect(int rc)
 {
 	printf("Connected with code %d.\n", rc);
+    if (PrepareInit) 
+        return;
 	if(rc == 0){
                 // Meta
         string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
@@ -126,6 +131,15 @@ void TMQTTOnewireHandler::RescanBus()
 
 void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
 {
+    string topic = message->topic;
+    string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
+    string device = topic.substr(controls_prefix.length(), topic.length());
+    for (auto& current : Channels)
+        if (device.substr(3, 3 + 6*2) == current.GetDeviceId()) 
+            return;
+    device = "BUF" + device;// such as it's not real device and we need 3 symbols before device.Id, add some random symbols
+    Channels.emplace_back(device);
+
 }
 
 void TMQTTOnewireHandler::OnSubscribe(int mid, int qos_count, const int *granted_qos)
@@ -188,7 +202,20 @@ int main(int argc, char *argv[])
 
     std::shared_ptr<TMQTTOnewireHandler> mqtt_handler(new TMQTTOnewireHandler(mqtt_config));
     mqtt_handler->Init();
-
+	int Number = 3;
+    string topic = string("/devices/") + mqtt_config.Id + "/controls/+";
+    int i;
+	mqtt_handler->Subscribe(NULL,topic);
+	for (i = 0; i< Number; i++){// waiting in a loop while all retained messages comes 
+		rc = mqtt_handler->loop();
+		if (rc != 0){
+			mqtt_handler->reconnect();
+		    mqtt_handler->Subscribe(NULL,topic);
+		}
+    }
+    mqtt_handler->unsubscribe(NULL, topic.c_str());
+    mqtt_handler->SetPrepareInit(false);
+	
 	while(1){
 		rc = mqtt_handler->loop();
         //~ cout << "break in a loop! " << rc << endl;
