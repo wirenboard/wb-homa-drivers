@@ -11,13 +11,33 @@ struct THandlerConfig
     int MinSwitchIntervalMs = 0;
     string Id;
     int Multiplier;
-    int Gpio;
+    vector<int> Gpios;
 };
+
 
 class TMQTTADCHandler : public TMQTTWrapper
 {
 public:
-    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
+    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config) ;
+
+    virtual void OnConnect(int rc) = 0;
+    virtual void OnMessage(const struct mosquitto_message *message) = 0;
+    virtual void OnSubscribe(int mid, int qos_count, const int *granted_qos) = 0;
+    static std::shared_ptr<TMQTTADCHandler> GetADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
+
+    //std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
+    //void UpdateChannelValues();
+    virtual void UpdateValue() = 0;
+private:
+    THandlerConfig Config;
+    TSysfsADC ADC;
+    //vector<TSysfsADCChannel> Channels;
+};
+
+class TMQTTADCHandlerMux : public TMQTTADCHandler
+{
+public:
+    TMQTTADCHandlerMux(const TMQTTADCHandlerMux::TConfig& mqtt_config, const THandlerConfig& handler_config);
 
     void OnConnect(int rc);
     void OnMessage(const struct mosquitto_message *message);
@@ -25,9 +45,11 @@ public:
 
     std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
     void UpdateChannelValues();
+    void UpdateValue();
 private:
     THandlerConfig Config;
     TSysfsADC ADC;
     vector<TSysfsADCChannel> Channels;
 };
+
 

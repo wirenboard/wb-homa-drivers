@@ -20,7 +20,10 @@ namespace {
         // Report failures and their locations in the document.
         if(not parsedSuccess)
             throw TADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
-        
+        if (!root.isObject())
+            throw TADCException("Bad config file (the root is not an object)");
+
+
         if (root.isMember("averaging_window")) {
             config.AveragingWindow = root["averaging_window"].asInt();
             if (config.AveragingWindow < 1)
@@ -31,29 +34,28 @@ namespace {
 
         for (unsigned int index = 0; index < array.size(); index++){
             const auto& item = array[index];
+                              
+            if (item.isMember("debug"))
+                config.Debug = item["debug"].asBool();
+
+            if (item.isMember("device_name"))
+            config.DeviceName = item["device_name"].asString();
+            
+            if (item.isMember("min_switch_interval_ms"))
+                config.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
+
+            if (item.isMember("id")) 
+                config.Id = item["id"].asString();
+            if (item.isMember("multiplier"))
+                config.Multiplier = item["multiplier"].asFloat();
+            if (item.isMember("gpios")){
+                const auto& gpios_array = item["gpios"];
+                for (unsigned int i = 0; i< gpios_array.size(); i++){
+                    const auto& gpio_item = gpios_array[i];
+                    config.Gpios.push_back(gpio_item.asInt());
+                }
+            }
         }
-                        
-        /*if (!root.isObject())
-            throw TADCException("Bad config file (the root is not an object)");
-
-        if (root.isMember("debug"))
-            config.Debug = root["debug"].asBool();
-
-        if (root.isMember("device_name"))
-            config.DeviceName = root["device_name"].asString();
-
-        
-
-        if (root.isMember("min_switch_interval_ms"))
-            config.MinSwitchIntervalMs = root["min_switch_interval_ms"].asInt();
-            */
-
-        if (root.isMember("id")) 
-            config.Id = root["id"].asString();
-        if (root.isMember("multiplier"))
-            config.Multiplier = root["multiplier"].asFloat();
-        if (root.isMember("gpio"))
-            config.Gpio = root["gpio"].asInt();
     }
 };
 
@@ -104,7 +106,7 @@ int main(int argc, char **argv)
 
         config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
-        std::shared_ptr<TMQTTADCHandler> mqtt_handler(new TMQTTADCHandler(mqtt_config, config));
+        std::shared_ptr<TMQTTADCHandler> mqtt_handler = TMQTTADCHandler::GetADCHandler(mqtt_config, config);
         mqtt_handler->Init();
 
         while(1){
@@ -112,7 +114,7 @@ int main(int argc, char **argv)
             if(rc != 0)
                 mqtt_handler->reconnect();
             else // update current values
-                mqtt_handler->UpdateChannelValues();
+                mqtt_handler->UpdateValue();
         }
     } catch (const TADCException& e) {
         std::cerr << "FATAL: " << e.what() << std::endl;

@@ -11,15 +11,27 @@ namespace {
     }
 }
 
-
+std::shared_ptr<TMQTTADCHandler> TMQTTADCHandler::GetADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config){
+    if (handler_config.DeviceName == "ADCs") {
+        std::shared_ptr<TMQTTADCHandlerMux> mqtt_handler(new TMQTTADCHandlerMux(mqtt_config, handler_config));
+        return mqtt_handler;
+    }
+    else return nullptr;    
+}
 
 TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
     : TMQTTWrapper(mqtt_config),
-      Config(handler_config),
-      ADC(GetSysfsPrefix(),
+      Config(handler_config)
+{
+}
+
+TMQTTADCHandlerMux::TMQTTADCHandlerMux(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
+    : TMQTTADCHandler(mqtt_config, handler_config),
+        ADC(GetSysfsPrefix(),
           handler_config.AveragingWindow,
           handler_config.MinSwitchIntervalMs,
           handler_config.Debug)
+
 {
     for (int i = 0; i < 8; ++i)
         Channels.push_back(ADC.GetChannel("ADC" + std::to_string(i)));
@@ -27,7 +39,7 @@ TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, co
 	Connect();
 }
 
-void TMQTTADCHandler::OnConnect(int rc)
+void TMQTTADCHandlerMux::OnConnect(int rc)
 {
     if (Config.Debug)
         std::cerr << "Connected with code " << rc << std::endl;
@@ -46,24 +58,27 @@ void TMQTTADCHandler::OnConnect(int rc)
     }
 }
 
-void TMQTTADCHandler::OnMessage(const struct mosquitto_message *)
+void TMQTTADCHandlerMux::OnMessage(const struct mosquitto_message *)
 {
     // NOOP
 }
 
-void TMQTTADCHandler::OnSubscribe(int, int, const int *)
+void TMQTTADCHandlerMux::OnSubscribe(int, int, const int *)
 {
     if (Config.Debug)
         std::cerr << "Subscription succeeded." << std::endl;
 }
 
-std::string TMQTTADCHandler::GetChannelTopic(const TSysfsADCChannel& channel) const
+string TMQTTADCHandlerMux::GetChannelTopic(const TSysfsADCChannel& channel) const
 {
     static string controls_prefix = std::string("/devices/") + MQTTConfig.Id + "/controls/";
     return controls_prefix + channel.GetName();
 }
 
-void TMQTTADCHandler::UpdateChannelValues()
+void TMQTTADCHandlerMux::UpdateValue(){
+    UpdateChannelValues();
+}
+void TMQTTADCHandlerMux::UpdateChannelValues()
 {
     for (auto channel : Channels) {
         int value = channel.GetValue();
