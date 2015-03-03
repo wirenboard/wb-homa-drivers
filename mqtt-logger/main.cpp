@@ -12,6 +12,7 @@
 #include<stdio.h>
 #include<unistd.h>
 #include<sstream>
+#include<vector>
 
 using namespace std;
 class  TLoggerConfig{// class for parsing config
@@ -114,8 +115,11 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
     string payload = static_cast<const char*>(message->payload);
     std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
     std::time_t tt = std::chrono::system_clock::to_time_t(current_time);
+    string time_string = ctime(&tt);
+    const vector<string>& tokens = StringSplit(time_string, ' ');
 
-    Output << topic + " " +  payload << ctime( &tt) << endl;
+
+    Output << tokens[1] + " " +  tokens[3] + " " + tokens[4] + ": " << topic + "\t" +  payload << endl;
     if (Output.tellp() > Max){
         Output.close();
         int i;
