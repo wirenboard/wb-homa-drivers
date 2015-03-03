@@ -3,5 +3,7 @@
     "device_name" : "ADCs",
     "averaging_window": 4,
     "min_switch_interval_ms": 100,
-    "debug": false
+    "debug": false,
+    "iio_channels" : [
+    ]
 }

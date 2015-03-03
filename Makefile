@@ -94,15 +94,17 @@ $(W1_DIR)/$(W1_BIN) : $(W1_DIR)/main.o $(W1_DIR)/sysfs_w1.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # ADC
-ADC_H=$(ADC_DIR)/sysfs_adc.h
+ADC_H=$(ADC_DIR)/sysfs_adc.h $(ADC_DIR)/adc_handler.h
 
 $(ADC_DIR)/main.o : $(ADC_DIR)/main.cpp $(COMMON_H) $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
+$(ADC_DIR)/adc_handler.o : $(ADC_DIR)/adc_handler.cpp $(COMMON_H) $(ADC_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
 $(ADC_DIR)/sysfs_adc.o : $(ADC_DIR)/sysfs_adc.cpp $(COMMON_H) $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(COMMON_O)
+$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_handler.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
