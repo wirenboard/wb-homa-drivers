@@ -30,11 +30,13 @@ TMQTTADCHandlerMux::TMQTTADCHandlerMux(const TMQTTADCHandler::TConfig& mqtt_conf
         ADC(GetSysfsPrefix(),
           handler_config.AveragingWindow,
           handler_config.MinSwitchIntervalMs,
-          handler_config.Debug)
+          handler_config.Debug,
+          handler_config.Gpios,
+          handler_config.Mux)
 
 {
     for (int i = 0; i < 8; ++i)
-        Channels.push_back(ADC.GetChannel("ADC" + std::to_string(i)));
+        Channels.push_back(ADC.GetChannel(i));
 
 	Connect();
 }

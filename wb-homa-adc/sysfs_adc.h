@@ -2,6 +2,15 @@
 #include <string>
 #include <exception>
 #include <memory>
+#include<vector>
+
+using namespace std;
+
+struct MUXChannel{
+    std::string Id;
+    float Multiplier;
+};
+
 
 class TSysfsADCChannel;
 
@@ -20,8 +29,8 @@ class TSysfsADC
 {
 public:
     TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10,
-              int min_switch_interval_ms = 0, bool debug = false);
-    TSysfsADCChannel GetChannel(const std::string& channel_name);
+              int min_switch_interval_ms = 0, bool debug = false, vector<int> gpios = vector<int> (), vector<MUXChannel> mux =vector<MUXChannel> ());
+    TSysfsADCChannel GetChannel(int i);
 private:
     int GetValue(int index);
     void InitMux();
@@ -40,8 +49,9 @@ private:
     int GpioMuxA;
     int GpioMuxB;
     int GpioMuxC;
-    std::ifstream AdcValStream;
+    ifstream AdcValStream;
     friend class TSysfsADCChannel;
+    vector<MUXChannel> Mux;
 };
 
 struct TSysfsADCChannelPrivate;

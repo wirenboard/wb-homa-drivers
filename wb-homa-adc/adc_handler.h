@@ -3,6 +3,7 @@
 #include"common/utils.h"
 #include"common/mqtt_wrapper.h"
 #include"sysfs_adc.h"
+
 struct THandlerConfig
 {
     std::string DeviceName = "ADCs";
@@ -12,8 +13,8 @@ struct THandlerConfig
     string Id;
     int Multiplier;
     vector<int> Gpios;
+    vector<MUXChannel> Mux;
 };
-
 
 class TMQTTADCHandler : public TMQTTWrapper
 {

@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "sysfs_adc.h"
-
+/*
 namespace {
     struct ChannelName {
         int n;
@@ -40,7 +40,6 @@ namespace {
 #endif
         {-1, 0}
     };
-
     int GetChannelIndex(const std::string& name)
     {
         std::string locase_name = name;
@@ -64,30 +63,32 @@ namespace {
         }
     }
 };
+*/
 
 TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
-                     int min_switch_interval_ms, bool debug)
+                     int min_switch_interval_ms, bool debug, vector<int> gpios, vector<MUXChannel> mux)
     : AveragingWindow(averaging_window),
       MinSwitchIntervalMs(min_switch_interval_ms),
       Debug(debug),
       Initialized(false),
       SysfsDir(sysfs_dir),
       CurrentMuxInput(-1),
-      AdcValStream(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw")
+      AdcValStream(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw"),
+      Mux(mux)
 {
-    GpioMuxA = GetGPIOFromEnv("WB_GPIO_MUX_A");
-    GpioMuxB = GetGPIOFromEnv("WB_GPIO_MUX_B");
-    GpioMuxC = GetGPIOFromEnv("WB_GPIO_MUX_C");
+    GpioMuxA = gpios[0];
+    GpioMuxB = gpios[1];
+    GpioMuxC = gpios[2];
     if (AdcValStream < 0) {
         throw TADCException("error opening sysfs ADC file");
     }
 
 }
 
-TSysfsADCChannel TSysfsADC::GetChannel(const std::string& channel_name)
+TSysfsADCChannel TSysfsADC::GetChannel(int i)
 {
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
-    return TSysfsADCChannel(this, GetChannelIndex(channel_name), channel_name);
+    return TSysfsADCChannel(this, i, Mux[i].Id);
 }
 
 int TSysfsADC::GetValue(int index)

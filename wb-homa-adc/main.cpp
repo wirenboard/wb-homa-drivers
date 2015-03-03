@@ -44,15 +44,32 @@ namespace {
             if (item.isMember("min_switch_interval_ms"))
                 config.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
 
-            if (item.isMember("id")) 
-                config.Id = item["id"].asString();
-            if (item.isMember("multiplier"))
-                config.Multiplier = item["multiplier"].asFloat();
-            if (item.isMember("gpios")){
-                const auto& gpios_array = item["gpios"];
-                for (unsigned int i = 0; i< gpios_array.size(); i++){
-                    const auto& gpio_item = gpios_array[i];
-                    config.Gpios.push_back(gpio_item.asInt());
+            if ( item.isMember("channels")){ 
+                const auto& channel_array = item["channels"];
+                if (channel_array.size() != 8) {
+                    cerr << "mux channels's quantity does not equal 8 " << endl;
+                    exit(-1);
+                }
+            
+                for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
+                    const auto& channel_iterator = channel_array[channel_number];
+                    MUXChannel element;
+                    if (channel_iterator.isMember("id")) 
+                        element.Id = channel_iterator["id"].asString();
+                    if (channel_iterator.isMember("multiplier"))
+                        element.Multiplier = channel_iterator["multiplier"].asFloat();
+                    config.Mux.push_back(element);
+                    if (channel_iterator.isMember("gpios")){
+                        const auto& gpios_array = channel_iterator["gpios"];
+                        if (gpios_array.size() != 3) {
+                            cerr << "gpios's quantity does not equal 3" << endl;
+                            exit(-1);
+                        }
+                        for (unsigned int i = 0; i< gpios_array.size(); i++){
+                            const auto& gpio_item = gpios_array[i];
+                            config.Gpios.push_back(gpio_item.asInt());
+                        }
+                    }
                 }
             }
         }
