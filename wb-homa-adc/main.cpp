@@ -51,7 +51,7 @@ namespace {
         if (root.isMember("id")) 
             config.Id = root["id"].asString();
         if (root.isMember("multiplier"))
-            config.Multiplier = root["multiplier"].asInt();
+            config.Multiplier = root["multiplier"].asFloat();
         if (root.isMember("gpio"))
             config.Gpio = root["gpio"].asInt();
     }
