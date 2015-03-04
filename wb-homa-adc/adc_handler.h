@@ -4,16 +4,20 @@
 #include"common/mqtt_wrapper.h"
 #include"sysfs_adc.h"
 
+struct TChannel{
+    int AveragingWindow = 10;
+    int MinSwitchIntervalMs = 0;
+    string Id;
+    string Type;
+    vector<int> Gpios;
+    vector<TMUXChannel> Mux;
+};
+    
 struct THandlerConfig
 {
     std::string DeviceName = "ADCs";
     bool Debug = false;
-    int AveragingWindow = 10;
-    int MinSwitchIntervalMs = 0;
-    string Id;
-    int Multiplier;
-    vector<int> Gpios;
-    vector<MUXChannel> Mux;
+    vector<TChannel> Channels;
 };
 
 class TMQTTADCHandler : public TMQTTWrapper
@@ -31,7 +35,7 @@ public:
     virtual void UpdateValue() = 0;
 private:
     THandlerConfig Config;
-    TSysfsADC ADC;
+    std::unique_ptr<TSysfsADC> ADC;
     //vector<TSysfsADCChannel> Channels;
 };
 
@@ -49,7 +53,7 @@ public:
     void UpdateValue();
 private:
     THandlerConfig Config;
-    TSysfsADC ADC;
+    std::unique_ptr<TSysfsADC> ADC;
     vector<TSysfsADCChannel> Channels;
 };
 

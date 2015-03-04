@@ -22,27 +22,29 @@ namespace {
             throw TADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
         if (!root.isObject())
             throw TADCException("Bad config file (the root is not an object)");
+        if (root.isMember("device_name"))
+            config.DeviceName = root["device_name"].asString();
+        if (root.isMember("debug"))
+                config.Debug = root["debug"].asBool();
 
 
-        if (root.isMember("averaging_window")) {
-            config.AveragingWindow = root["averaging_window"].asInt();
-            if (config.AveragingWindow < 1)
-                throw TADCException("bad averaging window specified in the config");
-        }
 
-        const auto& array = root["iio_channels"];
+             const auto& array = root["iio_channels"];
 
         for (unsigned int index = 0; index < array.size(); index++){
             const auto& item = array[index];
-                              
-            if (item.isMember("debug"))
-                config.Debug = item["debug"].asBool();
-
-            if (item.isMember("device_name"))
-            config.DeviceName = item["device_name"].asString();
-            
+            TChannel new_channel;// create new intrance to add in vector<TChannel> Channels
+            if (item.isMember("averaging_window")) {
+                new_channel.AveragingWindow = item["averaging_window"].asInt();
+                if (new_channel.AveragingWindow < 1)
+                    throw TADCException("bad averaging window specified in the config");
+            }
+            if (item.isMember("id")) 
+                        new_channel.Id = item["id"].asString();
+                    
+     
             if (item.isMember("min_switch_interval_ms"))
-                config.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
+                new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
 
             if ( item.isMember("channels")){ 
                 const auto& channel_array = item["channels"];
@@ -53,12 +55,12 @@ namespace {
             
                 for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
                     const auto& channel_iterator = channel_array[channel_number];
-                    MUXChannel element;
+                    TMUXChannel element;
                     if (channel_iterator.isMember("id")) 
                         element.Id = channel_iterator["id"].asString();
                     if (channel_iterator.isMember("multiplier"))
                         element.Multiplier = channel_iterator["multiplier"].asFloat();
-                    config.Mux.push_back(element);
+                    new_channel.Mux.push_back(element);
                     if (channel_iterator.isMember("gpios")){
                         const auto& gpios_array = channel_iterator["gpios"];
                         if (gpios_array.size() != 3) {
@@ -67,11 +69,13 @@ namespace {
                         }
                         for (unsigned int i = 0; i< gpios_array.size(); i++){
                             const auto& gpio_item = gpios_array[i];
-                            config.Gpios.push_back(gpio_item.asInt());
+                            new_channel.Gpios.push_back(gpio_item.asInt());
                         }
                     }
                 }
+            new_channel.Type == "Mux";
             }
+            config.Channels.push_back(new_channel);
         }
     }
 };

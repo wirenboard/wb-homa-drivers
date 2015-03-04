@@ -12,10 +12,11 @@ namespace {
 }
 
 std::shared_ptr<TMQTTADCHandler> TMQTTADCHandler::GetADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config){
-    if (handler_config.DeviceName == "ADCs") {
-        std::shared_ptr<TMQTTADCHandlerMux> mqtt_handler(new TMQTTADCHandlerMux(mqtt_config, handler_config));
-        return mqtt_handler;
-    }
+    for (const auto& channel: handler_config.Channels)// search for mux channel
+        if (channel.Type == "Mux") {
+            std::shared_ptr<TMQTTADCHandlerMux> mqtt_handler(new TMQTTADCHandlerMux(mqtt_config, handler_config));
+            return mqtt_handler;
+        }
     else return nullptr;    
 }
 
@@ -26,17 +27,15 @@ TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, co
 }
 
 TMQTTADCHandlerMux::TMQTTADCHandlerMux(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
-    : TMQTTADCHandler(mqtt_config, handler_config),
-        ADC(GetSysfsPrefix(),
-          handler_config.AveragingWindow,
-          handler_config.MinSwitchIntervalMs,
-          handler_config.Debug,
-          handler_config.Gpios,
-          handler_config.Mux)
-
+    : TMQTTADCHandler(mqtt_config, handler_config)
 {
+    for (auto& iterator : handler_config.Channels)// search for mux channel
+        if (iterator.Type == "Mux" )
+            ADC.reset(new TSysfsADC(GetSysfsPrefix(),iterator.AveragingWindow, iterator.MinSwitchIntervalMs, handler_config.Debug, iterator.Gpios, iterator.Mux));
+
+            
     for (int i = 0; i < 8; ++i)
-        Channels.push_back(ADC.GetChannel(i));
+        Channels.push_back(ADC->GetChannel(i));
 
 	Connect();
 }

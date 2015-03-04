@@ -6,7 +6,7 @@
 
 using namespace std;
 
-struct MUXChannel{
+struct TMUXChannel{
     std::string Id;
     float Multiplier;
 };
@@ -29,7 +29,7 @@ class TSysfsADC
 {
 public:
     TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10,
-              int min_switch_interval_ms = 0, bool debug = false, vector<int> gpios = vector<int> (), vector<MUXChannel> mux =vector<MUXChannel> ());
+              int min_switch_interval_ms = 0, bool debug = false, vector<int> gpios = vector<int> (), vector<TMUXChannel> mux =vector<TMUXChannel> ());
     TSysfsADCChannel GetChannel(int i);
 private:
     int GetValue(int index);
@@ -51,7 +51,7 @@ private:
     int GpioMuxC;
     ifstream AdcValStream;
     friend class TSysfsADCChannel;
-    vector<MUXChannel> Mux;
+    vector<TMUXChannel> Mux;
 };
 
 struct TSysfsADCChannelPrivate;

@@ -66,7 +66,7 @@ namespace {
 */
 
 TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
-                     int min_switch_interval_ms, bool debug, vector<int> gpios, vector<MUXChannel> mux)
+                     int min_switch_interval_ms, bool debug, vector<int> gpios, vector<TMUXChannel> mux)
     : AveragingWindow(averaging_window),
       MinSwitchIntervalMs(min_switch_interval_ms),
       Debug(debug),
