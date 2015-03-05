@@ -24,43 +24,19 @@ struct THandlerConfig
 class TMQTTADCHandler : public TMQTTWrapper
 {
 public:
-    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const std::string& device_name, bool debug) ;
+    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig handler_config) ;
 
-    virtual void OnConnect(int rc) = 0;
-    virtual void OnMessage(const struct mosquitto_message *message) = 0;
-    virtual void OnSubscribe(int mid, int qos_count, const int *granted_qos) = 0;
-    static vector<std::shared_ptr<TMQTTADCHandler>> GetADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
-
-    //std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
-    //void UpdateChannelValues();
-    virtual void UpdateValue() = 0;
-private:
-    THandlerConfig Config;
-    std::unique_ptr<TSysfsADC> ADC;
-protected:
-    static bool GeneralPublish;
-    string DeviceName;
-    bool Debug;
-
-    //vector<TSysfsADCChannel> Channels;
-};
-
-class TMQTTADCHandlerMux : public TMQTTADCHandler
-{
-public:
-    TMQTTADCHandlerMux(const TMQTTADCHandlerMux::TConfig& mqtt_config, const std::string& device_name, bool debug, const TChannel& channel);
-
-    void OnConnect(int rc);
+    void OnConnect(int rc) ;
     void OnMessage(const struct mosquitto_message *message);
     void OnSubscribe(int mid, int qos_count, const int *granted_qos);
 
     std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
     void UpdateChannelValues();
-    void UpdateValue();
+    virtual void UpdateValue() ;
 private:
     THandlerConfig Config;
-    std::unique_ptr<TSysfsADC> ADC;
+    vector<std::shared_ptr<TSysfsADC>> ADCHandlers;
+
     vector<TSysfsADCChannel> Channels;
 };
-
 

@@ -76,11 +76,9 @@ TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
       AdcValStream(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw"),
       Mux(mux)
 {
-    cout << "TSYSFSADC constructor\n";
     GpioMuxA = gpios[0];
     GpioMuxB = gpios[1];
     GpioMuxC = gpios[2];
-    cout << "TSYSFSADC constructor\n";
     if (AdcValStream < 0) {
         throw TADCException("error opening sysfs ADC file");
     }

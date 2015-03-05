@@ -151,16 +151,9 @@ int main(int argc, char **argv)
                 cout << "GPIO IS " << j << endl;
             }
         }*/
-        vector<std::shared_ptr<TMQTTADCHandler>> handlers;
-        for (int i = 0; i< 2; i++){
-            handlers =  TMQTTADCHandler::GetADCHandler(mqtt_config, config);
-            //mqtt_handler->Init();
-        }
-        cout << "THERE \n";
-        std::shared_ptr<TMQTTADCHandler> mqtt_handler = handlers[1];
+        std::shared_ptr<TMQTTADCHandler> mqtt_handler( new TMQTTADCHandler(mqtt_config, config));
         mqtt_handler->Init();
         while(1){
-            //for (auto& mqtt_handler: handlers){
                 rc = mqtt_handler->loop();
                 if(rc != 0)
                     mqtt_handler->reconnect();
