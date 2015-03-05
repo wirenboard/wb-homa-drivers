@@ -1,49 +1,54 @@
 // Configuration options
 {
+    "device_name" : "ADCs",
+    "debug" : false,
     "iio_channels" : [
-        0 : { 
-                "device_name" : "Direct physical channel",
-                "debug": false
+         {
+                "id" : "Direct physical channel",
+                 "averaging_window": 4,
+                 "poll_interval" : 0,
         },
-        1 : {
-                "device_name" : "ADCs",
+
+         {
+                "type" : "mux",
                 "averaging_window": 4,
                 "min_switch_interval_ms": 100,
-                "debug": false,
                 "gpios" : [22, 44, 55],
                 "channels" : [
-                        0 : {
+                         {
                             "id" : "A1",
-                            "multiplier" : 2.48,
+                            "multiplier" : 2.48
                         },
-                        1 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A2",
+                            "multiplier" : 2.4
                         },
-                        2 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A3",
+                            "multiplier" : 2.48
                         },
-                        3 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A4",
+                            "multiplier" : 2.48
                         },
-                        4 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A5",
+                            "multiplier" : 2.48
                         },
-                        5 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A6",
+                            "multiplier" : 2.48
                         },
-                        6 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A7",
+                            "multiplier" : 2.48
                         },
-                        7 : {
-                            "id" : "A1",
-                            "multiplier" : 2.48,
+                         {
+                            "id" : "A8",
+                            "multiplier" : 2.48
                         }
                 ]
         }
+    ]
 }
+
