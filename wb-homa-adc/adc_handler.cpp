@@ -24,7 +24,10 @@ TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, co
     : TMQTTWrapper(mqtt_config),
       Config(handler_config)
 {
+    GeneralPublish = false;
 }
+
+bool TMQTTADCHandler::GeneralPublish = false;
 
 TMQTTADCHandlerMux::TMQTTADCHandlerMux(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
     : TMQTTADCHandler(mqtt_config, handler_config)
@@ -36,7 +39,6 @@ TMQTTADCHandlerMux::TMQTTADCHandlerMux(const TMQTTADCHandler::TConfig& mqtt_conf
             
     for (int i = 0; i < 8; ++i)
         Channels.push_back(ADC->GetChannel(i));
-
 	Connect();
 }
 
@@ -48,14 +50,18 @@ void TMQTTADCHandlerMux::OnConnect(int rc)
     if(rc != 0)
         return;
 
-    string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-    Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
+    if (!GeneralPublish) {
+        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
+        Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
+        //GeneralPublish = true;
+    }
 
     int n = 0;
     for (auto channel : Channels) {
         std::string topic = GetChannelTopic(channel);
-        Publish(NULL, topic + "/meta/type", "text", 0, true);
+        //Publish(NULL, topic + "/meta/type", "text", 0, true);
         Publish(NULL, topic + "/meta/order", std::to_string(n++), 0, true);
+        Publish(NULL, topic + "meta/type", "voltage", 0, true);
     }
 }
 
@@ -85,6 +91,8 @@ void TMQTTADCHandlerMux::UpdateChannelValues()
         int value = channel.GetValue();
         if (Config.Debug)
             std::cerr << "channel: " << channel.GetName() << " value: " << value << std::endl;
-        Publish(NULL, GetChannelTopic(channel), to_string(value), 0, true);
+        float result = channel.GetMultiplier() * value;
+
+        Publish(NULL, GetChannelTopic(channel), to_string(result), 0, true);
     }
 }

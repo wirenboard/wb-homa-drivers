@@ -39,8 +39,13 @@ namespace {
                 if (new_channel.AveragingWindow < 1)
                     throw TADCException("bad averaging window specified in the config");
             }
-            if (item.isMember("id")) 
-                        new_channel.Id = item["id"].asString();
+            if (item.isMember("id")) {
+                TMUXChannel buf_channel;
+                buf_channel.Id = item["id"].asString();
+                if (item.isMember("multiplier"))
+                    buf_channel.Multiplier = item["multiplier"].asFloat();
+                new_channel.Mux.push_back(buf_channel);
+            }
                     
      
             if (item.isMember("min_switch_interval_ms"))
@@ -127,15 +132,32 @@ int main(int argc, char **argv)
 
         config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
-        std::shared_ptr<TMQTTADCHandler> mqtt_handler = TMQTTADCHandler::GetADCHandler(mqtt_config, config);
-        mqtt_handler->Init();
+        for ( auto& i: config.Channels){
+            cout << "AVERAGE IS " << i.AveragingWindow << endl;
+            cout << "MINSWITCHINTERVAL IS " << i.MinSwitchIntervalMs << endl;
+            cout << "Type IS " << i.Type << endl;
+            if (i.Type == "mux" ) 
+                cout << "MUX " << endl;
+            for (auto& j : i.Mux){
+                cout << "ID IS " << j.Id << endl;
+                cout << "Multiplier IS " << j.Multiplier << endl;
+            }
+        }
+        vector<std::shared_ptr<TMQTTADCHandler>> handlers;
+        for (auto& channel_config : config.Channels){
+            std::shared_ptr<TMQTTADCHandler> mqtt_handler = TMQTTADCHandler::GetADCHandler(mqtt_config, config);
+            mqtt_handler->Init();
+            handlers.push_back(mqtt_handler);
+        }
 
         while(1){
-            rc = mqtt_handler->loop();
-            if(rc != 0)
-                mqtt_handler->reconnect();
-            else // update current values
-                mqtt_handler->UpdateValue();
+            for (auto& mqtt_handler: handlers){
+                rc = mqtt_handler->loop();
+                if(rc != 0)
+                    mqtt_handler->reconnect();
+                else // update current values
+                    mqtt_handler->UpdateValue();
+            }
         }
     } catch (const TADCException& e) {
         std::cerr << "FATAL: " << e.what() << std::endl;

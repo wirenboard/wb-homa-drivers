@@ -7,8 +7,7 @@
 struct TChannel{
     int AveragingWindow = 10;
     int MinSwitchIntervalMs = 0;
-    string Id;
-    string Type;
+    string Type = "";
     vector<int> Gpios;
     vector<TMUXChannel> Mux;
 };
@@ -36,6 +35,8 @@ public:
 private:
     THandlerConfig Config;
     std::unique_ptr<TSysfsADC> ADC;
+protected:
+    static bool GeneralPublish;
     //vector<TSysfsADCChannel> Channels;
 };
 
