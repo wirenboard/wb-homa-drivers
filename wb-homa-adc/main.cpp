@@ -51,13 +51,29 @@ namespace {
             if (item.isMember("min_switch_interval_ms"))
                 new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
 
+            if (item.isMember("poll_interval"))
+                new_channel.PollInterval = item["poll_interval"].asInt();
+
+
             if ( item.isMember("channels")){ 
                 const auto& channel_array = item["channels"];
                 if (channel_array.size() != 8) {
-                    cerr << "mux channels's quantity does not equal 8 " << endl;
+                    cerr << "number of mux channels is not equal to  8 " << endl;
                     exit(-1);
                 }
-            
+            if (item.isMember("gpios")){
+                        cout << "SETING GPIOS\n";
+                        const auto& gpios_array = item["gpios"];
+                        if (gpios_array.size() != 3) {
+                            cerr << "number of gpios isn't equal to  3" << endl;
+                            exit(-1);
+                        }
+                        for (unsigned int i = 0; i< gpios_array.size(); i++){
+                            const auto& gpio_item = gpios_array[i];
+                            new_channel.Gpios.push_back(gpio_item.asInt());
+                        }
+                    }
+
                 for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
                     const auto& channel_iterator = channel_array[channel_number];
                     TMUXChannel element;
@@ -66,19 +82,8 @@ namespace {
                     if (channel_iterator.isMember("multiplier"))
                         element.Multiplier = channel_iterator["multiplier"].asFloat();
                     new_channel.Mux.push_back(element);
-                    if (channel_iterator.isMember("gpios")){
-                        const auto& gpios_array = channel_iterator["gpios"];
-                        if (gpios_array.size() != 3) {
-                            cerr << "gpios's quantity does not equal 3" << endl;
-                            exit(-1);
-                        }
-                        for (unsigned int i = 0; i< gpios_array.size(); i++){
-                            const auto& gpio_item = gpios_array[i];
-                            new_channel.Gpios.push_back(gpio_item.asInt());
-                        }
-                    }
-                }
-            new_channel.Type == "Mux";
+                                    }
+                new_channel.Type = "mux";
             }
             config.Channels.push_back(new_channel);
         }
@@ -132,7 +137,7 @@ int main(int argc, char **argv)
 
         config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
-        for ( auto& i: config.Channels){
+        /*for ( auto& i: config.Channels){
             cout << "AVERAGE IS " << i.AveragingWindow << endl;
             cout << "MINSWITCHINTERVAL IS " << i.MinSwitchIntervalMs << endl;
             cout << "Type IS " << i.Type << endl;
@@ -142,22 +147,25 @@ int main(int argc, char **argv)
                 cout << "ID IS " << j.Id << endl;
                 cout << "Multiplier IS " << j.Multiplier << endl;
             }
-        }
+            for (auto& j : i.Gpios){
+                cout << "GPIO IS " << j << endl;
+            }
+        }*/
         vector<std::shared_ptr<TMQTTADCHandler>> handlers;
-        for (auto& channel_config : config.Channels){
-            std::shared_ptr<TMQTTADCHandler> mqtt_handler = TMQTTADCHandler::GetADCHandler(mqtt_config, config);
-            mqtt_handler->Init();
-            handlers.push_back(mqtt_handler);
+        for (int i = 0; i< 2; i++){
+            handlers =  TMQTTADCHandler::GetADCHandler(mqtt_config, config);
+            //mqtt_handler->Init();
         }
-
+        cout << "THERE \n";
+        std::shared_ptr<TMQTTADCHandler> mqtt_handler = handlers[1];
+        mqtt_handler->Init();
         while(1){
-            for (auto& mqtt_handler: handlers){
+            //for (auto& mqtt_handler: handlers){
                 rc = mqtt_handler->loop();
                 if(rc != 0)
                     mqtt_handler->reconnect();
                 else // update current values
                     mqtt_handler->UpdateValue();
-            }
         }
     } catch (const TADCException& e) {
         std::cerr << "FATAL: " << e.what() << std::endl;
