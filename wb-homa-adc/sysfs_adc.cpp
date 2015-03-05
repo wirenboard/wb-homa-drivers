@@ -88,7 +88,7 @@ TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
 TSysfsADCChannel TSysfsADC::GetChannel(int i)
 {
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
-    return TSysfsADCChannel(this, i, Mux[i].Id);
+    return TSysfsADCChannel(this, i, Mux[i].Id,Mux[i].Multiplier);
 }
 
 int TSysfsADC::GetValue(int index)
@@ -178,24 +178,14 @@ void TSysfsADC::SetMuxABC(int n)
     usleep(MinSwitchIntervalMs * 1000);
 }
 
-struct TSysfsADCChannelPrivate {
-    ~TSysfsADCChannelPrivate() { if (Buffer) delete[] Buffer; }
-    TSysfsADC* Owner;
-    int Index;
-    std::string Name;
-    int* Buffer = 0;
-    double Sum = 0;
-    bool Ready = false;
-    int Pos = 0;
-};
-
-TSysfsADCChannel::TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name)
+TSysfsADCChannel::TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name, float multiplier)
     : d(new TSysfsADCChannelPrivate())
 {
     d->Owner = owner;
     d->Index = index;
     d->Name = name;
     d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
+    d->Multiplier = multiplier;
 }
 
 int TSysfsADCChannel::GetValue()

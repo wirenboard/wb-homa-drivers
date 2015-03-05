@@ -54,15 +54,27 @@ private:
     vector<TMUXChannel> Mux;
 };
 
-struct TSysfsADCChannelPrivate;
+struct TSysfsADCChannelPrivate {
+    ~TSysfsADCChannelPrivate() { if (Buffer) delete[] Buffer; }
+    TSysfsADC* Owner;
+    int Index;
+    std::string Name;
+    int* Buffer = 0;
+    double Sum = 0;
+    bool Ready = false;
+    int Pos = 0;
+    float Multiplier = 1.0;
+};
+
 
 class TSysfsADCChannel
 {
 public:
     int GetValue();
     const std::string& GetName() const;
+    inline float GetMultiplier () { return d->Multiplier; }
 private:
-    TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name);
+    TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name, float multiplier);
     std::shared_ptr<TSysfsADCChannelPrivate> d;
     friend class TSysfsADC;
 };
