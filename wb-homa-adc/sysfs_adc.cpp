@@ -48,50 +48,55 @@ namespace {
             if (locase_name == name_item->name)
                 return name_item->n;
         }
-        throw TADCException("invalid channel name " + name);
+        throw TAdcException("invalid channel name " + name);
     }
 
     int GetGPIOFromEnv(const std::string& name)
     {
         char* s = getenv(name.c_str());
         if (!s)
-            throw TADCException("Environment variable not set: " + name);
+            throw TAdcException("Environment variable not set: " + name);
         try {
             return std::stoi(s);
         } catch (std::exception) {
-            throw TADCException("Invalid value of environment variable '" + name + "': " + s);
+            throw TAdcException("Invalid value of environment variable '" + name + "': " + s);
         }
     }
 };
 */
-
-TSysfsADC::TSysfsADC(const std::string& sysfs_dir, int averaging_window,
-                     int min_switch_interval_ms, bool debug, vector<int> gpios, vector<TMUXChannel> mux)
-    : AveragingWindow(averaging_window),
-      MinSwitchIntervalMs(min_switch_interval_ms),
-      Debug(debug),
-      Initialized(false),
-      SysfsDir(sysfs_dir),
-      CurrentMuxInput(-1),
-      AdcValStream(SysfsDir + "/bus/iio/devices/iio:device0/in_voltage1_raw"),
-      Mux(mux)
+TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
+    : SysfsDir(sysfs_dir),
+    ChannelConfig(channel_config)
 {
-    GpioMuxA = gpios[0];
-    GpioMuxB = gpios[1];
-    GpioMuxC = gpios[2];
+    AveragingWindow = ChannelConfig.AveragingWindow;
+    Debug = debug;
+    Initialized = false;
+    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(ChannelConfig.ChannelNumber) + "_raw";
+    AdcValStream.open(path_to_value);
     if (AdcValStream < 0) {
-        throw TADCException("error opening sysfs ADC file");
+        throw TAdcException("error opening sysfs Adc file");
     }
-
 }
 
-TSysfsADCChannel TSysfsADC::GetChannel(int i)
+TSysfsAdcChannel TSysfsAdc::GetChannel(int i)
 {
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
-    return TSysfsADCChannel(this, i, Mux[i].Id,Mux[i].Multiplier);
+    return TSysfsAdcChannel(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier);
 }
 
-int TSysfsADC::GetValue(int index)
+
+TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
+    : TSysfsAdc(sysfs_dir, debug, channel_config)
+{
+    MinSwitchIntervalMs = ChannelConfig.MinSwitchIntervalMs;
+    CurrentMuxInput = -1;
+    GpioMuxA = ChannelConfig.Gpios[0];
+    GpioMuxB = ChannelConfig.Gpios[1];
+    GpioMuxC = ChannelConfig.Gpios[2];
+   }
+
+
+int TSysfsAdcMux::GetValue(int index)
 {
     SetMuxABC(index);
     int val;
@@ -100,7 +105,7 @@ int TSysfsADC::GetValue(int index)
     return val;
 }
 
-void TSysfsADC::InitMux()
+void TSysfsAdcMux::InitMux()
 {
     if (Initialized)
         return;
@@ -110,44 +115,44 @@ void TSysfsADC::InitMux()
     Initialized = true;
 }
 
-void TSysfsADC::InitGPIO(int gpio)
+void TSysfsAdcMux::InitGPIO(int gpio)
 {
     std::string gpio_direction_path = GPIOPath(gpio, "/direction");
     std::ofstream setdirgpio(gpio_direction_path);
     if (!setdirgpio) {
         std::ofstream exportgpio(SysfsDir + "/class/gpio/export");
         if (!exportgpio)
-            throw TADCException("unable to export GPIO " + std::to_string(gpio));
+            throw TAdcException("unable to export GPIO " + std::to_string(gpio));
         exportgpio << gpio << std::endl;
         setdirgpio.clear();
         setdirgpio.open(gpio_direction_path);
         if (!setdirgpio)
-            throw TADCException("unable to set GPIO direction");
+            throw TAdcException("unable to set GPIO direction");
     }
     setdirgpio << "out";
 }
 
-void TSysfsADC::SetGPIOValue(int gpio, int value)
+void TSysfsAdcMux::SetGPIOValue(int gpio, int value)
 {
     std::ofstream setvalgpio(GPIOPath(gpio, "/value"));
     if (!setvalgpio)
-        throw TADCException("unable to set value of gpio " + std::to_string(gpio));
+        throw TAdcException("unable to set value of gpio " + std::to_string(gpio));
     setvalgpio << value << std::endl;
 }
 
-std::string TSysfsADC::GPIOPath(int gpio, const std::string& suffix) const
+std::string TSysfsAdcMux::GPIOPath(int gpio, const std::string& suffix) const
 {
     return std::string(SysfsDir + "/class/gpio/gpio") + std::to_string(gpio) + suffix;
 }
 
-void TSysfsADC::MaybeWaitBeforeSwitching()
+void TSysfsAdcMux::MaybeWaitBeforeSwitching()
 {
     if (MinSwitchIntervalMs <= 0)
         return;
 
     struct timespec tp;
     if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp) < 0)
-        throw TADCException("unable to get timer value");
+        throw TAdcException("unable to get timer value");
 
     if (CurrentMuxInput >= 0) { // no delays before the first switch
         double elapsed_ms = (tp.tv_sec - PrevSwitchTS.tv_sec) * 1000 +
@@ -164,7 +169,7 @@ void TSysfsADC::MaybeWaitBeforeSwitching()
     PrevSwitchTS = tp;
 }
 
-void TSysfsADC::SetMuxABC(int n)
+void TSysfsAdcMux::SetMuxABC(int n)
 {
     InitMux();
     if (CurrentMuxInput == n)
@@ -178,17 +183,31 @@ void TSysfsADC::SetMuxABC(int n)
     usleep(MinSwitchIntervalMs * 1000);
 }
 
-TSysfsADCChannel::TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name, float multiplier)
-    : d(new TSysfsADCChannelPrivate())
+TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
+    : TSysfsAdc(sysfs_dir, debug, channel_config)
 {
-    d->Owner = owner;
+}
+
+int TSysfsAdcPhys::GetValue(int index)
+{
+    int val;
+    AdcValStream.seekg(0);
+    AdcValStream >> val;
+    return val;
+}
+
+
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier)
+    : d(new TSysfsAdcChannelPrivate())
+{
+    d->Owner.reset(owner);
     d->Index = index;
     d->Name = name;
     d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
     d->Multiplier = multiplier;
 }
 
-int TSysfsADCChannel::GetValue()
+int TSysfsAdcChannel::GetValue()
 {
     if (!d->Ready) {
         for (int i = 0; i < d->Owner->AveragingWindow; ++i) {
@@ -208,7 +227,7 @@ int TSysfsADCChannel::GetValue()
     return round(d->Sum / d->Owner->AveragingWindow);
 }
 
-const std::string& TSysfsADCChannel::GetName() const
+const std::string& TSysfsAdcChannel::GetName() const
 {
     return d->Name;
 }

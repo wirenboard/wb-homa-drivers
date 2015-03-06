@@ -7,6 +7,7 @@
                 "id" : "Direct physical channel",
                  "averaging_window": 4,
                  "poll_interval" : 0,
+                 "channel_number" : 2
         },
 
          {
@@ -17,35 +18,35 @@
                 "channels" : [
                          {
                             "id" : "A1",
-                            "multiplier" : 2.48
+                            "multiplier" : 0.903
                         },
                          {
                             "id" : "A2",
-                            "multiplier" : 2.4
+                            "multiplier" : 0.903
                         },
                          {
                             "id" : "A3",
-                            "multiplier" : 2.48
+                            "multiplier" : 0.903
                         },
                          {
                             "id" : "A4",
-                            "multiplier" : 2.48
+                            "multiplier" : 3.73
                         },
                          {
                             "id" : "A5",
-                            "multiplier" : 2.48
+                            "multiplier" : 3.73
                         },
                          {
-                            "id" : "A6",
-                            "multiplier" : 2.48
+                            "id" : "R1",
+                            "multiplier" : 0.497
                         },
                          {
-                            "id" : "A7",
-                            "multiplier" : 2.48
+                            "id" : "R2",
+                            "multiplier" : 0.497
                         },
                          {
-                            "id" : "A8",
-                            "multiplier" : 2.48
+                            "id" : "ii_pol",
+                            "multiplier" : 1.694
                         }
                 ]
         }

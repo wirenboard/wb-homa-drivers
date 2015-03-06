@@ -19,9 +19,9 @@ namespace {
 
         // Report failures and their locations in the document.
         if(not parsedSuccess)
-            throw TADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
+            throw TAdcException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
         if (!root.isObject())
-            throw TADCException("Bad config file (the root is not an object)");
+            throw TAdcException("Bad config file (the root is not an object)");
         if (root.isMember("device_name"))
             config.DeviceName = root["device_name"].asString();
         if (root.isMember("debug"))
@@ -37,7 +37,7 @@ namespace {
             if (item.isMember("averaging_window")) {
                 new_channel.AveragingWindow = item["averaging_window"].asInt();
                 if (new_channel.AveragingWindow < 1)
-                    throw TADCException("bad averaging window specified in the config");
+                    throw TAdcException("bad averaging window specified in the config");
             }
             if (item.isMember("id")) {
                 TMUXChannel buf_channel;
@@ -47,9 +47,10 @@ namespace {
                 new_channel.Mux.push_back(buf_channel);
             }
                     
-     
             if (item.isMember("min_switch_interval_ms"))
                 new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
+            if (item.isMember("channelnumber"))
+                new_channel.ChannelNumber = item["channel_number"].asInt();
 
             if (item.isMember("poll_interval"))
                 new_channel.PollInterval = item["poll_interval"].asInt();
@@ -62,7 +63,6 @@ namespace {
                     exit(-1);
                 }
             if (item.isMember("gpios")){
-                        cout << "SETING GPIOS\n";
                         const auto& gpios_array = item["gpios"];
                         if (gpios_array.size() != 3) {
                             cerr << "number of gpios isn't equal to  3" << endl;
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	int rc;
     string config_fname;
     bool debug = false;
-    TMQTTADCHandler::TConfig mqtt_config;
+    TMQTTAdcHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
 
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
                 cout << "GPIO IS " << j << endl;
             }
         }*/
-        std::shared_ptr<TMQTTADCHandler> mqtt_handler( new TMQTTADCHandler(mqtt_config, config));
+        std::shared_ptr<TMQTTAdcHandler> mqtt_handler( new TMQTTAdcHandler(mqtt_config, config));
         mqtt_handler->Init();
         while(1){
                 rc = mqtt_handler->loop();
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
                 else // update current values
                     mqtt_handler->UpdateValue();
         }
-    } catch (const TADCException& e) {
+    } catch (const TAdcException& e) {
         std::cerr << "FATAL: " << e.what() << std::endl;
         return 1;
     }

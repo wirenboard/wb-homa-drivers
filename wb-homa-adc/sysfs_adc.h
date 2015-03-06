@@ -8,55 +8,77 @@ using namespace std;
 
 struct TMUXChannel{
     std::string Id;
-    float Multiplier;
+    float Multiplier = 1.0;
 };
+struct TChannel{
+    int AveragingWindow = 10;
+    int PollInterval;
+    int ChannelNumber = 1;
+    int MinSwitchIntervalMs = 0;
+    string Type = "";
+    vector<int> Gpios;
+    vector<TMUXChannel> Mux;
+};
+ 
 
+class TSysfsAdcChannel;
 
-class TSysfsADCChannel;
-
-class TADCException: public std::exception {
+class TAdcException: public std::exception {
 public:
-    TADCException(std::string _message): message(_message) {}
+    TAdcException(std::string _message): message(_message) {}
     const char* what () const throw ()
     {
-        return ("ADC error: " + message).c_str();
+        return ("Adc error: " + message).c_str();
     }
 private:
     std::string message;
 };
 
-class TSysfsADC
+class TSysfsAdc
 {
 public:
-    TSysfsADC(const std::string& sysfs_dir = "/sys", int averaging_window = 10,
-              int min_switch_interval_ms = 0, bool debug = false, vector<int> gpios = vector<int> (), vector<TMUXChannel> mux =vector<TMUXChannel> ());
-    TSysfsADCChannel GetChannel(int i);
-private:
-    int GetValue(int index);
-    void InitMux();
-    void InitGPIO(int gpio);
-    void SetGPIOValue(int gpio, int value);
-    std::string GPIOPath(int gpio, const std::string& suffix) const;
-    void MaybeWaitBeforeSwitching();
-    void SetMuxABC(int n);
+    TSysfsAdc(const std::string& sysfs_dir = "/sys", bool debug = false, const TChannel& channel_config = TChannel ());
+    TSysfsAdcChannel GetChannel(int i);
+protected:
+    virtual int GetValue(int index) = 0;
     int AveragingWindow;
-    int MinSwitchIntervalMs;
     bool Debug;
     bool Initialized;
     std::string SysfsDir;
-    int CurrentMuxInput;
-    struct timespec PrevSwitchTS;
-    int GpioMuxA;
-    int GpioMuxB;
-    int GpioMuxC;
     ifstream AdcValStream;
-    friend class TSysfsADCChannel;
-    vector<TMUXChannel> Mux;
+    friend class TSysfsAdcChannel;
+    TChannel ChannelConfig;
 };
 
-struct TSysfsADCChannelPrivate {
-    ~TSysfsADCChannelPrivate() { if (Buffer) delete[] Buffer; }
-    TSysfsADC* Owner;
+class TSysfsAdcMux : public TSysfsAdc{
+    public : 
+        TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
+    private:
+        int GetValue(int index);
+        void InitMux();
+        void InitGPIO(int gpio);
+        void SetGPIOValue(int gpio, int value);
+        std::string GPIOPath(int gpio, const std::string& suffix) const;
+        void MaybeWaitBeforeSwitching();
+        void SetMuxABC(int n);
+        int MinSwitchIntervalMs;
+        int CurrentMuxInput;
+        struct timespec PrevSwitchTS;
+        int GpioMuxA;
+        int GpioMuxB;
+        int GpioMuxC;
+};
+
+class TSysfsAdcPhys: public TSysfsAdc{
+    public :
+        TSysfsAdcPhys(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
+    private : 
+    int GetValue(int index);
+};
+ 
+struct TSysfsAdcChannelPrivate {
+    ~TSysfsAdcChannelPrivate() { if (Buffer) delete[] Buffer; }
+    std::shared_ptr<TSysfsAdc> Owner;
     int Index;
     std::string Name;
     int* Buffer = 0;
@@ -67,14 +89,14 @@ struct TSysfsADCChannelPrivate {
 };
 
 
-class TSysfsADCChannel
+class TSysfsAdcChannel
 {
 public:
     int GetValue();
     const std::string& GetName() const;
     inline float GetMultiplier () { return d->Multiplier; }
 private:
-    TSysfsADCChannel(TSysfsADC* owner, int index, const std::string& name, float multiplier);
-    std::shared_ptr<TSysfsADCChannelPrivate> d;
-    friend class TSysfsADC;
+    TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier);
+    std::shared_ptr<TSysfsAdcChannelPrivate> d;
+    friend class TSysfsAdc;
 };
