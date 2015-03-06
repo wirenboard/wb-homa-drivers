@@ -17,6 +17,7 @@ class TMQTTAdcHandler : public TMQTTWrapper
 {
 public:
     TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, const THandlerConfig handler_config) ;
+    ~TMQTTAdcHandler();
 
     void OnConnect(int rc) ;
     void OnMessage(const struct mosquitto_message *message);

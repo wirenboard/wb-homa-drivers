@@ -78,6 +78,12 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     }
 }
 
+TSysfsAdc::~TSysfsAdc(){
+    if (AdcValStream.is_open()){
+        AdcValStream.close();
+    }
+}
+
 TSysfsAdcChannel TSysfsAdc::GetChannel(int i)
 {
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)

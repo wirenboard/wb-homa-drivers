@@ -31,6 +31,11 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
 	Connect();
 }
 
+TMQTTAdcHandler::~TMQTTAdcHandler(){
+    AdcHandlers.clear();
+    Channels.clear();
+}
+
 void TMQTTAdcHandler::OnConnect(int rc)
 {
     if (Config.Debug)

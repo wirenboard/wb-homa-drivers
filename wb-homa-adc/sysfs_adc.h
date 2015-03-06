@@ -38,6 +38,7 @@ class TSysfsAdc
 {
 public:
     TSysfsAdc(const std::string& sysfs_dir = "/sys", bool debug = false, const TChannel& channel_config = TChannel ());
+    ~TSysfsAdc();
     TSysfsAdcChannel GetChannel(int i);
     int ReadValue();
 protected:
