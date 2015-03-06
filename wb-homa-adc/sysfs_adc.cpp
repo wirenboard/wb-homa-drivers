@@ -84,6 +84,12 @@ TSysfsAdcChannel TSysfsAdc::GetChannel(int i)
     return TSysfsAdcChannel(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier);
 }
 
+int TSysfsAdc::ReadValue(){
+    int val;
+    AdcValStream.seekg(0);
+    AdcValStream >> val;
+    return val;
+}
 
 TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : TSysfsAdc(sysfs_dir, debug, channel_config)
@@ -99,10 +105,7 @@ TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChan
 int TSysfsAdcMux::GetValue(int index)
 {
     SetMuxABC(index);
-    int val;
-    AdcValStream.seekg(0);
-    AdcValStream >> val;
-    return val;
+    return ReadValue(); 
 }
 
 void TSysfsAdcMux::InitMux()
@@ -190,10 +193,7 @@ TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TCh
 
 int TSysfsAdcPhys::GetValue(int index)
 {
-    int val;
-    AdcValStream.seekg(0);
-    AdcValStream >> val;
-    return val;
+   return ReadValue();
 }
 
 
