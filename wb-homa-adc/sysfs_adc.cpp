@@ -76,6 +76,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     if (AdcValStream < 0) {
         throw TAdcException("error opening sysfs Adc file");
     }
+    NumberOfChannels = channel_config.Mux.size();
 }
 
 TSysfsAdc::~TSysfsAdc(){

@@ -17,16 +17,16 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
     Config(handler_config)
 {
     for (auto& channel_config : Config.Channels){
+        std::shared_ptr<TSysfsAdc> adc_handler(nullptr); 
         if (channel_config.Type == "mux"){
-            std::shared_ptr<TSysfsAdc> adc_handler(new TSysfsAdcMux(GetSysfsPrefix(), Config.Debug, channel_config));
-            for (int i = 0; i < 8; ++i)
-                Channels.push_back(adc_handler->GetChannel(i));
-            AdcHandlers.push_back(adc_handler);
-        }else {
-            std::shared_ptr<TSysfsAdc> adc_handler(new TSysfsAdcPhys(GetSysfsPrefix(), Config.Debug, channel_config));
-            Channels.push_back(adc_handler->GetChannel(0));
-            AdcHandlers.push_back(adc_handler);
+            adc_handler.reset(new TSysfsAdcMux(GetSysfsPrefix(), Config.Debug, channel_config));
+                    }else {
+            adc_handler.reset(new TSysfsAdcPhys(GetSysfsPrefix(), Config.Debug, channel_config));
         }
+        for (int i = 0; i < adc_handler->GetNumberOfChannels(); ++i)
+                Channels.push_back(adc_handler->GetChannel(i));
+        AdcHandlers.push_back(adc_handler);
+
     }
 	Connect();
 }
@@ -44,8 +44,8 @@ void TMQTTAdcHandler::OnConnect(int rc)
     if(rc != 0)
         return;
 
-        string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-        Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
+    string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
+    Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
     int n = 0;
     for (auto channel : Channels) {
         std::string topic = GetChannelTopic(channel);

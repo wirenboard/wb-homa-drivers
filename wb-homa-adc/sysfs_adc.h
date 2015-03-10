@@ -41,6 +41,7 @@ public:
     ~TSysfsAdc();
     TSysfsAdcChannel GetChannel(int i);
     int ReadValue();
+    inline int GetNumberOfChannels() { return NumberOfChannels; };
 protected:
     virtual int GetValue(int index) = 0;
     int AveragingWindow;
@@ -50,6 +51,7 @@ protected:
     ifstream AdcValStream;
     friend class TSysfsAdcChannel;
     TChannel ChannelConfig;
+    int NumberOfChannels;
 };
 
 class TSysfsAdcMux : public TSysfsAdc{
