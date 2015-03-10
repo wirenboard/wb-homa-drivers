@@ -119,7 +119,7 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
     const vector<string>& tokens = StringSplit(time_string, ' ');
 
 
-    Output << tokens[1] + " " +  tokens[3] + " " + tokens[4] + ": " << topic + "\t" +  payload << endl;
+    Output << tokens[1] + " " +  tokens[2] + " " + tokens[3] + ": " << topic + "\t" +  payload << endl;
     if (Output.tellp() > Max){
         Output.close();
         int i;
