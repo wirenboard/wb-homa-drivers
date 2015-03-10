@@ -113,13 +113,11 @@ void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos){
 void MQTTLogger::OnMessage(const struct mosquitto_message *message){
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
-    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-    std::time_t tt = std::chrono::system_clock::to_time_t(current_time);
-    string time_string = ctime(&tt);
-    const vector<string>& tokens = StringSplit(time_string, ' ');
-
-
-    Output << tokens[1] + " " +  tokens[2] + " " + tokens[3] + ": " << topic + "\t" +  payload << endl;
+    std::time_t tt = std::time(NULL);
+    char mbstr[100];
+    std::strftime(mbstr, sizeof(mbstr), "%Y %h %d %H:%M:%S:", std::localtime(&tt));
+    string time(mbstr);
+    Output << time << topic + "\t" +  payload << endl;
     if (Output.tellp() > Max){
         Output.close();
         int i;
