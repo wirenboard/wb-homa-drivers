@@ -115,9 +115,9 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
     string payload = static_cast<const char*>(message->payload);
     std::time_t tt = std::time(NULL);
     char mbstr[100];
-    std::strftime(mbstr, sizeof(mbstr), "%Y %h %d %H:%M:%S:", std::localtime(&tt));
+    std::strftime(mbstr, sizeof(mbstr), " %Y-%m-%d %H:%M:%S:", std::localtime(&tt));
     string time(mbstr);
-    Output << time << topic + "\t" +  payload << endl;
+    Output << time + "\t" << topic + "\t" +  payload << endl;
     if (Output.tellp() > Max){
         Output.close();
         int i;
