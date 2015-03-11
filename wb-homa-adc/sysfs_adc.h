@@ -3,12 +3,18 @@
 #include <exception>
 #include <memory>
 #include<vector>
+#include"imx233.h"
+#define OHM_METER "ohm_meter"
 
 using namespace std;
 
 struct TMUXChannel{
     std::string Id;
     float Multiplier = 1.0;
+    std::string Type = "";
+    int Current = 40;
+    int Resistance1 = 1000;
+    int Resistance2 = 1000;
 };
 struct TChannel{
     int AveragingWindow = 10;
@@ -39,7 +45,7 @@ class TSysfsAdc
 public:
     TSysfsAdc(const std::string& sysfs_dir = "/sys", bool debug = false, const TChannel& channel_config = TChannel ());
     ~TSysfsAdc();
-    TSysfsAdcChannel GetChannel(int i);
+    std::shared_ptr<TSysfsAdcChannel> GetChannel(int i);
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
 protected:
@@ -89,18 +95,35 @@ struct TSysfsAdcChannelPrivate {
     double Sum = 0;
     bool Ready = false;
     int Pos = 0;
-    float Multiplier = 1.0;
+
+}; 
+class TSysfsAdcChannel { 
+    public: 
+        int GetRawValue();
+        virtual float GetValue(); 
+        const std::string& GetName() const;
+        virtual std::string GetType();
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int    multiplier);
+    protected:
+        std::shared_ptr<TSysfsAdcChannelPrivate> d;
+        friend class TSysfsAdc;
+    private:
+        float Multiplier = 1.0;
 };
 
-
-class TSysfsAdcChannel
+class TSysfsAdcChannelRes : public TSysfsAdcChannel
 {
-public:
-    int GetValue();
-    const std::string& GetName() const;
-    inline float GetMultiplier () { return d->Multiplier; }
-private:
-    TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier);
-    std::shared_ptr<TSysfsAdcChannelPrivate> d;
-    friend class TSysfsAdc;
+    public : 
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int current, int resistance1, int resistance2);
+         float GetValue();
+         std::string GetType();
+         void SetImx233();
+         void CloseImx233();
+    private:
+        int Current = 40;
+        int Resistance1 = 1000;
+        int Resistance2 = 1000;
+        std::string Type = "";
+        unsigned int Ctrl2_val;
 };

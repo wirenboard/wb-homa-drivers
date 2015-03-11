@@ -32,8 +32,8 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
 }
 
 TMQTTAdcHandler::~TMQTTAdcHandler(){
-    AdcHandlers.clear();
     Channels.clear();
+    AdcHandlers.clear();
 }
 
 void TMQTTAdcHandler::OnConnect(int rc)
@@ -48,10 +48,11 @@ void TMQTTAdcHandler::OnConnect(int rc)
     Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
     int n = 0;
     for (auto channel : Channels) {
-        std::string topic = GetChannelTopic(channel);
+        std::string topic = GetChannelTopic(*channel);
+        std::string type = channel->GetType();
         //Publish(NULL, topic + "/meta/type", "text", 0, true);
         Publish(NULL, topic + "/meta/order", std::to_string(n++), 0, true);
-        Publish(NULL, topic + "/meta/type", "voltage", 0, true);
+        Publish(NULL, topic + "/meta/type", type, 0, true);
     }
 }
 
@@ -78,11 +79,10 @@ void TMQTTAdcHandler::UpdateValue(){
 void TMQTTAdcHandler::UpdateChannelValues()
 {
     for (auto channel : Channels) {
-        int value = channel.GetValue();
+        float value = channel->GetValue();
         if (Config.Debug)
-            std::cerr << "channel: " << channel.GetName() << " value: " << value << std::endl;
-        float result = channel.GetMultiplier() * value;
+            std::cerr << "channel: " << channel->GetName() << " value: " << value << std::endl;
 
-        Publish(NULL, GetChannelTopic(channel), to_string(result), 0, true);
+        Publish(NULL, GetChannelTopic(*channel), to_string(value), 0, true);
     }
 }

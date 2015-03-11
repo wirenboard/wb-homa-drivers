@@ -30,6 +30,6 @@ private:
     THandlerConfig Config;
     vector<std::shared_ptr<TSysfsAdc>> AdcHandlers;
 
-    vector<TSysfsAdcChannel> Channels;
+    vector<std::shared_ptr<TSysfsAdcChannel>> Channels;
 };
 

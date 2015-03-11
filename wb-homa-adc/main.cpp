@@ -1,12 +1,34 @@
 #include <cstdlib>
 #include <iostream>
 #include <getopt.h>
-
+#include<string>
 #include "jsoncpp/json/json.h"
 
 #include "adc_handler.h"
 
 namespace {
+    int ReadResistance(std::string res)
+    {
+        std::string ohm;
+        unsigned int resistance,i;
+        for (i = 0; i < res.size();i++)
+            if (res[i] >'9' || res[i] < '0')
+                break;
+        if (i == 0 ) {
+            cerr << "incorrect resistance\n";
+            exit(-1);
+        }
+        resistance = std::stoi(res);
+        ohm = res.substr(i);
+        if ( ohm == "MOhm")
+            resistance *= 1000000;
+        if ( ohm == "kOhm")
+                resistance *= 1000;
+        cout << "Resistance is " << resistance << endl;
+        return resistance;
+    }
+        
+
     void LoadConfig(const std::string& file_name, THandlerConfig& config)
     {
         ifstream config_file (file_name);
@@ -81,8 +103,26 @@ namespace {
                         element.Id = channel_iterator["id"].asString();
                     if (channel_iterator.isMember("multiplier"))
                         element.Multiplier = channel_iterator["multiplier"].asFloat();
+                    if (channel_iterator.isMember("type"))
+                        element.Type = channel_iterator["type"].asString();
+                    if (channel_iterator.isMember("current")){
+                        int current = channel_iterator["current"].asInt();
+                        if ( (current < 0) || (current > 300) || ( (current % 20) != 0)) {
+                            cerr << "Error: wrong current value \n";
+                            exit(EXIT_FAILURE);
+                        }
+                        element.Current = current;
+                    }
+                    if (channel_iterator.isMember("resistance1")){
+                        int resistance = ReadResistance(channel_iterator["resistance1"].asString());
+                        element.Resistance1 = resistance;
+                    }
+                    if (channel_iterator.isMember("resistance2")){
+                        int resistance = ReadResistance(channel_iterator["resistance2"].asString());
+                        element.Resistance2 = resistance;
+                    }
                     new_channel.Mux.push_back(element);
-                                    }
+                }
                 new_channel.Type = "mux";
             }
             config.Channels.push_back(new_channel);

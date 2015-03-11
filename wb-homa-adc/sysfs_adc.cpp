@@ -7,6 +7,11 @@
 #include <unistd.h>
 
 #include "sysfs_adc.h"
+namespace {
+        extern "C" int imx233_rd(long offset);
+        extern "C" int imx233_wr(long offset, long value);
+        extern "C" void usleep(int value);
+};
 /*
 namespace {
     struct ChannelName {
@@ -85,10 +90,15 @@ TSysfsAdc::~TSysfsAdc(){
     }
 }
 
-TSysfsAdcChannel TSysfsAdc::GetChannel(int i)
+std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
 {
+    std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
-    return TSysfsAdcChannel(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier);
+    if (ChannelConfig.Mux[i].Type == OHM_METER)
+        ptr.reset (new TSysfsAdcChannelRes(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+    else
+        ptr.reset(new TSysfsAdcChannel(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier));
+    return ptr;
 }
 
 int TSysfsAdc::ReadValue(){
@@ -97,6 +107,7 @@ int TSysfsAdc::ReadValue(){
     AdcValStream >> val;
     return val;
 }
+
 
 TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : TSysfsAdc(sysfs_dir, debug, channel_config)
@@ -204,17 +215,22 @@ int TSysfsAdcPhys::GetValue(int index)
 }
 
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name)
     : d(new TSysfsAdcChannelPrivate())
 {
     d->Owner.reset(owner);
     d->Index = index;
     d->Name = name;
     d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
-    d->Multiplier = multiplier;
 }
 
-int TSysfsAdcChannel::GetValue()
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int multiplier)
+    :TSysfsAdcChannel(owner, index, name)
+{
+    Multiplier = multiplier;
+}
+
+int TSysfsAdcChannel::GetRawValue()
 {
     if (!d->Ready) {
         for (int i = 0; i < d->Owner->AveragingWindow; ++i) {
@@ -230,11 +246,56 @@ int TSysfsAdcChannel::GetValue()
         d->Buffer[d->Pos++] = v;
         d->Pos %= d->Owner->AveragingWindow;
     }
-
     return round(d->Sum / d->Owner->AveragingWindow);
 }
 
 const std::string& TSysfsAdcChannel::GetName() const
 {
     return d->Name;
+}
+
+float TSysfsAdcChannel::GetValue(){
+    float result;
+    int value = GetRawValue();
+    result = (float) value * Multiplier /4095;
+    return result;
+}
+std::string TSysfsAdcChannel::GetType(){
+    return "voltage";
+}
+
+TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int current, int resistance1, int resistance2)
+    : TSysfsAdcChannel(owner, index, name)
+{
+    Current = current;
+    Resistance1 = resistance1;
+    Resistance2 = resistance2;
+    Type = OHM_METER;
+    Ctrl2_val = (current / 20) << 4;
+}
+
+
+float TSysfsAdcChannelRes::GetValue(){
+    SetImx233(); 
+    int value = GetRawValue(); 
+    cout << "RAW VAUE IS " << value << endl;
+    float result;
+    float voltage = 1.85 * value / 4095;
+    cout << "VOLTAGE IS " << voltage << endl;
+    result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+    CloseImx233();
+    return result;
+}
+
+std::string TSysfsAdcChannelRes::GetType(){
+        return "resistance";
+}
+void TSysfsAdcChannelRes::SetImx233(){
+    imx233_wr(HW_LRADC_CTRL2_SET, 0x0200); //set TEMP_SENSOR_IENABLE1
+    imx233_wr(HW_LRADC_CTRL2_CLR, 0xF0); //clear TEMP_ISRC1
+    imx233_wr(HW_LRADC_CTRL2_SET, Ctrl2_val); //set TEMP_ISRC1
+}
+
+void TSysfsAdcChannelRes::CloseImx233(){
+    imx233_wr(HW_LRADC_CTRL2_CLR, 0x0200); //set TEMP_SENSOR_IENABLE1=0
 }

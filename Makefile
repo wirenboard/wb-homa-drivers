@@ -1,6 +1,12 @@
 CXX=g++
 CXX_PATH := $(shell which g++-4.7)
 
+ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
+	CC=gcc
+else
+	CC=$(DEB_HOST_GNU_TYPE)-gcc
+endif
+
 ifneq ($(CXX_PATH),)
 	CXX=g++-4.7
 endif
@@ -51,6 +57,7 @@ $(GPIO_DIR)/main.o : $(GPIO_DIR)/main.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp $(COMMON_H)
+
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o  $(COMMON_O)
@@ -103,8 +110,10 @@ $(ADC_DIR)/adc_handler.o : $(ADC_DIR)/adc_handler.cpp $(COMMON_H) $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 $(ADC_DIR)/sysfs_adc.o : $(ADC_DIR)/sysfs_adc.cpp $(COMMON_H) $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
+$(ADC_DIR)/imx233.o : $(ADC_DIR)/imx233.c
+	${CC} -c $< -o $@
 
-$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_handler.o $(COMMON_O)
+$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_handler.o $(ADC_DIR)/imx233.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
