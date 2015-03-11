@@ -17,7 +17,7 @@
                 "type" : "mux",
                 "averaging_window": 4,
                 "min_switch_interval_ms": 100,
-                "gpios" : [51, 54, 57],
+                "gpios" : [51, 57, 54],
                 "channels" : [
                          {
                             "id" : "A1",
