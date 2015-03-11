@@ -224,7 +224,7 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
 }
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int multiplier)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier)
     :TSysfsAdcChannel(owner, index, name)
 {
     Multiplier = multiplier;
@@ -257,7 +257,7 @@ const std::string& TSysfsAdcChannel::GetName() const
 float TSysfsAdcChannel::GetValue(){
     float result;
     int value = GetRawValue();
-    result = (float) value * Multiplier /4095;
+    result = (float) value * Multiplier;
     return result;
 }
 std::string TSysfsAdcChannel::GetType(){
@@ -278,10 +278,8 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 float TSysfsAdcChannelRes::GetValue(){
     SetImx233(); 
     int value = GetRawValue(); 
-    cout << "RAW VAUE IS " << value << endl;
     float result;
     float voltage = 1.85 * value / 4095;
-    cout << "VOLTAGE IS " << voltage << endl;
     result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
     CloseImx233();
     return result;

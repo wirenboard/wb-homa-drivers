@@ -104,7 +104,7 @@ class TSysfsAdcChannel {
         const std::string& GetName() const;
         virtual std::string GetType();
         TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int    multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier);
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
