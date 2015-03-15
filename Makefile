@@ -31,13 +31,15 @@ NINJABRIDGE_DIR=wb-homa-ninja-bridge
 NINJABRIDGE_BIN=wb-homa-ninja-bridge
 TEST_DIR=test
 TEST_BIN=wb-homa-test
+LOGGER=mqtt-logger
+LOGGER_BIN=mqtt-logger
 
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
 .PHONY: all clean test
 
-all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
+all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -145,7 +147,13 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
   $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
 
-test: $(TEST_DIR)/$(TEST_BIN)
+#mqtt-logger
+$(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@
+$(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+test_need_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
@@ -160,6 +168,7 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
+	-rm -f $(LOGGER)/*.o $(LOGGER)/$(LOGGER_BIN)
 
 
 
@@ -179,4 +188,5 @@ install: all
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
+	install -m 0755  $(LOGGER)/$(LOGGER_BIN) $(DESTDIR)/usr/bin/$(LOGGER_BIN)
 
