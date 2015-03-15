@@ -1,21 +1,23 @@
-#include"common/utils.h"
-#include"common/mqtt_wrapper.h"
-#include<chrono>
-#include<getopt.h>
-#include<iostream>
-#include<fstream>
-#include<string>
-#include<exception>
-#include<stdexcept>
-#include<mosquittopp.h>
-#include<ctime>
-#include<stdio.h>
-#include<unistd.h>
-#include<sstream>
-#include<vector>
+#include "common/utils.h"
+#include "common/mqtt_wrapper.h"
+#include <chrono>
+#include <getopt.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <exception>
+#include <stdexcept>
+#include <mosquittopp.h>
+#include <ctime>
+#include <stdio.h>
+#include <unistd.h>
+#include <sstream>
+#include <vector>
 
 using namespace std;
-class  TLoggerConfig{// class for parsing config
+
+// class for config parsing
+class  TLoggerConfig {
     public:
         inline void SetPath(string s) { Path_to_log = s; }
         inline string GetPath() { return Path_to_log; }
@@ -27,30 +29,30 @@ class  TLoggerConfig{// class for parsing config
         inline int GetNumber() { return Number; }
         inline void SetNumber(string s) { SetIntFromString(Number, s); }
         void SetOption(string key, string value);// set option key to value
-    
-    
-    private: 
+
+
+    private:
         string Path_to_log;
         int Size;
         string Mask;
         int Number;
 };
 
-void TLoggerConfig::SetIntFromString(int& i, string s ){
+void TLoggerConfig::SetIntFromString(int& i, string s) {
     try {
-        if (s != "")  
+        if (s != "") {
             i = stoi(s.c_str());
-    }catch (const std::invalid_argument& argument) {
+		}
+    } catch (const std::invalid_argument& argument) {
             cerr << "invalid number " << s << endl;
             exit(-1);
-    }catch (const std::out_of_range& argument){
+    } catch (const std::out_of_range& argument) {
             cerr << "out of range " << s << endl;
             exit(-1);
-        }
-
+	}
 }
 
-void TLoggerConfig::SetOption( string key, string value){
+void TLoggerConfig::SetOption( string key, string value) {
     if (key == "n") {
         SetIntFromString(Number, value);
         return;
@@ -65,25 +67,26 @@ void TLoggerConfig::SetOption( string key, string value){
     }
     cerr << "incorrect option " << key << " in config file\n";
 }
-class MQTTLogger: public TMQTTWrapper 
+
+class MQTTLogger: public TMQTTWrapper
 {
-    public: 
+    public:
         MQTTLogger (const MQTTLogger::TConfig& mqtt_config, TLoggerConfig log_config);
         ~MQTTLogger();
 
         void OnConnect(int rc) ;
         void OnMessage(const struct mosquitto_message *message);
         void OnSubscribe(int mid, int qos_count, const int *granted_qos);
-        
-    
+
+
     private:
         string Path_To_Log;// path to log file
         int Max;// set maximum size of log file
         unsigned int Timeout;// timeout after which we will do dump logs
-        bool FullDump;// if full_dump yes we doing full dump after timeout 
+        bool FullDump;// if full_dump yes we doing full dump after timeout
         ofstream Output;
         int Number; // number of old log files;
-        string Mask;// mask wich subscribe to 
+        string Mask;// mask wich subscribe to
 };
 
 MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig log_config)
@@ -97,24 +100,29 @@ MQTTLogger::MQTTLogger ( const MQTTLogger::TConfig& mqtt_config, TLoggerConfig l
     }
     Max = 1024 * log_config.GetSize();// set the maximum size of log file
     Number = log_config.GetNumber(); // set the number of old log files
-    Mask = log_config.GetMask();// set the mask which subscribe to 
+    Mask = log_config.GetMask();// set the mask which subscribe to
     Connect();
 }
 
 MQTTLogger::~MQTTLogger() {}
 
-void MQTTLogger::OnConnect(int rc){
-    Subscribe(NULL, Mask);  
+void MQTTLogger::OnConnect(int rc)
+{
+    Subscribe(NULL, Mask);
 }
 
-void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos){
+void MQTTLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos)
+{
     cout << "subscription succeded\n";
 }
-void MQTTLogger::OnMessage(const struct mosquitto_message *message){
+
+void MQTTLogger::OnMessage(const struct mosquitto_message *message)
+{
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
     std::time_t tt = std::time(NULL);
     char mbstr[100];
+
     std::strftime(mbstr, sizeof(mbstr), " %Y-%m-%d %H:%M:%S:", std::localtime(&tt));
     string time(mbstr);
     Output << time + "\t" << topic + "\t" +  payload << endl;
@@ -139,7 +147,7 @@ void MQTTLogger::OnMessage(const struct mosquitto_message *message){
             exit (-1);
         }
         mosquittopp::unsubscribe(NULL, Mask.c_str());// unsubscribe and subscribe to save all retained messages after rotate
-        Subscribe(NULL, Mask);  
+        Subscribe(NULL, Mask);
     }
 }
 
@@ -154,7 +162,7 @@ int main (int argc, char* argv[])
     log_config.SetPath("/var/log/mqtt.log");
     log_config.SetSize("200");
     log_config.SetNumber("2");
-    
+
     while ( (c = getopt(argc, argv, "hp:H:s:f:n:") ) != -1 ){
         switch(c){
             case 'n':
@@ -184,30 +192,33 @@ int main (int argc, char* argv[])
             default:
                 printf("Usage:\n mqtt_logger [options] mask\n");
                 printf("Options:\n");
-                printf("\t-n NUMBER \t\t\t Number of old log files to remain(default 2) \n");
+                printf("\t-n NUMBER \t\t\t Number of old log files to remain (default 2) \n");
                 printf("\t-p PORT   \t\t\t set to what port mqtt_logger should connect (default: 1883)\n");
                 printf("\t-H IP     \t\t\t set to what IP mqtt_logger should connect (default: localhost)\n");
-                printf("\t-s SIZE   \t\t\t Max size (KB) before rotation ( default: 200KB)\n");
-                printf("\t-f FILE   \t\t\t File where log will be writting to(default /var/log/mqtt-logger.log)\n"); 
-                printf("\tmask      \t\t\t Mask, what topics subscribe to(default: /#)\n");
+                printf("\t-s SIZE   \t\t\t Max size (KB) before rotation (default: 200KB)\n");
+                printf("\t-f FILE   \t\t\t File where log will be writting to (default /var/log/mqtt-logger.log)\n");
+                printf("\tmask      \t\t\t Mask, what topics subscribe to (use /# to log everything)\n");
                 return 0;
         }
     }
+
     if (optind == argc ){
-        printf("too few arguments, Where is mask?\n");
+        printf("too few arguments, Subscribe topic mask is missing.\n");
         return -1;
     }
     log_config.SetMask(string (argv[optind]));
+
     if (optind +1 < argc ) {
         printf("too many arguments\n");
         return -1;
     }
+
     mosqpp::lib_init();
     std::shared_ptr<MQTTLogger> mqtt_logger(new MQTTLogger(mqtt_config, log_config));
     mqtt_logger->Init();
+
     while (1){
         rc = mqtt_logger->loop();
-        //std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
         if (rc != 0)
             mqtt_logger->reconnect();
     }
