@@ -6,7 +6,7 @@
 
 #include "dirent.h"
 #include <getopt.h>
-
+#include <chrono>
 // This is the JSON header
 #include "jsoncpp/json/json.h"
 
@@ -18,7 +18,9 @@
 #include "sysfs_w1.h"
 
 using namespace std;
-
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::steady_clock;
 
 class TMQTTOnewireHandler : public TMQTTWrapper
 {
@@ -53,7 +55,7 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
     , PrepareInit(true)
 {
 	Connect();
-    
+
     Retained_hack = string("/tmp/") + MQTTConfig.Id + "/retained_hack";
 
 }
@@ -68,7 +70,7 @@ void TMQTTOnewireHandler::OnConnect(int rc)
         string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
         Publish(NULL, path, "1-wire Thermometers", 0, true);
 
-            
+
         if (PrepareInit){
             string controls = string("/devices/") + MQTTConfig.Id + "/controls/+";
             Subscribe(NULL, controls);
@@ -151,7 +153,7 @@ void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
     }else {
         string device = topic.substr(controls_prefix.length(), topic.length());
         for (auto& current : Channels)
-            if (device == current.GetDeviceId()) 
+            if (device == current.GetDeviceId())
                 return;
         Channels.emplace_back(device);
     }
@@ -186,12 +188,13 @@ int main(int argc, char *argv[])
     TMQTTOnewireHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
+    int poll_interval = 10 * 1000; //milliseconds
 
     int c;
     //~ int digit_optind = 0;
     //~ int aopt = 0, bopt = 0;
     //~ char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "c:h:p:")) != -1) {
+    while ( (c = getopt(argc, argv, "c:h:p:i:")) != -1) {
         //~ int this_option_optind = optind ? optind : 1;
         switch (c) {
         //~ case 'c':
@@ -206,6 +209,8 @@ int main(int argc, char *argv[])
             printf ("option h with value '%s'\n", optarg);
             mqtt_config.Host = optarg;
             break;
+        case 'i':
+			poll_interval = stoi(optarg) * 1000;
         case '?':
             break;
         default:
@@ -219,17 +224,22 @@ int main(int argc, char *argv[])
     std::shared_ptr<TMQTTOnewireHandler> mqtt_handler(new TMQTTOnewireHandler(mqtt_config));
     mqtt_handler->Init();
     string topic = string("/devices/") + mqtt_config.Id + "/controls/+";
-	
+
+	auto time_last_published = steady_clock::now();
     while(1){
-		rc = mqtt_handler->loop();
+		rc = mqtt_handler->loop(poll_interval);
         //~ cout << "break in a loop! " << rc << endl;
 		if(rc != 0) {
 			mqtt_handler->reconnect();
 		} else {
             // update current values
             if (!mqtt_handler->GetPrepareInit()){
-                mqtt_handler->RescanBus();
-                mqtt_handler->UpdateChannelValues();
+				int time_elapsed = duration_cast<milliseconds>(steady_clock::now() - time_last_published).count() ;
+				if (time_elapsed >= poll_interval ) { //checking is it time to look through all gpios
+	                mqtt_handler->RescanBus();
+	                mqtt_handler->UpdateChannelValues();
+	                time_last_published = steady_clock::now();
+				}
             }
         }
 	}
