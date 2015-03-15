@@ -123,7 +123,7 @@ TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChan
 int TSysfsAdcMux::GetValue(int index)
 {
     SetMuxABC(index);
-    return ReadValue(); 
+    return ReadValue();
 }
 
 void TSysfsAdcMux::InitMux()
@@ -148,7 +148,7 @@ void TSysfsAdcMux::InitGPIO(int gpio)
         setdirgpio.clear();
         setdirgpio.open(gpio_direction_path);
         if (!setdirgpio)
-            throw TAdcException("unable to set GPIO direction");
+            throw TAdcException("unable to set GPIO direction: "  + std::to_string(gpio));
     }
     setdirgpio << "out";
 }
@@ -276,8 +276,8 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 
 
 float TSysfsAdcChannelRes::GetValue(){
-    SetImx233(); 
-    int value = GetRawValue(); 
+    SetImx233();
+    int value = GetRawValue();
     float result;
     float voltage = 1.85 * value / 4095;
     result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
