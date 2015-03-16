@@ -1,110 +1,34 @@
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <getopt.h>
-
+#include<string>
 #include "jsoncpp/json/json.h"
 
-#include <mosquittopp.h>
-
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
-#include "sysfs_adc.h"
+#include "adc_handler.h"
 
 namespace {
-    std::string GetSysfsPrefix()
+    int ReadResistance(std::string res)
     {
-        const char* prefix = getenv("WB_SYSFS_PREFIX");
-        return prefix ? prefix : "/sys";
+        std::string ohm;
+        unsigned int resistance,i;
+        for (i = 0; i < res.size();i++)
+            if (res[i] >'9' || res[i] < '0')
+                break;
+        if (i == 0 ) {
+            cerr << "incorrect resistance\n";
+            exit(-1);
+        }
+        resistance = std::stoi(res);
+        ohm = res.substr(i);
+        if ( ohm == "MOhm")
+            resistance *= 1000000;
+        if ( ohm == "kOhm")
+                resistance *= 1000;
+        cout << "Resistance is " << resistance << endl;
+        return resistance;
     }
-}
+        
 
-struct THandlerConfig
-{
-    std::string DeviceName = "ADCs";
-    bool Debug = false;
-    int AveragingWindow = 10;
-    int MinSwitchIntervalMs = 0;
-};
-
-class TMQTTADCHandler : public TMQTTWrapper
-{
-public:
-    TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
-
-    void OnConnect(int rc);
-    void OnMessage(const struct mosquitto_message *message);
-    void OnSubscribe(int mid, int qos_count, const int *granted_qos);
-
-    std::string GetChannelTopic(const TSysfsADCChannel& channel) const;
-    void UpdateChannelValues();
-private:
-    THandlerConfig Config;
-    TSysfsADC ADC;
-    vector<TSysfsADCChannel> Channels;
-};
-
-TMQTTADCHandler::TMQTTADCHandler(const TMQTTADCHandler::TConfig& mqtt_config, const THandlerConfig& handler_config)
-    : TMQTTWrapper(mqtt_config),
-      Config(handler_config),
-      ADC(GetSysfsPrefix(),
-          handler_config.AveragingWindow,
-          handler_config.MinSwitchIntervalMs,
-          handler_config.Debug)
-{
-    for (int i = 0; i < 8; ++i)
-        Channels.push_back(ADC.GetChannel("ADC" + std::to_string(i)));
-
-	Connect();
-}
-
-void TMQTTADCHandler::OnConnect(int rc)
-{
-    if (Config.Debug)
-        std::cerr << "Connected with code " << rc << std::endl;
-
-    if(rc != 0)
-        return;
-
-    string path = string("/devices/") + MQTTConfig.Id + "/meta/name";
-    Publish(NULL, path, Config.DeviceName.c_str(), 0, true);
-
-    int n = 0;
-    for (auto channel : Channels) {
-        std::string topic = GetChannelTopic(channel);
-        Publish(NULL, topic + "/meta/type", "text", 0, true);
-        Publish(NULL, topic + "/meta/order", std::to_string(n++), 0, true);
-    }
-}
-
-void TMQTTADCHandler::OnMessage(const struct mosquitto_message *)
-{
-    // NOOP
-}
-
-void TMQTTADCHandler::OnSubscribe(int, int, const int *)
-{
-    if (Config.Debug)
-        std::cerr << "Subscription succeeded." << std::endl;
-}
-
-std::string TMQTTADCHandler::GetChannelTopic(const TSysfsADCChannel& channel) const
-{
-    static string controls_prefix = std::string("/devices/") + MQTTConfig.Id + "/controls/";
-    return controls_prefix + channel.GetName();
-}
-
-void TMQTTADCHandler::UpdateChannelValues()
-{
-    for (auto channel : Channels) {
-        int value = channel.GetValue();
-        if (Config.Debug)
-            std::cerr << "channel: " << channel.GetName() << " value: " << value << std::endl;
-        Publish(NULL, GetChannelTopic(channel), to_string(value), 0, true);
-    }
-}
-
-namespace {
     void LoadConfig(const std::string& file_name, THandlerConfig& config)
     {
         ifstream config_file (file_name);
@@ -117,25 +41,92 @@ namespace {
 
         // Report failures and their locations in the document.
         if(not parsedSuccess)
-            throw TADCException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
-
+            throw TAdcException("Failed to parse config JSON: " + reader.getFormatedErrorMessages());
         if (!root.isObject())
-            throw TADCException("Bad config file (the root is not an object)");
-
-        if (root.isMember("debug"))
-            config.Debug = root["debug"].asBool();
-
+            throw TAdcException("Bad config file (the root is not an object)");
         if (root.isMember("device_name"))
             config.DeviceName = root["device_name"].asString();
+        if (root.isMember("debug"))
+                config.Debug = root["debug"].asBool();
 
-        if (root.isMember("averaging_window")) {
-            config.AveragingWindow = root["averaging_window"].asInt();
-            if (config.AveragingWindow < 1)
-                throw TADCException("bad averaging window specified in the config");
+
+
+             const auto& array = root["iio_channels"];
+
+        for (unsigned int index = 0; index < array.size(); index++){
+            const auto& item = array[index];
+            TChannel new_channel;// create new intrance to add in vector<TChannel> Channels
+            if (item.isMember("averaging_window")) {
+                new_channel.AveragingWindow = item["averaging_window"].asInt();
+                if (new_channel.AveragingWindow < 1)
+                    throw TAdcException("bad averaging window specified in the config");
+            }
+            if (item.isMember("id")) {
+                TMUXChannel buf_channel;
+                buf_channel.Id = item["id"].asString();
+                if (item.isMember("multiplier"))
+                    buf_channel.Multiplier = item["multiplier"].asFloat();
+                new_channel.Mux.push_back(buf_channel);
+            }
+                    
+            if (item.isMember("min_switch_interval_ms"))
+                new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
+            if (item.isMember("channelnumber"))
+                new_channel.ChannelNumber = item["channel_number"].asInt();
+
+            if (item.isMember("poll_interval"))
+                new_channel.PollInterval = item["poll_interval"].asInt();
+
+
+            if ( item.isMember("channels")){ 
+                const auto& channel_array = item["channels"];
+                if (channel_array.size() != 8) {
+                    cerr << "number of mux channels is not equal to  8 " << endl;
+                    exit(-1);
+                }
+            if (item.isMember("gpios")){
+                        const auto& gpios_array = item["gpios"];
+                        if (gpios_array.size() != 3) {
+                            cerr << "number of gpios isn't equal to  3" << endl;
+                            exit(-1);
+                        }
+                        for (unsigned int i = 0; i< gpios_array.size(); i++){
+                            const auto& gpio_item = gpios_array[i];
+                            new_channel.Gpios.push_back(gpio_item.asInt());
+                        }
+                    }
+
+                for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
+                    const auto& channel_iterator = channel_array[channel_number];
+                    TMUXChannel element;
+                    if (channel_iterator.isMember("id")) 
+                        element.Id = channel_iterator["id"].asString();
+                    if (channel_iterator.isMember("multiplier"))
+                        element.Multiplier = channel_iterator["multiplier"].asFloat();
+                    if (channel_iterator.isMember("type"))
+                        element.Type = channel_iterator["type"].asString();
+                    if (channel_iterator.isMember("current")){
+                        int current = channel_iterator["current"].asInt();
+                        if ( (current < 0) || (current > 300) || ( (current % 20) != 0)) {
+                            cerr << "Error: wrong current value \n";
+                            exit(EXIT_FAILURE);
+                        }
+                        element.Current = current;
+                    }
+                    if (channel_iterator.isMember("resistance1")){
+                        int resistance = ReadResistance(channel_iterator["resistance1"].asString());
+                        element.Resistance1 = resistance;
+                    }
+                    if (channel_iterator.isMember("resistance2")){
+                        int resistance = ReadResistance(channel_iterator["resistance2"].asString());
+                        element.Resistance2 = resistance;
+                    }
+                    new_channel.Mux.push_back(element);
+                }
+                new_channel.Type = "mux";
+            }
+            config.Channels.push_back(new_channel);
         }
-
-        if (root.isMember("min_switch_interval_ms"))
-            config.MinSwitchIntervalMs = root["min_switch_interval_ms"].asInt();
     }
 };
 
@@ -144,7 +135,7 @@ int main(int argc, char **argv)
 	int rc;
     string config_fname;
     bool debug = false;
-    TMQTTADCHandler::TConfig mqtt_config;
+    TMQTTAdcHandler::TConfig mqtt_config;
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
 
@@ -186,17 +177,30 @@ int main(int argc, char **argv)
 
         config.Debug = config.Debug || debug;
         mqtt_config.Id = "wb-adc";
-        std::shared_ptr<TMQTTADCHandler> mqtt_handler(new TMQTTADCHandler(mqtt_config, config));
+        /*for ( auto& i: config.Channels){
+            cout << "AVERAGE IS " << i.AveragingWindow << endl;
+            cout << "MINSWITCHINTERVAL IS " << i.MinSwitchIntervalMs << endl;
+            cout << "Type IS " << i.Type << endl;
+            if (i.Type == "mux" ) 
+                cout << "MUX " << endl;
+            for (auto& j : i.Mux){
+                cout << "ID IS " << j.Id << endl;
+                cout << "Multiplier IS " << j.Multiplier << endl;
+            }
+            for (auto& j : i.Gpios){
+                cout << "GPIO IS " << j << endl;
+            }
+        }*/
+        std::shared_ptr<TMQTTAdcHandler> mqtt_handler( new TMQTTAdcHandler(mqtt_config, config));
         mqtt_handler->Init();
-
         while(1){
-            rc = mqtt_handler->loop();
-            if(rc != 0)
-                mqtt_handler->reconnect();
-            else // update current values
-                mqtt_handler->UpdateChannelValues();
+                rc = mqtt_handler->loop();
+                if(rc != 0)
+                    mqtt_handler->reconnect();
+                else // update current values
+                    mqtt_handler->UpdateValue();
         }
-    } catch (const TADCException& e) {
+    } catch (const TAdcException& e) {
         std::cerr << "FATAL: " << e.what() << std::endl;
         return 1;
     }
