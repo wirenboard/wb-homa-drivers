@@ -257,7 +257,7 @@ const std::string& TSysfsAdcChannel::GetName() const
 float TSysfsAdcChannel::GetValue(){
     float result;
     int value = GetRawValue();
-    result = (float) value * Multiplier;
+    result = (float) value * Multiplier / 1000;// set voltage to V from mV
     return result;
 }
 std::string TSysfsAdcChannel::GetType(){
