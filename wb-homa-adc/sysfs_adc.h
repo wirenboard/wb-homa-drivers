@@ -8,18 +8,18 @@
 
 using namespace std;
 
-struct TMUXChannel{
+struct TMUXChannel{// config for mux channel
     std::string Id;
     float Multiplier = 1.0;
     std::string Type = "";
-    int Current = 40;
-    int Resistance1 = 1000;
-    int Resistance2 = 1000;
+    int Current = 40;// current in uA
+    int Resistance1 = 1000;// resistance in Ohm
+    int Resistance2 = 1000;// resistance in Ohm
 };
 struct TChannel{
     int AveragingWindow = 10;
     int PollInterval;
-    int ChannelNumber = 1;
+    int ChannelNumber = 1;//Number of TMUXChannels in vector Mux
     int MinSwitchIntervalMs = 0;
     string Type = "";
     vector<int> Gpios;
@@ -60,7 +60,7 @@ protected:
     int NumberOfChannels;
 };
 
-class TSysfsAdcMux : public TSysfsAdc{
+class TSysfsAdcMux : public TSysfsAdc{// class, that handles mux channels
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
     private:
@@ -109,21 +109,21 @@ class TSysfsAdcChannel {
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
     private:
-        float Multiplier = 1.0;
+        float Multiplier;
 };
 
-class TSysfsAdcChannelRes : public TSysfsAdcChannel
+class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
          TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int current, int resistance1, int resistance2);
          float GetValue();
          std::string GetType();
-         void SetImx233();
-         void CloseImx233();
+         void SetUpCurrentSource();
+         void SwitchOffCurrentSource();
     private:
-        int Current = 40;
-        int Resistance1 = 1000;
-        int Resistance2 = 1000;
-        std::string Type = "";
+        int Current;
+        int Resistance1;
+        int Resistance2;
+        std::string Type;
         unsigned int Ctrl2_val;
 };
