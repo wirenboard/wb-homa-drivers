@@ -19,18 +19,6 @@
                 "gpios" : [51, 57, 54],
                 "channels" : [
                          {
-                            "id" : "A1",
-                            "multiplier" : 0.903
-                        },
-                         {
-                            "id" : "A2",
-                            "multiplier" : 0.903
-                        },
-                         {
-                            "id" : "A3",
-                            "multiplier" : 0.903
-                        },
-                         {
                             "id" : "A4",
                             "multiplier" : 3.73
                         },
@@ -39,16 +27,28 @@
                             "multiplier" : 3.73
                         },
                          {
-                            "id" : "R1",
-                            "multiplier" : 0.497
+                            "id" : "li_pol",
+                            "multiplier" : 1.694
+                        },
+                         {
+                            "id" : "A1",
+                            "multiplier" : 0.903
+                        },
+                         {
+                            "id" : "A2",
+                            "multiplier" : 0.903
                         },
                          {
                             "id" : "R2",
                             "multiplier" : 0.497
                         },
                          {
-                            "id" : "ii_pol",
-                            "multiplier" : 1.694
+                            "id" : "A3",
+                            "multiplier" : 0.903
+                        },
+                         {
+                            "id" : "R1",
+                            "multiplier" : 0.497
                         }
                 ]
         }
