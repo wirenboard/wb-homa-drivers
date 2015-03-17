@@ -71,7 +71,7 @@ namespace {
                     
             if (item.isMember("min_switch_interval_ms"))
                 new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
-            if (item.isMember("channelnumber"))
+            if (item.isMember("channel_number"))
                 new_channel.ChannelNumber = item["channel_number"].asInt();
 
             if (item.isMember("poll_interval"))
