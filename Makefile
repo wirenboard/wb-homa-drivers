@@ -35,7 +35,7 @@ TEST_BIN=wb-homa-test
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean test
+.PHONY: all clean test_fix
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 
@@ -145,7 +145,7 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
   $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
 
-test: $(TEST_DIR)/$(TEST_BIN)
+test_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
@@ -168,6 +168,7 @@ install: all
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
+	install -d $(DESTDIR)/usr/share/wb-homa-modbus
 
 	install -m 0644  $(GPIO_DIR)/config.json.wbsh3 $(DESTDIR)/etc/wb-homa-gpio.conf.wbsh3
 	install -m 0644  $(GPIO_DIR)/config.json.default $(DESTDIR)/etc/wb-homa-gpio.conf.default
@@ -175,6 +176,7 @@ install: all
 	install -m 0755  $(GPIO_DIR)/$(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
 	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
+	cp -r  $(MODBUS_DIR)/wb-homa-modbus-templates $(DESTDIR)/usr/share/wb-homa-modbus/templates
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/etc/wb-homa-adc.conf

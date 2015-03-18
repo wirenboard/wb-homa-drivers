@@ -1,2 +1,3 @@
 usr/bin/wb-homa-modbus
+/usr/share/wb-homa-modbus/templates/*
 /etc/wb-homa-modbus.conf.sample
