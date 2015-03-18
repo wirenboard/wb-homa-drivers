@@ -24,7 +24,6 @@ namespace {
             resistance *= 1000000;
         if ( ohm == "kOhm")
                 resistance *= 1000;
-        cout << "Resistance is " << resistance << endl;
         return resistance;
     }
         
