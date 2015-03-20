@@ -246,7 +246,6 @@ int TSysfsAdcChannel::GetRawValue()
     } else {
         for (int i = 0; i < d->ReadingsNumber; i++) {
             int v = d->Owner->GetValue(d->Index);
-            cout << "NAME IS " << d->Name << " value is " << v << endl;
             d->Sum -= d->Buffer[d->Pos];
             d->Sum += v;
             d->Buffer[d->Pos++] = v;

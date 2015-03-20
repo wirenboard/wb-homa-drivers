@@ -65,6 +65,9 @@ namespace {
                 buf_channel.Id = item["id"].asString();
                 if (item.isMember("multiplier"))
                     buf_channel.Multiplier = item["multiplier"].asFloat();
+                if (item.isMember("readings_number")) {
+                    buf_channel.ReadingsNumber = item["readings_number"].asInt();
+                }
                 new_channel.Mux.push_back(buf_channel);
             }
                     
