@@ -2,8 +2,8 @@
 #include <string>
 #include <exception>
 #include <memory>
-#include<vector>
-#include"imx233.h"
+#include <vector>
+#include "imx233.h"
 #define OHM_METER "ohm_meter"
 
 using namespace std;
@@ -15,6 +15,7 @@ struct TMUXChannel{// config for mux channel
     int Current = 40;// current in uA
     int Resistance1 = 1000;// resistance in Ohm
     int Resistance2 = 1000;// resistance in Ohm
+    int MuxChannelNumber = 0;// ADC channel number
 };
 struct TChannel{
     int AveragingWindow = 10;

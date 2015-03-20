@@ -1,6 +1,6 @@
-#include<iostream>
-#include<stdio.h>
-#include"adc_handler.h"
+#include <iostream>
+#include <stdio.h>
+#include "adc_handler.h"
 
 using namespace std;
 

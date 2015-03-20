@@ -18,37 +18,52 @@
                 "min_switch_interval_ms": 100,
                 "gpios" : [51, 57, 54],
                 "channels" : [
-                         {
-                            "id" : "A4",
-                            "multiplier" : 3.73
-                        },
-                         {
-                            "id" : "A5",
-                            "multiplier" : 3.73
-                        },
-                         {
-                            "id" : "li_pol",
-                            "multiplier" : 1.694
-                        },
-                         {
+                        {
                             "id" : "A1",
-                            "multiplier" : 0.903
+                            "multiplier" : 0.903,
+                            "mux_channel_number" : 3
+
                         },
-                         {
+                        {
                             "id" : "A2",
-                            "multiplier" : 0.903
+                            "multiplier" : 0.903,
+                            "mux_channel_number" : 4
+
                         },
-                         {
-                            "id" : "R2",
-                            "multiplier" : 0.497
-                        },
-                         {
+                        {
                             "id" : "A3",
-                            "multiplier" : 0.903
+                            "multiplier" : 0.903,
+                            "mux_channel_number" : 6
+
                         },
-                         {
+                        {
+                            "id" : "A4",
+                            "multiplier" : 3.73,
+                            "mux_channel_number" : 0
+                        },
+                        {
+                            "id" : "A5",
+                            "multiplier" : 3.73,
+                            "mux_channel_number" : 1
+
+                        },
+                        {
                             "id" : "R1",
-                            "multiplier" : 0.497
+                            "multiplier" : 0.497,
+                            "mux_channel_number" : 7
+
+                        },
+                        {
+                            "id" : "R2",
+                            "multiplier" : 0.497,
+                            "mux_channel_number" : 5
+
+                        },
+                        {
+                            "id" : "li_pol",
+                            "multiplier" : 1.694,
+                            "mux_channel_number" : 2
+
                         }
                 ]
         }

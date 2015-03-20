@@ -95,9 +95,9 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
     std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
     else
-        ptr.reset(new TSysfsAdcChannel(this, i, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier));
+        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier));
     return ptr;
 }
 

@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <getopt.h>
-#include<string>
+#include <string>
 #include "jsoncpp/json/json.h"
 
 #include "adc_handler.h"
@@ -26,7 +26,6 @@ namespace {
                 resistance *= 1000;
         return resistance;
     }
-        
 
     void LoadConfig(const std::string& file_name, THandlerConfig& config)
     {
@@ -55,6 +54,7 @@ namespace {
         for (unsigned int index = 0; index < array.size(); index++){
             const auto& item = array[index];
             TChannel new_channel;// create new intrance to add in vector<TChannel> Channels
+            
             if (item.isMember("averaging_window")) {
                 new_channel.AveragingWindow = item["averaging_window"].asInt();
                 if (new_channel.AveragingWindow < 1)
@@ -72,10 +72,6 @@ namespace {
                 new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
             if (item.isMember("channel_number"))
                 new_channel.ChannelNumber = item["channel_number"].asInt();
-
-            if (item.isMember("poll_interval"))
-                new_channel.PollInterval = item["poll_interval"].asInt();
-
 
             if ( item.isMember("channels")){ 
                 const auto& channel_array = item["channels"];
@@ -98,6 +94,9 @@ namespace {
                 for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
                     const auto& channel_iterator = channel_array[channel_number];
                     TMUXChannel element;
+                    if (channel_iterator.isMember("mux_channel_number")) {
+                        element.MuxChannelNumber = channel_iterator["mux_channel_number"].asInt();
+                    }
                     if (channel_iterator.isMember("id")) 
                         element.Id = channel_iterator["id"].asString();
                     if (channel_iterator.isMember("multiplier"))
