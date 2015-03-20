@@ -94,6 +94,9 @@ namespace {
                 for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
                     const auto& channel_iterator = channel_array[channel_number];
                     TMUXChannel element;
+                    if (channel_iterator.isMember("readings_number")) {
+                        element.ReadingsNumber = channel_iterator["readings_number"].asInt();
+                    }
                     if (channel_iterator.isMember("mux_channel_number")) {
                         element.MuxChannelNumber = channel_iterator["mux_channel_number"].asInt();
                     }

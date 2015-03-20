@@ -5,7 +5,7 @@
 #include <vector>
 #include "imx233.h"
 #define OHM_METER "ohm_meter"
-
+#define DELAY 1
 using namespace std;
 
 struct TMUXChannel{// config for mux channel
@@ -16,6 +16,7 @@ struct TMUXChannel{// config for mux channel
     int Resistance1 = 1000;// resistance in Ohm
     int Resistance2 = 1000;// resistance in Ohm
     int MuxChannelNumber = 0;// ADC channel number
+    int ReadingsNumber = 10; // number of reading value during one selection
 };
 struct TChannel{
     int AveragingWindow = 10;
@@ -96,6 +97,8 @@ struct TSysfsAdcChannelPrivate {
     double Sum = 0;
     bool Ready = false;
     int Pos = 0;
+    int ReadingsNumber;
+    int ChannelAveragingWindow;
 
 }; 
 class TSysfsAdcChannel { 
@@ -104,8 +107,8 @@ class TSysfsAdcChannel {
         virtual float GetValue(); 
         const std::string& GetName() const;
         virtual std::string GetType();
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, float multiplier);
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
@@ -116,7 +119,7 @@ class TSysfsAdcChannel {
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
-         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int current, int resistance1, int resistance2);
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int current, int resistance1, int resistance2);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();

@@ -5,6 +5,8 @@
 #include <cmath>
 #include <ctime>
 #include <unistd.h>
+#include <chrono>
+#include <thread>
 
 #include "sysfs_adc.h"
 namespace {
@@ -95,9 +97,9 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
     std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
     else
-        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id,ChannelConfig.Mux[i].Multiplier));
+        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].Multiplier));
     return ptr;
 }
 
@@ -215,17 +217,19 @@ int TSysfsAdcPhys::GetValue(int index)
 }
 
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number)
     : d(new TSysfsAdcChannelPrivate())
 {
     d->Owner.reset(owner);
     d->Index = index;
     d->Name = name;
-    d->Buffer = new int[d->Owner->AveragingWindow](); // () initializes with zeros
+    d->ReadingsNumber = readings_number;
+    d->ChannelAveragingWindow = readings_number * d->Owner->AveragingWindow;
+    d->Buffer = new int[d->ChannelAveragingWindow](); // () initializes with zeros
 }
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, float multiplier)
-    :TSysfsAdcChannel(owner, index, name)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, float multiplier)
+    :TSysfsAdcChannel(owner, index, name, readings_number)
 {
     Multiplier = multiplier;
 }
@@ -233,20 +237,24 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
 int TSysfsAdcChannel::GetRawValue()
 {
     if (!d->Ready) {
-        for (int i = 0; i < d->Owner->AveragingWindow; ++i) {
+        for (int i = 0; i < d->ChannelAveragingWindow; ++i) {
             int v = d->Owner->GetValue(d->Index);
             d->Buffer[i] = v;
             d->Sum += v;
         }
         d->Ready = true;
     } else {
-        int v = d->Owner->GetValue(d->Index);
-        d->Sum -= d->Buffer[d->Pos];
-        d->Sum += v;
-        d->Buffer[d->Pos++] = v;
-        d->Pos %= d->Owner->AveragingWindow;
+        for (int i = 0; i < d->ReadingsNumber; i++) {
+            int v = d->Owner->GetValue(d->Index);
+            cout << "NAME IS " << d->Name << " value is " << v << endl;
+            d->Sum -= d->Buffer[d->Pos];
+            d->Sum += v;
+            d->Buffer[d->Pos++] = v;
+            d->Pos %= d->ChannelAveragingWindow;
+            this_thread::sleep_for(chrono::milliseconds(DELAY));
+        }
     }
-    return round(d->Sum / d->Owner->AveragingWindow);
+    return round(d->Sum / d->ChannelAveragingWindow);
 }
 
 const std::string& TSysfsAdcChannel::GetName() const
@@ -264,8 +272,8 @@ std::string TSysfsAdcChannel::GetType(){
     return "voltage";
 }
 
-TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int current, int resistance1, int resistance2)
-    : TSysfsAdcChannel(owner, index, name)
+TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name,int readings_number, int current, int resistance1, int resistance2)
+    : TSysfsAdcChannel(owner, index, name, readings_number)
 {
     Current = current;
     Resistance1 = resistance1;
