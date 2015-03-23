@@ -65,6 +65,8 @@ class TMQTTGpioHandler : public TMQTTWrapper
         void InitInterrupts(int epfd);// look through all gpios and select Interrupt supporting ones
         string GetChannelTopic(const TGpioDesc& gpio_desc);
         void CatchInterrupts(int count, struct epoll_event* events);
+        void PublishValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
+        bool FirstTime = true;
 
     private:
         THandlerConfig Config;
@@ -178,12 +180,14 @@ void TMQTTGpioHandler::OnSubscribe(int mid, int qos_count, const int *granted_qo
 	printf("Subscription succeeded.\n");
 }
 
-string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) {
+string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) 
+{
     static string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
     return (controls_prefix + gpio_desc.Name);
 }
 
-void TMQTTGpioHandler::UpdateValue( const TGpioDesc& gpio_desc,std::shared_ptr<TSysfsGpio> gpio_handler) { 
+void TMQTTGpioHandler::UpdateValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler) 
+{
         // look at previous value and compare it with current
         int cached = gpio_handler->GetCachedValue();
         int value = gpio_handler->GetValue();
@@ -193,16 +197,21 @@ void TMQTTGpioHandler::UpdateValue( const TGpioDesc& gpio_desc,std::shared_ptr<T
             // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
             value = !!value;
             if ((cached < 0) || (cached != value)){
-                vector<TPublishPair> what_to_publish(gpio_handler->GpioPublish()); //gets nessesary to publish with updating value
-                for (TPublishPair& publish_element: what_to_publish){
-                    string to_topic = publish_element.first;
-                    string value = publish_element.second;
-                    Publish(NULL, GetChannelTopic(gpio_desc) + to_topic, value, 0, true); // Publish current value (make retained)
-                    }
+                PublishValue(gpio_desc, gpio_handler);
                 }
             }
 }
-void TMQTTGpioHandler::UpdateChannelValues() {
+void TMQTTGpioHandler::PublishValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler)
+{
+    vector<TPublishPair> what_to_publish(gpio_handler->GpioPublish()); //gets nessesary to publish with updating value
+    for (TPublishPair& publish_element: what_to_publish){
+        string to_topic = publish_element.first;
+        string value = publish_element.second;
+        Publish(NULL, GetChannelTopic(gpio_desc) + to_topic, value, 0, true); // Publish current value (make retained)
+        }
+}
+void TMQTTGpioHandler::UpdateChannelValues() 
+{
     for (TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
@@ -210,7 +219,8 @@ void TMQTTGpioHandler::UpdateChannelValues() {
     }
 }
 
-void TMQTTGpioHandler::InitInterrupts(int epfd){
+void TMQTTGpioHandler::InitInterrupts(int epfd)
+{
     int n; 
     for ( TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
@@ -227,7 +237,8 @@ void TMQTTGpioHandler::InitInterrupts(int epfd){
     
 }
 
-void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events){
+void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events)
+{
     int i;
     for ( auto& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
@@ -235,7 +246,7 @@ void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events){
         for (i=0; i < count; i++){
             if (gpio_handler->GetFileDes() == events[i].data.fd) {
                 if (!gpio_handler->IsDebouncing()){
-                    UpdateValue(gpio_desc, gpio_handler);             
+                    PublishValue(gpio_desc, gpio_handler);
                 }
             }
         }
@@ -374,6 +385,10 @@ int main(int argc, char *argv[])
                 mqtt_handler->UpdateChannelValues();
                 start = steady_clock::now();
             }else {
+                if (mqtt_handler->FirstTime && interval == 0) {
+                    mqtt_handler->FirstTime = false;
+                    continue;
+                }
                 mqtt_handler->CatchInterrupts( n, events );
             }
         }

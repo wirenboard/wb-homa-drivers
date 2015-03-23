@@ -9,6 +9,7 @@
 #include<iostream>
 
 #define WATT_METER "watt_meter"
+#define MICROSECONDS_DELAY 200000
 
 using namespace std;
 
@@ -30,7 +31,7 @@ public:
     // returns GPIO value (0 or 1), or negative number in case of error
     int GetValue();
     
-    int InterruptUp();// trying to write to edge file and checking is it input gpio
+    virtual int InterruptUp();// trying to write to edge file and checking is it input gpio
     
     //returns true if gpio support interruption
     bool GetInterruptSupport() ;
@@ -52,7 +53,7 @@ public:
         
     virtual vector<TPublishPair> MetaType(); // what publish to meta/type 
     virtual vector<TPublishPair> GpioPublish(); //getting what nessesary for  publishing to controls
-    virtual void GetInterval();// measure time interval between interruptions
+    bool GetInterval();// measure time interval between interruptions, return false if interval between interrupts less then specified delay
     string GetInterruptEdge(); // returning front of the impulse, that we're trying to catch
     void SetInterruptEdge(string s); // set front of the impulse
     bool IsDebouncing(); // if interval between two interruptions is less than 1 milisecond it will return true;
@@ -72,13 +73,14 @@ private:
     int CachedValue;
     int FileDes;
     mutable mutex G_mutex;
-    bool In;//direction true=in false=out
+    bool In;//direction true = in false = out
     std::chrono::steady_clock::time_point Previous_Interrupt_Time;
     bool Debouncing;
 protected: 
     long long unsigned int Interval;
     long unsigned int Counts;
     string InterruptEdge;
+    bool FirstTime;
 
 };
 
@@ -90,6 +92,7 @@ class TSysfsGpioBaseCounter : public TSysfsGpio {
         ~TSysfsGpioBaseCounter();
         vector<TPublishPair> MetaType();
         vector<TPublishPair> GpioPublish();   
+        int InterruptUp();// if user didn't specify interrupt edge, method would figure it out
     
     private:
         string Type;
