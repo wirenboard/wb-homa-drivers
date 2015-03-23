@@ -1,14 +1,15 @@
 #pragma once
 #include <string>
-#include<sys/epoll.h>
-#include<mutex>
-#include<chrono>
-#include<vector>
-#include<memory>
-#include<utility>
-#include<iostream>
+#include <sys/epoll.h>
+#include <mutex>
+#include <chrono>
+#include <vector>
+#include <memory>
+#include <utility>
+#include <iostream>
 
 #define WATT_METER "watt_meter"
+#define WATER_METER "water_meter"
 #define MICROSECONDS_DELAY 200000
 
 using namespace std;
@@ -84,7 +85,8 @@ protected:
 
 };
 
-class TSysfsGpioBaseCounter : public TSysfsGpio {
+class TSysfsGpioBaseCounter : public TSysfsGpio 
+{
     public:
         explicit TSysfsGpioBaseCounter(int gpio, bool inverted, string interrupt_edge, string type, int multiplier);
         TSysfsGpioBaseCounter(const TSysfsGpioBaseCounter& other) = delete;
@@ -97,6 +99,7 @@ class TSysfsGpioBaseCounter : public TSysfsGpio {
     private:
         string Type;
         int Multiplier;
+        int ConvertingMultiplier;// multiplier that converts value to appropriate measuring unit according to meter type
         float Total;
         float Power;
         string Topic1;

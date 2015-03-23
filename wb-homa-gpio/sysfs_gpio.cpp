@@ -285,7 +285,7 @@ vector<TPublishPair>  TSysfsGpio::GpioPublish()
         FirstTime = false;
     } else
         GetInterval();// remember interval
-    int output_value = !!CachedValue;
+    int output_value = GetValue();
     output_vector.push_back(make_pair("", to_string(output_value)));//output saved value 
     return output_vector; 
 }

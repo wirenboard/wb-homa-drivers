@@ -1,6 +1,6 @@
-#include"sysfs_gpio.h"
-#include<iostream>
-#include<memory>
+#include "sysfs_gpio.h"
+#include <iostream>
+#include <memory>
 
 using namespace std;
 
@@ -10,11 +10,26 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
     , Multiplier(multiplier)
     , Total(0)
 {   
+    bool succes = false; 
     if (Type == WATT_METER) {
         Topic2 = "/_current";
         Value_Topic2 = "power";
         Topic1 = "/_total";
         Value_Topic1 = "power_consumption";
+        ConvertingMultiplier = 1000;// convert  kW to W
+        succes = true;
+    }
+    if (Type == WATER_METER) {
+        Topic2 = "/_current";
+        Value_Topic2 = "water_flow";
+        Topic1 = "/_total";
+        Value_Topic1 = "water_consumption";
+        ConvertingMultiplier = 1.0;
+        succes = true;
+    }
+    if (!succes) {
+        cerr << "Uknown gpio type\n";
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -67,7 +82,10 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
     if (!GetInterval()) {// ignore repeated interrupts of one impulse 
         return output_vector;
     }
-    Power = 1000 * Multiplier * 3600.0 / Interval;
+    if (Interval == 0) 
+        Power =-1;
+    else 
+        Power = 3600.0 * 1000000 * ConvertingMultiplier/ (Interval * Multiplier);// convert microseconds to seconds, hours to seconds
     Total = (float) Counts / Multiplier;
     output_vector.push_back(make_pair(Topic1, to_string(Total)));
     output_vector.push_back(make_pair(Topic2, to_string(Power)));

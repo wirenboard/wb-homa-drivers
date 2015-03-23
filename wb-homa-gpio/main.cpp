@@ -91,8 +91,8 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         std::shared_ptr<TSysfsGpio> gpio_handler(nullptr);
         if (gpio_desc.Type == "")
                 gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
-        if (gpio_desc.Type == WATT_METER)
-                gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
+        else     
+            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
