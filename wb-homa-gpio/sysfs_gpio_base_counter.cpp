@@ -70,18 +70,18 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
         FirstTime = false;
         return output_vector;
     }
-    /*
-    int value = !!GetCachedValue();
-    int compare_value = (GetInverted()) ? 1: 0;
-    if ((GetInterruptEdge() == "rising") && ( value == compare_value))
-        return output_vector;
-    compare_value = !compare_value;
-    if ((GetInterruptEdge() == "falling") && (value == compare_value))
-        return output_vector;
-        */
+    int cached_value = GetCachedValue();
+    int value = GetValue();
+    if (value != cached_value) {// check what front we got here
+        if ((GetInterruptEdge() == "rising") && (value == 0))
+            return output_vector;
+        if ((GetInterruptEdge() == "falling") && (value == 1))
+            return output_vector;
+    }
     if (!GetInterval()) {// ignore repeated interrupts of one impulse 
         return output_vector;
     }
+    // in other cases we have correct interrupt and handle it
     if (Interval == 0) 
         Power =-1;
     else 
