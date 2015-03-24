@@ -1,0 +1,62 @@
+// Configuration options
+{
+    "device_name" : "Relays & FETs",
+
+    "channels" : [
+        {
+            "gpio" : 17,
+            "name" : "FET_1",
+            "inverted" : false
+        },
+        {
+            "gpio" : 7,
+            "name" : "FET_2",
+            "inverted" : false
+        },
+        {
+            "gpio" : 5,
+            "name" : "FET_3",
+            "inverted" : false
+        },
+        {
+            "gpio" : 53,
+            "name" : "FET_4",
+            "inverted" : false
+        },
+        {
+            "gpio" : 2,
+            "name" : "FET_5",
+            "inverted" : false
+        },
+        {
+            "gpio" : 248,
+            "name" : "FET_6",
+            "inverted" : false
+        },
+        {
+            "gpio" : 247,
+            "name" : "FET_7",
+            "inverted" : false
+        },
+        {
+            "gpio" : 246,
+            "name" : "FET_8",
+            "inverted" : false
+        },
+        {
+            "gpio" : 245,
+            "name" : "FET_9",
+            "inverted" : false
+        },
+        {
+            "gpio" : 34,
+            "name" : "Relay_1",
+            "inverted" : false
+        },
+        {
+            "gpio" : 33,
+            "name" : "Relay_2",
+            "inverted" : false
+        }
+    ]
+}
