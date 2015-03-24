@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 9), pkg-config, g++, libjsoncpp-dev, libmosquittopp
 
 Package: wb-homa-gpio
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, ucf
 Description: Wiren Board Smart Home MQTT generic sysfs GPIO driver compatible with HomA conventions
 
 Package: wb-homa-adc

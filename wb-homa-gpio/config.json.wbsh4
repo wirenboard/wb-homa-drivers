@@ -5,47 +5,47 @@
     "channels" : [
         {
             "gpio" : 17,
-            "name" : "FET_1",
+            "name" : "A1_OUT",
             "inverted" : false
         },
         {
             "gpio" : 7,
-            "name" : "FET_2",
+            "name" : "A2_OUT",
             "inverted" : false
         },
         {
             "gpio" : 5,
-            "name" : "FET_3",
+            "name" : "A3_OUT",
             "inverted" : false
         },
         {
             "gpio" : 53,
-            "name" : "FET_4",
+            "name" : "A4_OUT",
             "inverted" : false
         },
         {
             "gpio" : 2,
-            "name" : "FET_5",
+            "name" : "A5_OUT",
             "inverted" : false
         },
         {
             "gpio" : 248,
-            "name" : "FET_6",
+            "name" : "D1_OUT",
             "inverted" : false
         },
         {
             "gpio" : 247,
-            "name" : "FET_7",
+            "name" : "D2_OUT",
             "inverted" : false
         },
         {
             "gpio" : 246,
-            "name" : "FET_8",
+            "name" : "D3_OUT",
             "inverted" : false
         },
         {
             "gpio" : 245,
-            "name" : "FET_9",
+            "name" : "D4_OUT",
             "inverted" : false
         },
         {

@@ -173,10 +173,12 @@ install: all
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
+	install -d $(DESTDIR)/usr/share/wb-homa-gpio
 
-	install -m 0644  $(GPIO_DIR)/config.json.wbsh3 $(DESTDIR)/etc/wb-homa-gpio.conf.wbsh3
-	install -m 0644  $(GPIO_DIR)/config.json.default $(DESTDIR)/etc/wb-homa-gpio.conf.default
-	install -m 0644  $(GPIO_DIR)/config.json.mka3 $(DESTDIR)/etc/wb-homa-gpio.conf.mka3
+	install -m 0644  $(GPIO_DIR)/config.json.wbsh4 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.wbsh4
+	install -m 0644  $(GPIO_DIR)/config.json.wbsh3 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.wbsh3
+	install -m 0644  $(GPIO_DIR)/config.json.default $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.default
+	install -m 0644  $(GPIO_DIR)/config.json.mka3 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.mka3
 	install -m 0755  $(GPIO_DIR)/$(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
 	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
