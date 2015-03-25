@@ -4,6 +4,16 @@
 
     "channels" : [
         {
+            "gpio" : 34,
+            "name" : "Relay_1",
+            "inverted" : false
+        },
+        {
+            "gpio" : 33,
+            "name" : "Relay_2",
+            "inverted" : false
+        },
+        {
             "gpio" : 17,
             "name" : "A1_OUT",
             "inverted" : false
@@ -49,14 +59,42 @@
             "inverted" : false
         },
         {
-            "gpio" : 34,
-            "name" : "Relay_1",
-            "inverted" : false
+            "gpio" : 123,
+            "name" : "A4_IN",
+            "inverted" : false,
+            "direction": "input"
         },
         {
-            "gpio" : 33,
-            "name" : "Relay_2",
-            "inverted" : false
+            "gpio" : 1,
+            "name" : "A5_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 36,
+            "name" : "D1_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 37,
+            "name" : "D2_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 38,
+            "name" : "D3_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 39,
+            "name" : "D4_IN",
+            "inverted" : false,
+            "direction": "input"
         }
+
+
     ]
 }
