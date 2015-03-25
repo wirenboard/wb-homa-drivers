@@ -1,0 +1,13 @@
+#!/bin/bash
+
+CONFFILE=/etc/wb-homa-adc.conf
+
+if [ "$1" = "purge" ]; then
+    if [ -x /usr/bin/ucf ]; then
+        ucf  --purge /etc/wb-homa-adc.conf
+    fi
+fi
+
+
+#DEBHELPER#
+

@@ -1,2 +1,2 @@
 usr/bin/wb-homa-adc
-etc/wb-homa-adc.conf
+usr/share/wb-homa-adc/wb-homa-adc.conf*
