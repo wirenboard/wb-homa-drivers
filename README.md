@@ -294,6 +294,8 @@ wb-homa-gpio драйвер
 `wb-homa-gpio.conf.`. Конфигурационный файл построен по двухуровневой схеме :
 ```
 {
+    // отображаемое имя устройства. Публикуется как
+    // .../meta/name в MQTT
     "device_name" : "GPIO DEVICES",
 
     "channels" : [
