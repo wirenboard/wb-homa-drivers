@@ -14,8 +14,14 @@
 #include "sysfs_gpio.h"
 #include "common/utils.h"
 #include "common/mqtt_wrapper.h"
+#include<chrono>
+#include<thread>
+
 
 using namespace std;
+using  std::chrono::duration_cast;
+using  std::chrono::milliseconds;
+using  std::chrono::steady_clock;
 
 enum class TGpioDirection {
     Input,
@@ -28,6 +34,9 @@ struct TGpioDesc
     bool Inverted = false;
     string Name = "";
     TGpioDirection Direction = TGpioDirection::Output;
+    string InterruptEdge = "";
+    string Type = "";
+    int Multiplier;
 };
 
 class THandlerConfig
@@ -42,7 +51,7 @@ class THandlerConfig
 
 class TMQTTGpioHandler : public TMQTTWrapper
 {
-    typedef pair<TGpioDesc, TSysfsGpio> TChannelDesc;
+    typedef pair<TGpioDesc, std::shared_ptr<TSysfsGpio>> TChannelDesc;
 
 	public:
         TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
@@ -53,11 +62,17 @@ class TMQTTGpioHandler : public TMQTTWrapper
 		void OnSubscribe(int mid, int qos_count, const int *granted_qos);
 
         void UpdateChannelValues();
+        void InitInterrupts(int epfd);// look through all gpios and select Interrupt supporting ones
         string GetChannelTopic(const TGpioDesc& gpio_desc);
+        void CatchInterrupts(int count, struct epoll_event* events);
+        void PublishValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
+        bool FirstTime = true;
 
     private:
         THandlerConfig Config;
         vector<TChannelDesc> Channels;
+
+        void UpdateValue(const TGpioDesc& gpio_desc,std::shared_ptr<TSysfsGpio> gpio_handler); 
 
 };
 
@@ -73,20 +88,22 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
 {
     // init gpios
     for (const TGpioDesc& gpio_desc : handler_config.Gpios) {
-        TSysfsGpio gpio_handler(gpio_desc.Gpio, gpio_desc.Inverted);
-        gpio_handler.Export();
-        if (gpio_handler.IsExported()) {
+        std::shared_ptr<TSysfsGpio> gpio_handler(nullptr);
+        if (gpio_desc.Type == "")
+                gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
+        else     
+            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
+        gpio_handler->Export();
+        if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
-                gpio_handler.SetInput();
+                gpio_handler->SetInput();
             else
-                gpio_handler.SetOutput();
-            Channels.push_back(make_pair(gpio_desc, gpio_handler));
-        } else {
-            cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
-        }
+                gpio_handler->SetOutput();
+            Channels.emplace_back(gpio_desc, gpio_handler);
+            } else {
+                    cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
+            }
     }
-
-
 	Connect();
 }
 
@@ -102,20 +119,20 @@ void TMQTTGpioHandler::OnConnect(int rc)
         // Meta
         Publish(NULL, prefix + "/meta/name", Config.DeviceName, 0, true);
 
-
         for (const auto& channel_desc : Channels) {
             const auto& gpio_desc = channel_desc.first;
 
             //~ cout << "GPIO: " << gpio_desc.Name << endl;
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
-
-            Publish(NULL, control_prefix + "/meta/type", "switch", 0, true);
+            std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
+            vector<TPublishPair> what_to_publish (gpio_handler->MetaType());
+            for ( TPublishPair tmp : what_to_publish)
+                Publish(NULL, control_prefix +tmp.first + "/meta/type", tmp.second, 0, true);
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
                 Subscribe(NULL, control_prefix + "/on");
         }
-
 //~ /devices/293723-demo/controls/Demo-Switch 0
 //~ /devices/293723-demo/controls/Demo-Switch/on 1
 //~ /devices/293723-demo/controls/Demo-Switch/meta/type switch
@@ -144,13 +161,15 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                 continue;
 
             if (tokens[4] == gpio_desc.Name) {
-                auto & gpio_handler = channel_desc.second;
+                auto& gpio_handler = *channel_desc.second;
 
                 int val = payload == "0" ? 0 : 1;
                 if (gpio_handler.SetValue(val) == 0) {
                     // echo, retained
                     Publish(NULL, GetChannelTopic(gpio_desc), payload, 0, true);
-                }
+                }else {
+                    cerr << "DEBUG : couldn't set value" << endl;
+                    }
             }
         }
     }
@@ -161,32 +180,81 @@ void TMQTTGpioHandler::OnSubscribe(int mid, int qos_count, const int *granted_qo
 	printf("Subscription succeeded.\n");
 }
 
-string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) {
+string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) 
+{
     static string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
     return (controls_prefix + gpio_desc.Name);
 }
 
-void TMQTTGpioHandler::UpdateChannelValues() {
-    for (TChannelDesc& channel_desc : Channels) {
-        const auto& gpio_desc = channel_desc.first;
-        auto& gpio_handler = channel_desc.second;
-
-        // vv order matters
-        int cached = gpio_handler.GetCachedValue();
-        int value = gpio_handler.GetValue();
-
+void TMQTTGpioHandler::UpdateValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler) 
+{
+        // look at previous value and compare it with current
+        int cached = gpio_handler->GetCachedValue();
+        int value = gpio_handler->GetValue();
         if (value >= 0) {
             // Buggy GPIO driver may yield any non-zero number instead of 1,
             // so make sure it's either 1 or 0 here.
             // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
             value = !!value;
-            if ((cached < 0) || (cached != value))
-                Publish(NULL, GetChannelTopic(gpio_desc), to_string(value), 0, true); // Publish current value (make retained)
+            if ((cached < 0) || (cached != value)){
+                gpio_handler->SetCachedValue(cached);
+                PublishValue(gpio_desc, gpio_handler);
+                }
+            }
+}
+void TMQTTGpioHandler::PublishValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler)
+{
+    vector<TPublishPair> what_to_publish(gpio_handler->GpioPublish()); //gets nessesary to publish with updating value
+    for (TPublishPair& publish_element: what_to_publish){
+        string to_topic = publish_element.first;
+        string value = publish_element.second;
+        Publish(NULL, GetChannelTopic(gpio_desc) + to_topic, value, 0, true); // Publish current value (make retained)
         }
+}
+void TMQTTGpioHandler::UpdateChannelValues() 
+{
+    for (TChannelDesc& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+        std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
+        UpdateValue(gpio_desc,gpio_handler);
     }
-
 }
 
+void TMQTTGpioHandler::InitInterrupts(int epfd)
+{
+    int n; 
+    for ( TChannelDesc& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+        auto& gpio_handler = *channel_desc.second;
+        // check if file edge exists and is direction input 
+        gpio_handler.InterruptUp();        
+        if (gpio_handler.GetInterruptSupport()) {
+             n = epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.GetFileDes(),&gpio_handler.GetEpollStruct());// adding new instance to epoll
+            if (n != 0 ) {
+                cerr<<"epoll_ctl gained error with GPIO"<<gpio_desc.Gpio<<endl;
+            }
+        }
+    }
+    
+}
+
+void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events)
+{
+    int i;
+    for ( auto& channel_desc : Channels) {
+        const auto& gpio_desc = channel_desc.first;
+        std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
+        for (i=0; i < count; i++){
+            if (gpio_handler->GetFileDes() == events[i].data.fd) {
+                if (!gpio_handler->IsDebouncing()){
+                    PublishValue(gpio_desc, gpio_handler);
+                }
+            }
+        }
+    }
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));//avoid debouncing 
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -196,9 +264,10 @@ int main(int argc, char *argv[])
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
     string config_fname;
+    int epfd;
+    struct epoll_event events[20];
 
-
-    int c;
+    int c,n;
     //~ int digit_optind = 0;
     //~ int aopt = 0, bopt = 0;
     //~ char *copt = 0, *dopt = 0;
@@ -220,7 +289,7 @@ int main(int argc, char *argv[])
         case '?':
             break;
         default:
-            printf ("?? getopt returned character code 0%o ??\n", c);
+            printf ("?? Getopt returned character code 0%o ??\n", c);
         }
     }
     //~ if (optind < argc) {
@@ -281,6 +350,12 @@ int main(int argc, char *argv[])
                 gpio_desc.Inverted = item["inverted"].asBool();
             if (item.isMember("direction") && item["direction"].asString() == "input")
                 gpio_desc.Direction = TGpioDirection::Input;
+            if (item.isMember("type"))
+                    gpio_desc.Type = item["type"].asString();
+            if (item.isMember("multiplier"))
+                gpio_desc.Multiplier = item["multiplier"].asInt();
+            if (item.isMember("edge"))
+                gpio_desc.InterruptEdge = item["edge"].asString();
 
             handler_config.AddGpio(gpio_desc);
 
@@ -294,16 +369,29 @@ int main(int argc, char *argv[])
     mqtt_config.Id = "wb-gpio";
     std::shared_ptr<TMQTTGpioHandler> mqtt_handler(new TMQTTGpioHandler(mqtt_config, handler_config));
     mqtt_handler->Init();
-
-	while(1){
-		rc = mqtt_handler->loop();
-        //~ cout << "break in a loop! " << rc << endl;
-		if(rc != 0) {
-			mqtt_handler->reconnect();
-		} else {
-            // update current values
-
-            mqtt_handler->UpdateChannelValues();
+    
+    rc= mqtt_handler->loop_start(); 
+    if (rc != 0 ) {
+        cerr << "couldn't start mosquitto_loop_start ! " << rc << endl;
+    }else {
+        epfd = epoll_create(1);// creating epoll for Interrupts
+        mqtt_handler->InitInterrupts(epfd);
+        steady_clock::time_point start;
+        int interval;
+        start = steady_clock::now();
+        while(1){
+            n = epoll_wait(epfd,events,20,500);
+            interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
+            if (interval >= 500 ) {  //checking is it time to look through all gpios
+                mqtt_handler->UpdateChannelValues();
+                start = steady_clock::now();
+            }else {
+                if (mqtt_handler->FirstTime && interval == 0) {
+                    mqtt_handler->FirstTime = false;
+                    continue;
+                }
+                mqtt_handler->CatchInterrupts( n, events );
+            }
         }
 	}
 
