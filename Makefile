@@ -43,7 +43,7 @@ LOGGER_BIN=mqtt-logger
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean test
+.PHONY: all clean test_need_fix
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
@@ -181,7 +181,6 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
-	-rm -f $(LOGGER)/*.o $(LOGGER)/$(LOGGER_BIN)
 
 
 
@@ -190,6 +189,7 @@ install: all
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
+	install -d $(DESTDIR)/usr/share/wb-homa-modbus
 	install -d $(DESTDIR)/usr/share/wb-homa-gpio
 	install -d $(DESTDIR)/usr/share/wb-homa-adc
 
@@ -200,6 +200,7 @@ install: all
 	install -m 0755  $(GPIO_DIR)/$(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
 	install -m 0644  $(MODBUS_DIR)/config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
+	cp -r  $(MODBUS_DIR)/wb-homa-modbus-templates $(DESTDIR)/usr/share/wb-homa-modbus/templates
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
 	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.default
@@ -207,5 +208,5 @@ install: all
 	install -m 0644  $(ADC_DIR)/config.json.wb2.8 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb2.8
 	install -m 0644  $(ADC_DIR)/config.json.wb3.5 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb3.5
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)
-	install -m 0755  $(LOGGER)/$(LOGGER_BIN) $(DESTDIR)/usr/bin/$(LOGGER_BIN)
 
+	install -m 0755  $(LOGGER)/$(LOGGER_BIN) $(DESTDIR)/usr/bin/$(LOGGER_BIN)
