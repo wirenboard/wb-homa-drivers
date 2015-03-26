@@ -5,16 +5,16 @@
     "iio_channels" : [
          {
                 "id" : "Vin",
-                "averaging_window": 4,
+                "averaging_window": 1,
                 "poll_interval" : 0,
                 "channel_number" : 0,
                 "multiplier" : 3.73
-                
+
         },
         {
                 "type" : "mux",
-                "averaging_window": 4,
-                "min_switch_interval_ms": 100,
+                "averaging_window": 1,
+                "min_switch_interval_ms": 200,
                 "gpios" : [51, 57, 54],
                 "channels" : [
                         {
