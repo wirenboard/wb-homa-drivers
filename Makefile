@@ -198,7 +198,8 @@ install: all
 	install -m 0755  $(MODBUS_DIR)/$(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	install -m 0755  $(W1_DIR)/$(W1_BIN) $(DESTDIR)/usr/bin/$(W1_BIN)
 	install -m 0755  $(ADC_DIR)/$(ADC_BIN) $(DESTDIR)/usr/bin/$(ADC_BIN)
-	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf
+	install -m 0644  $(ADC_DIR)/config.json $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.default
+	install -m 0644  $(ADC_DIR)/config.json.wb4 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb4
 	install -m 0644  $(ADC_DIR)/config.json.wb2.8 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb2.8
 	install -m 0644  $(ADC_DIR)/config.json.wb3.5 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb3.5
 	install -m 0755  $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(DESTDIR)/usr/bin/$(NINJABRIDGE_BIN)

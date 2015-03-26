@@ -5,7 +5,7 @@ CONFFILE=/etc/wb-homa-adc.conf
 
 case "$WB_VERSION" in
     "41" )
-        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf"
+        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb4"
     ;;
 
     "32" )
@@ -17,7 +17,7 @@ case "$WB_VERSION" in
     ;;
 
     * )
-        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf"
+        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.default"
     ;;
 esac
 
