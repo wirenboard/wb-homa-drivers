@@ -268,7 +268,7 @@ bool TSysfsGpio::GetInterval()
         Counts=1;
         Previous_Interrupt_Time = std::chrono::steady_clock::now();
     } 
-    cerr << "DEBUG: GPIO:" << Gpio << "interval= " << Interval << "counts= " << Counts << endl;
+    //cerr << "DEBUG: GPIO:" << Gpio << "interval= " << Interval << "counts= " << Counts << endl;
     return true;
 }
 

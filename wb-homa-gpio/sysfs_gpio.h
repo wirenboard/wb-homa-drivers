@@ -50,6 +50,7 @@ public:
 
     //returns GPIO values (0 or 1) or negative in case of error
     inline int GetCachedValue() { return CachedValue; };
+    inline void SetCachedValue(int cached) { CachedValue = cached; }; // sometimes we should save written cached value
     inline int GetCachedValueOrDefault(int def = 0) {  return (CachedValue < 0) ? def : CachedValue; }
         
     virtual vector<TPublishPair> MetaType(); // what publish to meta/type 

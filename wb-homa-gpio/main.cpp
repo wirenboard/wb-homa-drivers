@@ -197,6 +197,7 @@ void TMQTTGpioHandler::UpdateValue(const TGpioDesc& gpio_desc, std::shared_ptr<T
             // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
             value = !!value;
             if ((cached < 0) || (cached != value)){
+                gpio_handler->SetCachedValue(cached);
                 PublishValue(gpio_desc, gpio_handler);
                 }
             }
