@@ -1,5 +1,5 @@
 #include <iostream>
-#include <stdio.h>
+#include <math.h>
 #include "adc_handler.h"
 
 using namespace std;
@@ -84,9 +84,12 @@ void TMQTTAdcHandler::UpdateChannelValues()
         if (Config.Debug)
             std::cerr << "channel: " << channel->GetName() << " value: " << value << std::endl;
         char buff[10];
-        sprintf(buff, "%.3f", value);
-        string output = buff;
-
+        if (value == round(value)) {
+                sprintf(buff, "%.0f", value);
+        } else {
+            sprintf(buff, "%.3f", value);
+        }
+        string output(buff);
         Publish(NULL, GetChannelTopic(*channel), output, 0, true);
     }
 }
