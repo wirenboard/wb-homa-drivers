@@ -32,6 +32,30 @@
             "gpio" : 246,
             "name" : "Relay_2",
             "inverted" : false
+        },
+        {
+            "gpio" : 7,
+            "name" : "R2_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 6,
+            "name" : "R3_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 5,
+            "name" : "R4_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 1,
+            "name" : "W3_IN",
+            "inverted" : false,
+            "direction": "input"
         }
 
 
