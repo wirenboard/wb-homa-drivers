@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <thread>
+#include <math.h>
 
 #include "sysfs_adc.h"
 namespace {
@@ -288,6 +289,7 @@ float TSysfsAdcChannelRes::GetValue(){
     float result;
     float voltage = 1.85 * value / 4095;
     result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+    result = round(result);
     SwitchOffCurrentSource();
     return result;
 }
