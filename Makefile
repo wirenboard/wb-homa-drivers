@@ -14,7 +14,7 @@ endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
 CFLAGS=-Wall -std=c++0x -Os -I.
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lcurl
 
 COMMON_DIR=common
 
@@ -31,6 +31,8 @@ W1_DIR=wb-homa-w1
 W1_BIN=wb-homa-w1
 ADC_DIR=wb-homa-adc
 ADC_BIN=wb-homa-adc
+ZWAY_DIR=wb-homa-zway
+ZWAY_BIN=wb-homa-zway
 TEST_LIBS=-lgtest -lpthread
 
 NINJABRIDGE_DIR=wb-homa-ninja-bridge
@@ -45,7 +47,7 @@ COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
 .PHONY: all clean test_need_fix
 
-all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
+all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN) $(ZWAY_DIR)/$(ZWAY_BIN)
 
 $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -164,6 +166,24 @@ $(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
 $(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 $(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+#ZWAY 
+$(ZWAY_DIR)/$(ZWAY_BIN): $(ZWAY_DIR)/main.o $(ZWAY_DIR)/Razberry.o $(ZWAY_DIR)/ZWaveBase.o $(ZWAY_DIR)/mqtt_zway.o $(ZWAY_DIR)/HTTPClient.o $(ZWAY_DIR)/Helper.o $(ZWAY_DIR)/localtime_r.o $(COMMON_O)
+	${CXX} $^ ${LDFLAGS} -o $@
+
+$(ZWAY_DIR)/main.o: $(ZWAY_DIR)/main.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/Razberry.o: $(ZWAY_DIR)/Razberry.cpp 
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/ZWaveBase.o: $(ZWAY_DIR)/ZWaveBase.cpp 
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/mqtt_zway.o: $(ZWAY_DIR)/mqtt_zway.cpp 
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/HTTPClient.o: $(ZWAY_DIR)/HTTPClient.cpp 
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/Helper.o: $(ZWAY_DIR)/Helper.cpp 
+	${CXX} -c $< -o $@ ${CFLAGS}
+$(ZWAY_DIR)/localtime_r.o: $(ZWAY_DIR)/localtime_r.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 test_need_fix: $(TEST_DIR)/$(TEST_BIN)
