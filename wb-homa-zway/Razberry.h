@@ -5,7 +5,6 @@
 #include "ZWaveBase.h"
 #include <iostream>
 #include "common/mqtt_wrapper.h"
-#include "Helper.h"
 
 namespace Json
 {

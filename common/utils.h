@@ -2,12 +2,15 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <time.h>
 
 using namespace std;
 
 
 
 
+time_t mytime(time_t * _Time);
+bool isInt(const std::string &s);
 bool StringHasSuffix(const std::string &str, const std::string &suffix);
 bool StringStartsWith(const string& str, const string& prefix);
 std::vector<std::string> StringSplit(const std::string &s, char delim);

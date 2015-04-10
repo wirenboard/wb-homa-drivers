@@ -49,5 +49,11 @@ CURLcode GetHttpUrl(const std::string& url, std::ostream& os, long timeout)
 	return code;
 }
 
-
-
+bool GetHTTPUrl(const std::string& url, std::string& result)
+{
+    bool bret;
+    std::ostringstream output;
+    bret = (GetHttpUrl(url, output, 10) == CURLE_OK);
+    result = output.str();
+    return bret;
+}

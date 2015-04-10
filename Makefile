@@ -42,8 +42,8 @@ TEST_BIN=wb-homa-test
 LOGGER=mqtt-logger
 LOGGER_BIN=mqtt-logger
 
-COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
-COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
+COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h $(COMMON_DIR)/http_helper.h
+COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o $(COMMON_DIR)/http_helper.o
 
 .PHONY: all clean test_need_fix
 
@@ -53,6 +53,9 @@ $(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(COMMON_DIR)/mqtt_wrapper.o : $(COMMON_DIR)/mqtt_wrapper.cpp $(COMMON_H)
+	${CXX} -c $< -o $@ ${CFLAGS}
+
+$(COMMON_DIR)/http_helper.o : $(COMMON_DIR)/http_helper.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 
@@ -123,13 +126,10 @@ $(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
-NINJABRIDGE_H=$(NINJABRIDGE_DIR)/http_helper.h $(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
+NINJABRIDGE_H=$(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
 NINJABRIDGE_LDFLAGS= -lcurl
 
 $(NINJABRIDGE_DIR)/main.o : $(NINJABRIDGE_DIR)/main.cpp $(COMMON_H) $(NINJABRIDGE_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-$(NINJABRIDGE_DIR)/http_helper.o : $(NINJABRIDGE_DIR)/http_helper.cpp $(COMMON_H) $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(NINJABRIDGE_DIR)/cloud_connection.o : $(NINJABRIDGE_DIR)/cloud_connection.cpp $(COMMON_H) $(NINJABRIDGE_H)
@@ -139,7 +139,7 @@ $(NINJABRIDGE_DIR)/local_connection.o : $(NINJABRIDGE_DIR)/local_connection.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 
-$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o  $(NINJABRIDGE_DIR)/http_helper.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o $(COMMON_O)
+$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} ${NINJABRIDGE_LDFLAGS} -o $@
 
 $(TEST_DIR)/testlog.o: $(TEST_DIR)/testlog.cpp
@@ -168,7 +168,7 @@ $(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
 $(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 #ZWAY 
-$(ZWAY_DIR)/$(ZWAY_BIN): $(ZWAY_DIR)/main.o $(ZWAY_DIR)/Razberry.o $(ZWAY_DIR)/ZWaveBase.o $(ZWAY_DIR)/mqtt_zway.o $(ZWAY_DIR)/HTTPClient.o $(ZWAY_DIR)/Helper.o $(ZWAY_DIR)/localtime_r.o $(COMMON_O)
+$(ZWAY_DIR)/$(ZWAY_BIN): $(ZWAY_DIR)/main.o $(ZWAY_DIR)/Razberry.o $(ZWAY_DIR)/ZWaveBase.o $(ZWAY_DIR)/mqtt_zway.o $(COMMON_O)
 	${CXX} $^ ${LDFLAGS} -o $@
 
 $(ZWAY_DIR)/main.o: $(ZWAY_DIR)/main.cpp $(COMMON_H)
@@ -178,12 +178,6 @@ $(ZWAY_DIR)/Razberry.o: $(ZWAY_DIR)/Razberry.cpp
 $(ZWAY_DIR)/ZWaveBase.o: $(ZWAY_DIR)/ZWaveBase.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 $(ZWAY_DIR)/mqtt_zway.o: $(ZWAY_DIR)/mqtt_zway.cpp 
-	${CXX} -c $< -o $@ ${CFLAGS}
-$(ZWAY_DIR)/HTTPClient.o: $(ZWAY_DIR)/HTTPClient.cpp 
-	${CXX} -c $< -o $@ ${CFLAGS}
-$(ZWAY_DIR)/Helper.o: $(ZWAY_DIR)/Helper.cpp 
-	${CXX} -c $< -o $@ ${CFLAGS}
-$(ZWAY_DIR)/localtime_r.o: $(ZWAY_DIR)/localtime_r.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 test_need_fix: $(TEST_DIR)/$(TEST_BIN)
@@ -201,6 +195,7 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
+	-rm -f $(ZWAY_DIR)/*.o $(ZWAY_DIR)/$(ZWAY_BIN)
 
 
 

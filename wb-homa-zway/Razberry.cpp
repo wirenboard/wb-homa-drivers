@@ -5,10 +5,9 @@
 #include <vector>
 #include <ctype.h>
 
-#include "HTTPClient.h"
-
+#include "common/utils.h"
+#include "common/http_helper.h"
 #include "jsoncpp/json/json.h"
-#include "localtime_r.h"
 
 #pragma warning(disable: 4996)
 
@@ -92,7 +91,7 @@ bool CRazberry::GetInitialDevices()
 	std::string szURL=GetControllerURL();
 
 	bool bret;
-	bret=HTTPClient::GET(szURL,sResult);
+	bret= GetHTTPUrl(szURL,sResult);
 	if (!bret)
 	{
 		cerr << "Razberry: Error getting data!";
@@ -142,7 +141,7 @@ bool CRazberry::GetUpdates()
 #ifndef	DEBUG_ZWAVE_INT
 	std::string szURL=GetControllerURL();
 	bool bret;
-	bret=HTTPClient::GET(szURL,sResult);
+	bret=GetHTTPUrl(szURL,sResult);
 	if (!bret)
 	{
 		cerr << "Razberry: Error getting update data!";
@@ -180,7 +179,7 @@ bool CRazberry::GetUpdates()
 		else
 		{
 			std::vector<std::string> results;
-			StringSplit(kName,".",results);
+			results = StringSplit(kName,".");
 
 			if (results.size()>1)
 			{
@@ -195,6 +194,7 @@ bool CRazberry::GetUpdates()
 
 void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
 {
+    cout << "insert control \n";
     vector<TPublishPair> output_vector;
     string control_id;
     string value = "";
@@ -219,13 +219,16 @@ void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
                     output_vector.push_back(make_pair("type", "multiswitch"));
                     to_subscribe = true;
                 }
+                if (device.commandClassID == 43) {
+                    output_vector.push_back(make_pair("type", "generic_value"));
+                }
                 break;
             }
         case ZDTYPE_SENSOR_SETPOINT:
             {
                 output_vector.push_back(make_pair("type", "temperature"));
                 char buff[10];
-                sprintf(buff, "$%.2f",device.floatValue);
+                sprintf(buff, "%.2f",device.floatValue);
                 value = buff;
                 control_id = ctrl_id;
                 to_subscribe = true;
@@ -271,13 +274,13 @@ void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
                     output_vector.push_back(make_pair("type", "generic_value"));
                 control_id = to_string(device.instanceID) + "_" + to_string(device.commandClassID) + "_" + to_string(device.scaleID);
                 char buff[10];
-                sprintf(buff, "$%.2f",device.floatValue);
+                sprintf(buff, "%.2f",device.floatValue);
                 if (value == "")
                     value = buff;
                 break;
             }
     }
-    cout << "control is " << control_id << endl;
+    cout << "control is " << control_id << " dev_id is " << device.DeviceId <<  endl;
     device.ControlId = control_id;        
     InsertDevice(device);
     Owner->PublishControlMeta(device.DeviceId, control_id, output_vector);
@@ -307,7 +310,6 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 		_device.nodeID=nodeID;
         string device_name = MqttEscape(node["data"]["givenName"]["value"].asString());
         string dev_id = to_string(nodeID) + "_" + device_name; 
-        cout << "Here i am " << device_name << " nodID is " << nodeID << endl;
         _device.DeviceId = dev_id;
         Owner->PublishDevice(dev_id, device_name); // publish device /meta/name
 
@@ -394,7 +396,7 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 							_device.indexID=0;
 							std::string vstring=(*itt2)["level"]["value"].asString();
 							if (vstring=="true")
-								_device.intvalue=1;//FIXME  find out why there was 255
+								_device.intvalue=255;
 							else if (vstring=="false")
 								_device.intvalue=0;
 							else
@@ -622,7 +624,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		{
 			int batValue=obj["value"].asInt();
 			std::vector<std::string> results;
-			StringSplit(path,".",results);
+			results = StringSplit(path,".");
 			int devID=atoi(results[1].c_str());
 			UpdateDeviceBatteryStatus(devID,batValue);
             string control_id = to_string(devID) + "_128";
@@ -635,7 +637,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//COMMAND_CLASS_SENSOR_MULTILEVEL
 		//Possible fix for Everspring ST814. maybe others, my multi sensor is coming soon to find out!
 		std::vector<std::string> results;
-		StringSplit(path,".",results);
+		results = StringSplit(path,".");
 		//Find device by data id
 		if (results.size()==8)
 		{
@@ -653,7 +655,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//COMMAND_CLASS_SENSOR_BINARY
 		//Possible fix for door sensors reporting on another instance number
 		std::vector<std::string> results;
-		StringSplit(path,".",results);
+		results = StringSplit(path,".");
 		//Find device by data id
 		if (results.size()==8)
 		{
@@ -670,7 +672,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 	{
 		//COMMAND_CLASS_THERMOSTAT_MODE
 		std::vector<std::string> results;
-		StringSplit(path,".",results);
+		results = StringSplit(path,".");
 		//Find device by data id
 		if (results.size()==8)
 		{
@@ -684,11 +686,11 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 			}
 		}
 	}
-	/*else if (path.find("commandClasses.43.data.currentScene")!=std::string::npos)
+	else if (path.find("commandClasses.43.data.currentScene")!=std::string::npos)
 	{
 		//COMMAND_CLASS_SCENE_ACTIVATION
 		std::vector<std::string> results;
-		StringSplit(path,".",results);
+		results = StringSplit(path,".");
 		//Find device by data id
 		if (results.size()==8)
 		{
@@ -725,14 +727,13 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 						_device.commandClassID=cmdID;
 						_device.devType= ZDTYPE_SWITCH_NORMAL;
 						_device.intvalue=255;
-                        string control_id = to_string(devID) + "_" + to_string(
-						InsertControl(_device);
+						InsertControl(_device, "");
 						pDevice=FindDevice(devID,instanceID,indexID, cmdID, ZDTYPE_SWITCH_NORMAL);
 					}
 				}
 			}
 		}
-	}*/
+	}
 	if (pDevice==NULL)
 	{
 		std::map<std::string,_tZWaveDevice>::iterator itt;
@@ -846,6 +847,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 	cerr << "Razberry: Update device: " <<pDevice->string_id.c_str() << endl;
 #endif
     string value = "";
+    long int update_time = -1;
 	switch (pDevice->devType)
 	{
 	case ZDTYPE_SWITCH_NORMAL:
@@ -901,7 +903,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//meters
 		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -910,7 +912,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//Voltage
 		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -919,7 +921,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//Ampere
 		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -928,7 +930,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//Ampere
 		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -936,7 +938,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
         {
 		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -945,7 +947,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//meters
 		pDevice->floatValue=obj["val"]["value"].asFloat();
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -961,7 +963,7 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 		//switch
 		pDevice->floatValue=obj["val"]["value"].asFloat();
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
@@ -977,12 +979,22 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
 			pDevice->floatValue=obj["value"].asFloat();
 		}
         char buff[10];
-        sprintf(buff, "$%.2f",pDevice->floatValue);
+        sprintf(buff, "%.2f",pDevice->floatValue);
         value = buff;
 		break;
         }
 	}
-    Owner->PublishControl(pDevice->DeviceId, pDevice->ControlId, value);
+    bool to_publish = true;
+    if (obj.isMember("val")) {
+        long int update_time = obj["val"]["updateTime"].asInt();
+        if (update_time > pDevice->UpdateTime) {
+        } else {
+            to_publish = false;
+        }
+        pDevice->UpdateTime = update_time;
+    }
+    if (to_publish) 
+        Owner->PublishControl(pDevice->DeviceId, pDevice->ControlId, value);
 	pDevice->lastreceived=atime;
 	pDevice->sequence_number+=1;
 	if (pDevice->sequence_number==0)
@@ -1056,9 +1068,7 @@ void CRazberry::SwitchOn(const _tZWaveDevice& device, const string& value)
 	int iValue=atoi(value.c_str());
 	if ((device.commandClassID == 64)&&(iValue != 0))
 		iValue=1;
-    cout << "device is " << device.nodeID << endl;
 	sstr << "devices[" << device.nodeID << "].instances[" << device.instanceID << "].commandClasses[" << device.commandClassID << "].Set(" << iValue << ")";
-    cout << "runcmd is " << sstr.str() << endl;
 	RunCMD(sstr.str());
 }
 
@@ -1075,7 +1085,7 @@ void CRazberry::RunCMD(const std::string &cmd)
 	std::string szURL=GetRunURL(cmd);
 	bool bret;
 	std::string sResult;
-	bret=HTTPClient::GET(szURL,sResult);
+	bret=GetHTTPUrl(szURL,sResult);
 	if (!bret)
 	{
 		cerr << "Razberry: Error sending command to controller!";

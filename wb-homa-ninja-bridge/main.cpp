@@ -12,7 +12,7 @@
 
 #include "common/utils.h"
 #include "common/mqtt_wrapper.h"
-#include "http_helper.h"
+#include "common/http_helper.h"
 #include "cloud_connection.h"
 #include "local_connection.h"
 

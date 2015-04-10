@@ -57,6 +57,7 @@ class ZWaveBase
         std::string DeviceId;
 		std::string string_id;
         std::string ControlId;
+        long int UpdateTime = 0;
 
 		//label
 		std::string label;

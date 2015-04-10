@@ -34,7 +34,7 @@ void TMQTTZWay::OnMessage(const struct mosquitto_message *message)
         string dev_id = tokens[2];
         razberry.SendCommand(dev_id, control_id, payload);
         topic = "/" + tokens[1] +"/" + tokens[2] + "/" + tokens[3] + "/" + tokens[4];
-        Publish(NULL, topic, payload, 0 , true);
+        //Publish(NULL, topic, payload, 0 , true);
         cout << " topic is " << topic << endl;
         }
 }
