@@ -7,7 +7,6 @@
 
 #include "common/utils.h"
 #include "common/http_helper.h"
-#include "jsoncpp/json/json.h"
 
 #pragma warning(disable: 4996)
 
@@ -198,6 +197,7 @@ void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
     vector<TPublishPair> output_vector;
     string control_id;
     string value = "";
+    int range = 0;
     bool to_subscribe = false;
     switch (device.devType)
     {
@@ -216,7 +216,8 @@ void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
                     control_id = ctrl_id;
                 }
                 if (device.commandClassID == 64) { 
-                    output_vector.push_back(make_pair("type", "multiswitch"));
+                    output_vector.push_back(make_pair("type", "range"));
+                    range = 32;
                     to_subscribe = true;
                 }
                 if (device.commandClassID == 43) {
@@ -279,14 +280,21 @@ void CRazberry::InsertControl(_tZWaveDevice device, const string& ctrl_id)
                     value = buff;
                 break;
             }
+        default :
+            {
+                cerr << "Unknown device type in device " << GenerateDeviceStringID(&device) << endl;
+                return ;
+            }
     }
     cout << "control is " << control_id << " dev_id is " << device.DeviceId <<  endl;
     device.ControlId = control_id;        
     InsertDevice(device);
     Owner->PublishControlMeta(device.DeviceId, control_id, output_vector);
+    if (range > 0 ) {
+        Owner->PublishControl(device.DeviceId, control_id + "/meta/max", to_string(range));
+    }
     Owner->PublishControl(device.DeviceId, control_id, value);
     if (to_subscribe) {
-
         Owner->SubscribControl(device.DeviceId, control_id);
     }
          
@@ -558,10 +566,10 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 			{
 				//COMMAND_CLASS_THERMOSTAT_MODE
 				int iValue=instance["commandClasses"]["64"]["data"]["mode"]["value"].asInt();
-				/*if (iValue==0)
+				if (iValue==0)
 					_device.intvalue=0;
 				else
-					_device.intvalue=255;*/
+					_device.intvalue=255;
 				_device.commandClassID=64;
 				_device.devType = ZDTYPE_SWITCH_NORMAL;
 				InsertControl(_device, "");
@@ -850,139 +858,144 @@ void CRazberry::UpdateDevice(const std::string &path, const Json::Value &obj)
     long int update_time = -1;
 	switch (pDevice->devType)
 	{
-	case ZDTYPE_SWITCH_NORMAL:
-	case ZDTYPE_SWITCH_DIMMER:
-		{
-			//switch
-			int intValue = 0;
-			if (pDevice->commandClassID==64) //Thermostat Mode
-			{
-				int iValue=obj["value"].asInt();
-				if (iValue==0)
-					intValue = 0;
-				else
-					intValue = 255;
-			}
-			else if (pDevice->commandClassID==43) //Switch Scene
-			{
-				intValue = 255;
-			}
-			else
-			{
-				std::string vstring="";
-				if (obj["value"].empty()==false)
-					vstring=obj["value"].asString();
-				else if (obj["level"].empty()==false)
-				{
-					if (obj["level"]["value"].empty()==false)
-						vstring=obj["level"]["value"].asString();
-				}
+        case ZDTYPE_SWITCH_NORMAL:
+        case ZDTYPE_SWITCH_DIMMER:
+            {
+                //switch
+                int intValue = 0;
+                if (pDevice->commandClassID==64) //Thermostat Mode
+                {
+                    int iValue=obj["value"].asInt();
+                    if (iValue==0)
+                        intValue = 0;
+                    else
+                        intValue = 255;
+                }
+                else if (pDevice->commandClassID==43) //Switch Scene
+                {
+                    intValue = 255;
+                }
+                else
+                {
+                    std::string vstring="";
+                    if (obj["value"].empty()==false)
+                        vstring=obj["value"].asString();
+                    else if (obj["level"].empty()==false)
+                    {
+                        if (obj["level"]["value"].empty()==false)
+                            vstring=obj["level"]["value"].asString();
+                    }
 
-				if (vstring=="true")
-					intValue = 255;
-				else if (vstring=="false")
-					intValue = 0;
-				else
-					intValue = atoi(vstring.c_str());
-			}
-			if (pDevice->intvalue == intValue)
-			{
-				//Don't send same value twice
-				pDevice->lastreceived = atime;
-				pDevice->sequence_number += 1;
-				if (pDevice->sequence_number == 0)
-					pDevice->sequence_number = 1;
-				return;
-			}
-			pDevice->intvalue = intValue;
-            value = to_string(intValue);
-		}
-		break;
-	case ZDTYPE_SENSOR_POWER:
-        {
-		//meters
-		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_VOLTAGE:
-        {
-		//Voltage
-		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_AMPERE:
-        {
-		//Ampere
-		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_PERCENTAGE:
-        {
-		//Ampere
-		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_POWERENERGYMETER:
-        {
-		pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_TEMPERATURE:
-        {
-		//meters
-		pDevice->floatValue=obj["val"]["value"].asFloat();
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_HUMIDITY:
-        {
-		//switch
-		pDevice->intvalue=obj["val"]["value"].asInt();
-        value = to_string(pDevice->intvalue);
-		break;
-        }
-	case ZDTYPE_SENSOR_LIGHT:
-        {
-		//switch
-		pDevice->floatValue=obj["val"]["value"].asFloat();
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
-	case ZDTYPE_SENSOR_SETPOINT:
-        {
-		//meters
-		if (obj["val"]["value"].empty()==false)
-		{
-			pDevice->floatValue=obj["val"]["value"].asFloat();
-		}
-		else if (obj["value"].empty()==false)
-		{
-			pDevice->floatValue=obj["value"].asFloat();
-		}
-        char buff[10];
-        sprintf(buff, "%.2f",pDevice->floatValue);
-        value = buff;
-		break;
-        }
+                    if (vstring=="true")
+                        intValue = 255;
+                    else if (vstring=="false")
+                        intValue = 0;
+                    else
+                        intValue = atoi(vstring.c_str());
+                }
+                if (pDevice->intvalue == intValue)
+                {
+                    //Don't send same value twice
+                    pDevice->lastreceived = atime;
+                    pDevice->sequence_number += 1;
+                    if (pDevice->sequence_number == 0)
+                        pDevice->sequence_number = 1;
+                    return;
+                }
+                pDevice->intvalue = intValue;
+                value = to_string(intValue);
+            }
+            break;
+        case ZDTYPE_SENSOR_POWER:
+            {
+            //meters
+            pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_VOLTAGE:
+            {
+            //Voltage
+            pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_AMPERE:
+            {
+            //Ampere
+            pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_PERCENTAGE:
+            {
+            //Ampere
+            pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_POWERENERGYMETER:
+            {
+            pDevice->floatValue=obj["val"]["value"].asFloat()*pDevice->scaleMultiply;
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_TEMPERATURE:
+            {
+            //meters
+            pDevice->floatValue=obj["val"]["value"].asFloat();
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_HUMIDITY:
+            {
+            //switch
+            pDevice->intvalue=obj["val"]["value"].asInt();
+            value = to_string(pDevice->intvalue);
+            break;
+            }
+        case ZDTYPE_SENSOR_LIGHT:
+            {
+            //switch
+            pDevice->floatValue=obj["val"]["value"].asFloat();
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        case ZDTYPE_SENSOR_SETPOINT:
+            {
+            //meters
+            if (obj["val"]["value"].empty()==false)
+            {
+                pDevice->floatValue=obj["val"]["value"].asFloat();
+            }
+            else if (obj["value"].empty()==false)
+            {
+                pDevice->floatValue=obj["value"].asFloat();
+            }
+            char buff[10];
+            sprintf(buff, "%.2f",pDevice->floatValue);
+            value = buff;
+            break;
+            }
+        default :
+            {
+                cerr << "Unknown device type in device " << GenerateDeviceStringID(pDevice) << endl;
+                return ;
+            }
 	}
     bool to_publish = true;
     if (obj.isMember("val")) {
@@ -1031,6 +1044,11 @@ void CRazberry::SendCommand(const string& dev_id, const string& control_id, cons
             {
                 SetThermostatSetPoint(*device, payload);
                 break;
+            }
+        default :
+            {
+                cerr << "Unknown device type in device " << GenerateDeviceStringID(device) << endl;
+                return ;
             }
     }
 }

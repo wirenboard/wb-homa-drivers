@@ -89,13 +89,8 @@ public:
 
 	virtual bool GetInitialDevices()=0;
 	virtual bool GetUpdates()=0;
-	bool StartHardware();
-	bool StopHardware();
-	void WriteToHardware(const char *pdata, const unsigned char length);
 private:
 	void Do_Work();
-	void SendDevice2Domoticz(const _tZWaveDevice *pDevice);
-	void SendSwitchIfNotExists(const _tZWaveDevice *pDevice);
 	
 	_tZWaveDevice* FindDevice(const int nodeID, const int instanceID, const int indexID, const _eZWaveDeviceType devType);
 	_tZWaveDevice* FindDevice(const int nodeID, const int instanceID, const int indexID, const int CommandClassID, const _eZWaveDeviceType devType);
@@ -111,7 +106,6 @@ private:
 	time_t m_updateTime;
 	bool m_bInitState;
 	std::map<std::string,_tZWaveDevice> m_devices;
-        std::shared_ptr<std::thread> m_thread;
 	bool m_stoprequested;
 };
 

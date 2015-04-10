@@ -5,6 +5,7 @@
 #include "ZWaveBase.h"
 #include <iostream>
 #include "common/mqtt_wrapper.h"
+#include "jsoncpp/json/json.h"
 
 namespace Json
 {
@@ -17,7 +18,7 @@ struct TZWayConfig
 {
     int Id = 0;
     int Port = 8083;
-    string Address = "localhost";
+    string Host = "localhost";
     string Username = "";
     string Password = "";
     string DeviceName = "";
