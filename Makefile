@@ -1,16 +1,16 @@
 CXX=g++
 CXX_PATH := $(shell which g++-4.7)
 
-ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
-	CC=gcc
-else
-	CC=$(DEB_HOST_GNU_TYPE)-gcc
-endif
+CC=gcc
+CC_PATH := $(shell which gcc-4.7)
 
 ifneq ($(CXX_PATH),)
 	CXX=g++-4.7
 endif
 
+ifneq ($(CC_PATH),)
+	CC=gcc-4.7
+endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
 CFLAGS=-Wall -std=c++0x -Os -I.
@@ -181,6 +181,7 @@ clean :
 	-rm -f $(ADC_DIR)/*.o $(ADC_DIR)/$(ADC_BIN)
 	-rm -f $(NINJABRIDGE_DIR)/*.o $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN)
 	-rm -f $(TEST_DIR)/*.o $(TEST_DIR)/$(TEST_BIN)
+	-rm -f $(LOGGER)/*.o $(LOGGER)/$(LOGGER_BIN)
 
 
 
