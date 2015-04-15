@@ -75,7 +75,7 @@
 
                         },
                         {
-                            "id" : "li_pol",
+                            "id" : "BAT",
                             "multiplier" : 0.903,
                             "mux_channel_number" : 2
 
