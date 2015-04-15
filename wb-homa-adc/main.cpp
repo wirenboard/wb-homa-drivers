@@ -54,7 +54,7 @@ namespace {
         for (unsigned int index = 0; index < array.size(); index++){
             const auto& item = array[index];
             TChannel new_channel;// create new intrance to add in vector<TChannel> Channels
-            
+
             if (item.isMember("averaging_window")) {
                 new_channel.AveragingWindow = item["averaging_window"].asInt();
                 if (new_channel.AveragingWindow < 1)
@@ -70,19 +70,19 @@ namespace {
                 }
                 new_channel.Mux.push_back(buf_channel);
             }
-                    
+
             if (item.isMember("min_switch_interval_ms"))
                 new_channel.MinSwitchIntervalMs = item["min_switch_interval_ms"].asInt();
             if (item.isMember("channel_number"))
                 new_channel.ChannelNumber = item["channel_number"].asInt();
 
-            if ( item.isMember("channels")){ 
+            if ( item.isMember("channels")){
                 const auto& channel_array = item["channels"];
                 if (channel_array.size() != 8) {
-                    cerr << "number of mux channels is not equal to  8 " << endl;
-                    exit(-1);
+                    cerr << "Warning: number of mux channels is not equal to  8 " << endl;
                 }
-            if (item.isMember("gpios")){
+
+                if (item.isMember("gpios")){
                         const auto& gpios_array = item["gpios"];
                         if (gpios_array.size() != 3) {
                             cerr << "number of gpios isn't equal to  3" << endl;
@@ -92,7 +92,7 @@ namespace {
                             const auto& gpio_item = gpios_array[i];
                             new_channel.Gpios.push_back(gpio_item.asInt());
                         }
-                    }
+                }
 
                 for (unsigned int channel_number = 0; channel_number < channel_array.size(); channel_number++){
                     const auto& channel_iterator = channel_array[channel_number];
@@ -103,7 +103,7 @@ namespace {
                     if (channel_iterator.isMember("mux_channel_number")) {
                         element.MuxChannelNumber = channel_iterator["mux_channel_number"].asInt();
                     }
-                    if (channel_iterator.isMember("id")) 
+                    if (channel_iterator.isMember("id"))
                         element.Id = channel_iterator["id"].asString();
                     if (channel_iterator.isMember("multiplier"))
                         element.Multiplier = channel_iterator["multiplier"].asFloat();
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
             cout << "AVERAGE IS " << i.AveragingWindow << endl;
             cout << "MINSWITCHINTERVAL IS " << i.MinSwitchIntervalMs << endl;
             cout << "Type IS " << i.Type << endl;
-            if (i.Type == "mux" ) 
+            if (i.Type == "mux" )
                 cout << "MUX " << endl;
             for (auto& j : i.Mux){
                 cout << "ID IS " << j.Id << endl;
