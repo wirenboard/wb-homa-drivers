@@ -384,13 +384,13 @@ int main(int argc, char *argv[])
     rc= mqtt_handler->loop_start(); 
     if (rc != 0 ) {
         cerr << "couldn't start mosquitto_loop_start ! " << rc << endl;
-    }else {
+    } else {
         epfd = epoll_create(1);// creating epoll for Interrupts
         mqtt_handler->InitInterrupts(epfd);
         steady_clock::time_point start;
         int interval;
         start = steady_clock::now();
-        while(1){
+        while(1) {
             n = epoll_wait(epfd,events,20,500);
             interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
             if (interval >= 500 ) {  //checking is it time to look through all gpios
