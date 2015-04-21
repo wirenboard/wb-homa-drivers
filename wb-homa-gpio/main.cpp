@@ -132,10 +132,13 @@ void TMQTTGpioHandler::OnConnect(int rc)
             //~ cout << "GPIO: " << gpio_desc.Name << endl;
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
             std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
-            Publish(NULL, control_prefix + "/meta/order", to_string(gpio_desc.Order), 0, true);
             vector<TPublishPair> what_to_publish (gpio_handler->MetaType());
-            for (TPublishPair tmp : what_to_publish)
+            int order = gpio_desc.Order * 2;
+            for (TPublishPair tmp : what_to_publish) {
+                Publish(NULL, control_prefix + "/meta/order", to_string(order), 0, true);
                 Publish(NULL, control_prefix + tmp.first + "/meta/type", tmp.second, 0, true);
+                order++;
+            }
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
