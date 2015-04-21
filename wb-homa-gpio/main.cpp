@@ -3,6 +3,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 #include <getopt.h>
 
@@ -37,7 +38,9 @@ struct TGpioDesc
     string InterruptEdge = "";
     string Type = "";
     int Multiplier;
+    int Order;
 };
+
 
 class THandlerConfig
 {
@@ -49,9 +52,12 @@ class THandlerConfig
 
 };
 
+typedef pair<TGpioDesc, std::shared_ptr<TSysfsGpio>> TChannelDesc;
+
+bool FuncComp( const TChannelDesc& a, const TChannelDesc& b)
+    { return (a.first.Order < b.first.Order); }
 class TMQTTGpioHandler : public TMQTTWrapper
 {
-    typedef pair<TGpioDesc, std::shared_ptr<TSysfsGpio>> TChannelDesc;
 
 	public:
         TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
@@ -104,6 +110,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
                     cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
             }
     }
+    sort(Channels.begin(), Channels.end(), FuncComp);
 	Connect();
 }
 
@@ -125,9 +132,10 @@ void TMQTTGpioHandler::OnConnect(int rc)
             //~ cout << "GPIO: " << gpio_desc.Name << endl;
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
             std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
+            Publish(NULL, control_prefix + "/meta/order", to_string(gpio_desc.Order), 0, true);
             vector<TPublishPair> what_to_publish (gpio_handler->MetaType());
-            for ( TPublishPair tmp : what_to_publish)
-                Publish(NULL, control_prefix +tmp.first + "/meta/type", tmp.second, 0, true);
+            for (TPublishPair tmp : what_to_publish)
+                Publish(NULL, control_prefix + tmp.first + "/meta/type", tmp.second, 0, true);
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
@@ -356,7 +364,7 @@ int main(int argc, char *argv[])
                 gpio_desc.Multiplier = item["multiplier"].asInt();
             if (item.isMember("edge"))
                 gpio_desc.InterruptEdge = item["edge"].asString();
-
+            gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
         }

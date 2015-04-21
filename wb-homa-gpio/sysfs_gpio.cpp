@@ -151,7 +151,7 @@ int TSysfsGpio::SetDirection(bool input)
 int TSysfsGpio::SetValue(int value)
 {
     std::lock_guard<std::mutex> lock(G_mutex);
-    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << "pid is " << getpid() << "filedis is " << FileDes << endl;
+    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << " pid is " << getpid() << " filedis is " << FileDes << endl;
     char buf= '0';
     string setval_str = "/sys/class/gpio/gpio";
     setval_str +=  to_string(Gpio) + "/value";
