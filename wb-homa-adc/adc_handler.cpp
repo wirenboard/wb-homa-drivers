@@ -1,5 +1,7 @@
 #include <iostream>
 #include <math.h>
+#include <string.h>
+#include <stdio.h>
 #include "adc_handler.h"
 
 using namespace std;
@@ -91,7 +93,20 @@ void TMQTTAdcHandler::UpdateChannelValues()
             if (value == round(value)) {
                     sprintf(buff, "%.0f", value);
             } else {
-                sprintf(buff, "%.3f", value);
+                sprintf(buff, "%.5f", value);
+                int decimal_places = -1;
+                bool stop = false;
+                for(int i = 0; (i < strlen(buff)) && (!stop); i++) {
+                    if (buff[i] == '.' ) 
+                        decimal_places = 0;
+                    if (decimal_places > -1) {
+                        if (decimal_places > channel->DecimalPlaces) {
+                            buff[i] = '\0';
+                            stop = true;
+                        }
+                        decimal_places++;
+                    }
+                }
             }
             output = buff;
         }

@@ -100,6 +100,9 @@ namespace {
                     if (channel_iterator.isMember("readings_number")) {
                         element.ReadingsNumber = channel_iterator["readings_number"].asInt();
                     }
+                    if (channel_iterator.isMember("decimal_places")) {
+                        element.DecimalPlaces = channel_iterator["decimal_places"].asInt();
+                    }
                     if (channel_iterator.isMember("mux_channel_number")) {
                         element.MuxChannelNumber = channel_iterator["mux_channel_number"].asInt();
                     }

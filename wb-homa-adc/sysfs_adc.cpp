@@ -133,9 +133,9 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
     std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
     else
-        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].Multiplier));
+        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].Multiplier));
     return ptr;
 }
 
@@ -254,8 +254,9 @@ int TSysfsAdcPhys::GetRawValue(int index)
 }
 
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number)
-    : d(new TSysfsAdcChannelPrivate())
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places)
+    : DecimalPlaces(decimal_places)
+    , d(new TSysfsAdcChannelPrivate())
 {
     d->Owner.reset(owner);
     d->Index = index;
@@ -265,8 +266,8 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     d->Buffer = new int[d->ChannelAveragingWindow](); // () initializes with zeros
 }
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, float multiplier)
-    :TSysfsAdcChannel(owner, index, name, readings_number)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, float multiplier)
+    :TSysfsAdcChannel(owner, index, name, readings_number, decimal_places)
 {
     Multiplier = multiplier;
 }
@@ -312,8 +313,8 @@ std::string TSysfsAdcChannel::GetType(){
     return "voltage";
 }
 
-TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name,int readings_number, int current, int resistance1, int resistance2)
-    : TSysfsAdcChannel(owner, index, name, readings_number)
+TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int current, int resistance1, int resistance2)
+    : TSysfsAdcChannel(owner, index, name, readings_number, decimal_places)
 {
     Current = current;
     Resistance1 = resistance1;

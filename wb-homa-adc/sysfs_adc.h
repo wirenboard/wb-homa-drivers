@@ -19,6 +19,7 @@ struct TMUXChannel{// config for mux channel
     int Resistance2 = 1000;// resistance in Ohm
     int MuxChannelNumber = 0;// ADC channel number
     int ReadingsNumber = 10; // number of reading value during one selection
+    int DecimalPlaces = 3;
 };
 struct TChannel{
     int AveragingWindow = 10;
@@ -110,8 +111,9 @@ class TSysfsAdcChannel {
         virtual float GetValue(); 
         const std::string& GetName() const;
         virtual std::string GetType();
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, float multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, float multiplier);
+        int DecimalPlaces;
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
@@ -122,7 +124,7 @@ class TSysfsAdcChannel {
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
-         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int current, int resistance1, int resistance2);
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int current, int resistance1, int resistance2);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();
