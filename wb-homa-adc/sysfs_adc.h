@@ -7,6 +7,7 @@
 #define OHM_METER "ohm_meter"
 #define DELAY 1
 #define ADC_OLD_SCALE 0.451660156 // default scale for file "in_voltageNUMBER_scale"
+#define VALUE_MAXIMUM 4095
 using namespace std;
 
 struct TMUXChannel{// config for mux channel
@@ -51,8 +52,9 @@ public:
     std::shared_ptr<TSysfsAdcChannel> GetChannel(int i);
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
+    double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
 protected:
-    virtual int GetValue(int index) = 0;
+    virtual int GetRawValue(int index) = 0;
     int AveragingWindow;
     bool Debug;
     bool Initialized;
@@ -61,14 +63,13 @@ protected:
     friend class TSysfsAdcChannel;
     TChannel ChannelConfig;
     int NumberOfChannels;
-    double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
 };
 
 class TSysfsAdcMux : public TSysfsAdc{// class, that handles mux channels
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
     private:
-        int GetValue(int index);
+        int GetRawValue(int index);
         void InitMux();
         void InitGPIO(int gpio);
         void SetGPIOValue(int gpio, int value);
@@ -87,7 +88,7 @@ class TSysfsAdcPhys: public TSysfsAdc{
     public :
         TSysfsAdcPhys(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
     private : 
-    int GetValue(int index);
+    int GetRawValue(int index);
 };
  
 struct TSysfsAdcChannelPrivate {
@@ -105,7 +106,7 @@ struct TSysfsAdcChannelPrivate {
 }; 
 class TSysfsAdcChannel { 
     public: 
-        int GetRawValue();
+        int GetAverageValue();
         virtual float GetValue(); 
         const std::string& GetName() const;
         virtual std::string GetType();

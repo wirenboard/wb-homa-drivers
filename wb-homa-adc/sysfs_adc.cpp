@@ -76,6 +76,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     : SysfsDir(sysfs_dir),
     ChannelConfig(channel_config)
 {
+    ScaleFactor = 1;
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
@@ -142,7 +143,7 @@ int TSysfsAdc::ReadValue(){
     int val;
     AdcValStream.seekg(0);
     AdcValStream >> val;
-    val *=ScaleFactor;
+    val *= round(ScaleFactor);
     return val;
 }
 
@@ -158,7 +159,7 @@ TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChan
    }
 
 
-int TSysfsAdcMux::GetValue(int index)
+int TSysfsAdcMux::GetRawValue(int index)
 {
     SetMuxABC(index);
     return ReadValue(); 
@@ -247,7 +248,7 @@ TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TCh
 {
 }
 
-int TSysfsAdcPhys::GetValue(int index)
+int TSysfsAdcPhys::GetRawValue(int index)
 {
    return ReadValue();
 }
@@ -270,18 +271,18 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     Multiplier = multiplier;
 }
 
-int TSysfsAdcChannel::GetRawValue()
+int TSysfsAdcChannel::GetAverageValue()
 {
     if (!d->Ready) {
         for (int i = 0; i < d->ChannelAveragingWindow; ++i) {
-            int v = d->Owner->GetValue(d->Index);
+            int v = d->Owner->GetRawValue(d->Index);
             d->Buffer[i] = v;
             d->Sum += v;
         }
         d->Ready = true;
     } else {
         for (int i = 0; i < d->ReadingsNumber; i++) {
-            int v = d->Owner->GetValue(d->Index);
+            int v = d->Owner->GetRawValue(d->Index);
             d->Sum -= d->Buffer[d->Pos];
             d->Sum += v;
             d->Buffer[d->Pos++] = v;
@@ -299,8 +300,12 @@ const std::string& TSysfsAdcChannel::GetName() const
 
 float TSysfsAdcChannel::GetValue(){
     float result;
-    int value = GetRawValue();
-    result = (float) value * Multiplier / 1000;// set voltage to V from mV
+    int value = GetAverageValue();
+    if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
+        result = (float) value * Multiplier / 1000;// set voltage to V from mV
+    } else {
+        result = std::nan("");
+    }
     return result;
 }
 std::string TSysfsAdcChannel::GetType(){
@@ -320,11 +325,15 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 
 float TSysfsAdcChannelRes::GetValue(){
     SetUpCurrentSource(); 
-    int value = GetRawValue(); 
+    int value = GetAverageValue(); 
     float result;
-    float voltage = 1.85 * value / 4095;
+    if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
+    float voltage = 1.85 * value / VALUE_MAXIMUM;
     result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
     result = round(result);
+    } else {
+        result = std::nan("");
+    }
     SwitchOffCurrentSource();
     return result;
 }

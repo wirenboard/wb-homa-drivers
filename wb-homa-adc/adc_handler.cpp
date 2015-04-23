@@ -83,13 +83,18 @@ void TMQTTAdcHandler::UpdateChannelValues()
         float value = channel->GetValue();
         if (Config.Debug)
             std::cerr << "channel: " << channel->GetName() << " value: " << value << std::endl;
-        char buff[10];
-        if (value == round(value)) {
-                sprintf(buff, "%.0f", value);
+        string output; 
+        if (isnan(value)) {
+            output = "nan";
         } else {
-            sprintf(buff, "%.3f", value);
+            char buff[10];
+            if (value == round(value)) {
+                    sprintf(buff, "%.0f", value);
+            } else {
+                sprintf(buff, "%.3f", value);
+            }
+            output = buff;
         }
-        string output(buff);
         Publish(NULL, GetChannelTopic(*channel), output, 0, true);
     }
 }
