@@ -84,6 +84,39 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     if (AdcValStream < 0) {
         throw TAdcException("error opening sysfs Adc file");
     }
+    string scale_prefix = "/sys/bus/iio/devices/iio:device0/in_voltage" + to_string(ChannelConfig.ChannelNumber) + "_scale";
+    ifstream scale_file(scale_prefix + "_available");
+    if (scale_file.is_open()) {
+        vector<string> scales;
+        char c;
+        string buf = "";
+        while(scale_file.get(c)) {
+            if (c == ' ') {
+                scales.push_back(buf);
+                buf = "";
+            } else {
+                buf += c;
+            }
+        }
+        double max = ADC_OLD_SCALE;
+        int i = 0;
+        int position = 0; 
+        for (const auto &element : scales) {
+            double val = stod(element);
+            if (val > max) {
+                max = val;
+                position = i;
+            }
+            i++;
+        }
+        scale_file.close();
+        ofstream write_scale(scale_prefix);
+        if (!write_scale.is_open()) {
+            throw TAdcException("error opening sysfs Adc scale file");
+        }
+        ScaleFactor = max / ADC_OLD_SCALE;
+        write_scale << scales[position]; 
+    } 
     NumberOfChannels = channel_config.Mux.size();
 }
 
@@ -108,6 +141,7 @@ int TSysfsAdc::ReadValue(){
     int val;
     AdcValStream.seekg(0);
     AdcValStream >> val;
+    val *=ScaleFactor;
     return val;
 }
 
