@@ -8,7 +8,8 @@
                 "averaging_window": 1,
                 "poll_interval" : 0,
                 "channel_number" : 0,
-                "multiplier" : 3.74
+                "multiplier" : 3.74,
+                "decimal_places" : 2
 
         },
         {
@@ -21,36 +22,42 @@
                         {
                             "id" : "A1",
                             "multiplier" : 0.949,
-                            "mux_channel_number" : 3
+                            "mux_channel_number" : 3,
+                            "decimal_places" : 1
 
                         },
                         {
                             "id" : "A2",
                             "multiplier" : 0.949,
-                            "mux_channel_number" : 4
+                            "mux_channel_number" : 4,
+                            "decimal_places" : 1
 
                         },
                         {
                             "id" : "A3",
                             "multiplier" : 0.949,
-                            "mux_channel_number" : 6
+                            "mux_channel_number" : 6,
+                            "decimal_places" : 1
 
                         },
                         {
                             "id" : "A4",
                             "multiplier" : 4.21,
-                            "mux_channel_number" : 0
+                            "mux_channel_number" : 0,
+                            "decimal_places" : 2
                         },
                         {
                             "id" : "A5",
                             "multiplier" : 4.21,
-                            "mux_channel_number" : 1
+                            "mux_channel_number" : 1,
+                            "decimal_places" : 2
 
                         },
                         {
                             "id" : "R1",
                             "multiplier" : 0.426,
-                            "mux_channel_number" : 7
+                            "mux_channel_number" : 7,
+                            "decimal_places" : 2
 
                             // Uncomment to enable resistance measurement on R1
 
@@ -64,7 +71,8 @@
                         {
                             "id" : "R2",
                             "multiplier" : 0.426,
-                            "mux_channel_number" : 5
+                            "mux_channel_number" : 5,
+                            "decimal_places" : 2
 
                             // Uncomment to enable resistance measurement on R2
 
@@ -77,8 +85,8 @@
                         {
                             "id" : "BAT",
                             "multiplier" : 0.903,
-                            "mux_channel_number" : 2
-
+                            "mux_channel_number" : 2,
+                            "decimal_places" : 2
                         }
                 ]
         }

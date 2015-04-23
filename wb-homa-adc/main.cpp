@@ -68,6 +68,9 @@ namespace {
                 if (item.isMember("readings_number")) {
                     buf_channel.ReadingsNumber = item["readings_number"].asInt();
                 }
+                if (item.isMember("decimal_places")) {
+                    buf_channel.DecimalPlaces = item["decimal_places"].asInt();
+                }
                 new_channel.Mux.push_back(buf_channel);
             }
 
