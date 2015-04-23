@@ -122,7 +122,8 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     NumberOfChannels = channel_config.Mux.size();
 }
 
-TSysfsAdc::~TSysfsAdc(){
+TSysfsAdc::~TSysfsAdc()
+{
     if (AdcValStream.is_open()){
         AdcValStream.close();
     }
@@ -139,7 +140,8 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
     return ptr;
 }
 
-int TSysfsAdc::ReadValue(){
+int TSysfsAdc::ReadValue()
+{
     int val;
     AdcValStream.seekg(0);
     AdcValStream >> val;
@@ -156,7 +158,7 @@ TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChan
     GpioMuxA = ChannelConfig.Gpios[0];
     GpioMuxB = ChannelConfig.Gpios[1];
     GpioMuxC = ChannelConfig.Gpios[2];
-   }
+}
 
 
 int TSysfsAdcMux::GetRawValue(int index)
@@ -266,7 +268,7 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     d->Buffer = new int[d->ChannelAveragingWindow](); // () initializes with zeros
 }
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, float multiplier)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, float multiplier)
     :TSysfsAdcChannel(owner, index, name, readings_number, decimal_places)
 {
     Multiplier = multiplier;
@@ -299,7 +301,8 @@ const std::string& TSysfsAdcChannel::GetName() const
     return d->Name;
 }
 
-float TSysfsAdcChannel::GetValue(){
+float TSysfsAdcChannel::GetValue()
+{
     float result;
     int value = GetAverageValue();
     if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
@@ -309,7 +312,8 @@ float TSysfsAdcChannel::GetValue(){
     }
     return result;
 }
-std::string TSysfsAdcChannel::GetType(){
+std::string TSysfsAdcChannel::GetType()
+{
     return "voltage";
 }
 
@@ -324,14 +328,15 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 }
 
 
-float TSysfsAdcChannelRes::GetValue(){
+float TSysfsAdcChannelRes::GetValue()
+{
     SetUpCurrentSource(); 
     int value = GetAverageValue(); 
     float result;
     if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
-    float voltage = 1.85 * value / VALUE_MAXIMUM;
-    result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
-    result = round(result);
+        float voltage = 1.85 * value / VALUE_MAXIMUM;
+        result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+        result = round(result);
     } else {
         result = std::nan("");
     }
@@ -339,15 +344,18 @@ float TSysfsAdcChannelRes::GetValue(){
     return result;
 }
 
-std::string TSysfsAdcChannelRes::GetType(){
+std::string TSysfsAdcChannelRes::GetType()
+{
         return "resistance";
 }
-void TSysfsAdcChannelRes::SetUpCurrentSource(){
+void TSysfsAdcChannelRes::SetUpCurrentSource()
+{
     imx233_wr(HW_LRADC_CTRL2_SET, 0x0200); //set TEMP_SENSOR_IENABLE1
     imx233_wr(HW_LRADC_CTRL2_CLR, 0xF0); //clear TEMP_ISRC1
     imx233_wr(HW_LRADC_CTRL2_SET, Ctrl2_val); //set TEMP_ISRC1
 }
 
-void TSysfsAdcChannelRes::SwitchOffCurrentSource(){
+void TSysfsAdcChannelRes::SwitchOffCurrentSource()
+{
     imx233_wr(HW_LRADC_CTRL2_CLR, 0x0200); //set TEMP_SENSOR_IENABLE1=0
 }

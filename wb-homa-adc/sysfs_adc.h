@@ -10,7 +10,8 @@
 #define VALUE_MAXIMUM 4095
 using namespace std;
 
-struct TMUXChannel{// config for mux channel
+struct TMUXChannel // config for mux channel
+{
     std::string Id;
     float Multiplier = 1.0;
     std::string Type = "";
@@ -21,7 +22,8 @@ struct TMUXChannel{// config for mux channel
     int ReadingsNumber = 10; // number of reading value during one selection
     int DecimalPlaces = 3;
 };
-struct TChannel{
+struct TChannel
+{
     int AveragingWindow = 10;
     int PollInterval;
     int ChannelNumber = 1;//Number of TMUXChannels in vector Mux
@@ -34,7 +36,8 @@ struct TChannel{
 
 class TSysfsAdcChannel;
 
-class TAdcException: public std::exception {
+class TAdcException: public std::exception 
+{
 public:
     TAdcException(std::string _message): message(_message) {}
     const char* what () const throw ()
@@ -66,7 +69,8 @@ protected:
     int NumberOfChannels;
 };
 
-class TSysfsAdcMux : public TSysfsAdc{// class, that handles mux channels
+class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
+{
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
     private:
@@ -85,14 +89,16 @@ class TSysfsAdcMux : public TSysfsAdc{// class, that handles mux channels
         int GpioMuxC;
 };
 
-class TSysfsAdcPhys: public TSysfsAdc{
+class TSysfsAdcPhys: public TSysfsAdc
+{
     public :
         TSysfsAdcPhys(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
     private : 
     int GetRawValue(int index);
 };
  
-struct TSysfsAdcChannelPrivate {
+struct TSysfsAdcChannelPrivate 
+{
     ~TSysfsAdcChannelPrivate() { if (Buffer) delete[] Buffer; }
     std::shared_ptr<TSysfsAdc> Owner;
     int Index;
@@ -105,7 +111,8 @@ struct TSysfsAdcChannelPrivate {
     int ChannelAveragingWindow;
 
 }; 
-class TSysfsAdcChannel { 
+class TSysfsAdcChannel 
+{ 
     public: 
         int GetAverageValue();
         virtual float GetValue(); 

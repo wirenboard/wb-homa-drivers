@@ -15,7 +15,7 @@ namespace {
 }
 
 
-TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, THandlerConfig handler_config )
+TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, THandlerConfig handler_config)
     : TMQTTWrapper(mqtt_config),
     Config(handler_config)
 {
@@ -34,7 +34,8 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
 	Connect();
 }
 
-TMQTTAdcHandler::~TMQTTAdcHandler(){
+TMQTTAdcHandler::~TMQTTAdcHandler()
+{
     Channels.clear();
     AdcHandlers.clear();
 }
@@ -76,7 +77,8 @@ string TMQTTAdcHandler::GetChannelTopic(const TSysfsAdcChannel& channel) const
     return controls_prefix + channel.GetName();
 }
 
-void TMQTTAdcHandler::UpdateValue(){
+void TMQTTAdcHandler::UpdateValue()
+{
     UpdateChannelValues();
 }
 void TMQTTAdcHandler::UpdateChannelValues()
