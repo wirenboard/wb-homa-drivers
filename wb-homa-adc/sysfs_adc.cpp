@@ -101,7 +101,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
         double max = ADC_OLD_SCALE;
         int i = 0;
         int position = 0; 
-        for (const auto &element : scales) {
+        for (const auto& element : scales) {
             double val = stod(element);
             if (val > max) {
                 max = val;
@@ -116,6 +116,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
         }
         ScaleFactor = max / ADC_OLD_SCALE;
         write_scale << scales[position]; 
+        write_scale.close();
     } 
     NumberOfChannels = channel_config.Mux.size();
 }
