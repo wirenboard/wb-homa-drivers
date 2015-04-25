@@ -78,7 +78,7 @@ class TMQTTGpioHandler : public TMQTTWrapper
         THandlerConfig Config;
         vector<TChannelDesc> Channels;
 
-        void UpdateValue(const TGpioDesc& gpio_desc,std::shared_ptr<TSysfsGpio> gpio_handler); 
+        void UpdateValue(const TGpioDesc& gpio_desc,std::shared_ptr<TSysfsGpio> gpio_handler);
 
 };
 
@@ -97,7 +97,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         std::shared_ptr<TSysfsGpio> gpio_handler(nullptr);
         if (gpio_desc.Type == "")
                 gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
-        else     
+        else
             gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
@@ -124,7 +124,7 @@ void TMQTTGpioHandler::OnConnect(int rc)
         string prefix = string("/devices/") + MQTTConfig.Id + "/";
 
         // Meta
-        Publish(NULL, prefix + "/meta/name", Config.DeviceName, 0, true);
+        Publish(NULL, prefix + "meta/name", Config.DeviceName, 0, true);
 
         for (const auto& channel_desc : Channels) {
             const auto& gpio_desc = channel_desc.first;
@@ -191,13 +191,13 @@ void TMQTTGpioHandler::OnSubscribe(int mid, int qos_count, const int *granted_qo
 	printf("Subscription succeeded.\n");
 }
 
-string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc) 
+string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc& gpio_desc)
 {
     static string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
     return (controls_prefix + gpio_desc.Name);
 }
 
-void TMQTTGpioHandler::UpdateValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler) 
+void TMQTTGpioHandler::UpdateValue(const TGpioDesc& gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler)
 {
         // look at previous value and compare it with current
         int cached = gpio_handler->GetCachedValue();
@@ -222,7 +222,7 @@ void TMQTTGpioHandler::PublishValue(const TGpioDesc& gpio_desc, std::shared_ptr<
         Publish(NULL, GetChannelTopic(gpio_desc) + to_topic, value, 0, true); // Publish current value (make retained)
         }
 }
-void TMQTTGpioHandler::UpdateChannelValues() 
+void TMQTTGpioHandler::UpdateChannelValues()
 {
     for (TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
@@ -233,12 +233,12 @@ void TMQTTGpioHandler::UpdateChannelValues()
 
 void TMQTTGpioHandler::InitInterrupts(int epfd)
 {
-    int n; 
+    int n;
     for ( TChannelDesc& channel_desc : Channels) {
         const auto& gpio_desc = channel_desc.first;
         auto& gpio_handler = *channel_desc.second;
-        // check if file edge exists and is direction input 
-        gpio_handler.InterruptUp();        
+        // check if file edge exists and is direction input
+        gpio_handler.InterruptUp();
         if (gpio_handler.GetInterruptSupport()) {
              n = epoll_ctl(epfd,EPOLL_CTL_ADD,gpio_handler.GetFileDes(),&gpio_handler.GetEpollStruct());// adding new instance to epoll
             if (n != 0 ) {
@@ -246,7 +246,7 @@ void TMQTTGpioHandler::InitInterrupts(int epfd)
             }
         }
     }
-    
+
 }
 
 void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events)
@@ -263,7 +263,7 @@ void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event* events)
             }
         }
     }
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));//avoid debouncing 
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));//avoid debouncing
 
 }
 
@@ -380,8 +380,8 @@ int main(int argc, char *argv[])
     mqtt_config.Id = "wb-gpio";
     std::shared_ptr<TMQTTGpioHandler> mqtt_handler(new TMQTTGpioHandler(mqtt_config, handler_config));
     mqtt_handler->Init();
-    
-    rc= mqtt_handler->loop_start(); 
+
+    rc= mqtt_handler->loop_start();
     if (rc != 0 ) {
         cerr << "couldn't start mosquitto_loop_start ! " << rc << endl;
     } else {
