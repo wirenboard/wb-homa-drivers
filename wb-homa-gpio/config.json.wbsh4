@@ -1,6 +1,6 @@
 // Configuration options
 {
-    "device_name" : "Relays & FETs",
+    "device_name" : "Relays, FETs & Inputs",
 
     "channels" : [
         {
