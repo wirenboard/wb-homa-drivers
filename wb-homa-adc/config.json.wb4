@@ -61,7 +61,7 @@
 
                             // The next 4 lines enable resistance measurement on R1
 
-                             ,"resistance1" : "120kOhm",
+                             ,"resistance1" : "100kOhm",
                              "resistance2" : "3570Ohm",
                              "type" : "ohm_meter",
                              "current" : 80
@@ -74,7 +74,7 @@
 
                             // The next 4 lines enable resistance measurement on R2
 
-                             ,"resistance1" : "120kOhm",
+                             ,"resistance1" : "100kOhm",
                              "resistance2" : "3570Ohm",
                              "type" : "ohm_meter",
                              "current" : 80
