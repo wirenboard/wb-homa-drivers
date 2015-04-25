@@ -23,34 +23,34 @@
                             "id" : "A1",
                             "multiplier" : 0.949,
                             "mux_channel_number" : 3,
-                            "decimal_places" : 1
+                            "decimal_places" : 2
 
                         },
                         {
                             "id" : "A2",
                             "multiplier" : 0.949,
                             "mux_channel_number" : 4,
-                            "decimal_places" : 1
+                            "decimal_places" : 2
 
                         },
                         {
                             "id" : "A3",
                             "multiplier" : 0.949,
                             "mux_channel_number" : 6,
-                            "decimal_places" : 1
+                            "decimal_places" : 2
 
                         },
                         {
                             "id" : "A4",
                             "multiplier" : 4.21,
                             "mux_channel_number" : 0,
-                            "decimal_places" : 2
+                            "decimal_places" : 1
                         },
                         {
                             "id" : "A5",
                             "multiplier" : 4.21,
                             "mux_channel_number" : 1,
-                            "decimal_places" : 2
+                            "decimal_places" : 1
 
                         },
                         {
@@ -81,7 +81,7 @@
                         },
                         {
                             "id" : "BAT",
-                            "multiplier" : 0.903,
+                            "multiplier" : 0.949,
                             "mux_channel_number" : 2,
                             "decimal_places" : 2
                         }
