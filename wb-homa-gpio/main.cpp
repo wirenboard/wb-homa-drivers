@@ -3,6 +3,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 #include <getopt.h>
 
@@ -37,7 +38,9 @@ struct TGpioDesc
     string InterruptEdge = "";
     string Type = "";
     int Multiplier;
+    int Order;
 };
+
 
 class THandlerConfig
 {
@@ -49,9 +52,12 @@ class THandlerConfig
 
 };
 
+typedef pair<TGpioDesc, std::shared_ptr<TSysfsGpio>> TChannelDesc;
+
+bool FuncComp( const TChannelDesc& a, const TChannelDesc& b)
+    { return (a.first.Order < b.first.Order); }
 class TMQTTGpioHandler : public TMQTTWrapper
 {
-    typedef pair<TGpioDesc, std::shared_ptr<TSysfsGpio>> TChannelDesc;
 
 	public:
         TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config, const THandlerConfig& handler_config);
@@ -104,6 +110,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
                     cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
             }
     }
+    sort(Channels.begin(), Channels.end(), FuncComp);
 	Connect();
 }
 
@@ -126,8 +133,12 @@ void TMQTTGpioHandler::OnConnect(int rc)
             string control_prefix = prefix + "controls/" + gpio_desc.Name;
             std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
             vector<TPublishPair> what_to_publish (gpio_handler->MetaType());
-            for ( TPublishPair tmp : what_to_publish)
-                Publish(NULL, control_prefix +tmp.first + "/meta/type", tmp.second, 0, true);
+            int order = gpio_desc.Order * 2;
+            for (TPublishPair tmp : what_to_publish) {
+                Publish(NULL, control_prefix + "/meta/order", to_string(order), 0, true);
+                Publish(NULL, control_prefix + tmp.first + "/meta/type", tmp.second, 0, true);
+                order++;
+            }
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
@@ -356,7 +367,7 @@ int main(int argc, char *argv[])
                 gpio_desc.Multiplier = item["multiplier"].asInt();
             if (item.isMember("edge"))
                 gpio_desc.InterruptEdge = item["edge"].asString();
-
+            gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
         }
@@ -373,13 +384,13 @@ int main(int argc, char *argv[])
     rc= mqtt_handler->loop_start(); 
     if (rc != 0 ) {
         cerr << "couldn't start mosquitto_loop_start ! " << rc << endl;
-    }else {
+    } else {
         epfd = epoll_create(1);// creating epoll for Interrupts
         mqtt_handler->InitInterrupts(epfd);
         steady_clock::time_point start;
         int interval;
         start = steady_clock::now();
-        while(1){
+        while(1) {
             n = epoll_wait(epfd,events,20,500);
             interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
             if (interval >= 500 ) {  //checking is it time to look through all gpios
