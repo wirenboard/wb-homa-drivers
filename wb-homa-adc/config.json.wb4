@@ -59,14 +59,12 @@
                             "mux_channel_number" : 7,
                             "decimal_places" : 2
 
-                            // Uncomment to enable resistance measurement on R1
+                            // The next 4 lines enable resistance measurement on R1
 
-                            // ,"resistance1" : "120kOhm",
-                            // "resistance2" : "3570Ohm",
-                            // "type" : "ohm_meter",
-                            // "current" : 80
-
-
+                             ,"resistance1" : "120kOhm",
+                             "resistance2" : "3570Ohm",
+                             "type" : "ohm_meter",
+                             "current" : 80
                         },
                         {
                             "id" : "R2",
@@ -74,13 +72,12 @@
                             "mux_channel_number" : 5,
                             "decimal_places" : 2
 
-                            // Uncomment to enable resistance measurement on R2
+                            // The next 4 lines enable resistance measurement on R2
 
-                            // ,"resistance1" : "120kOhm",
-                            // "resistance2" : "3570Ohm",
-                            // "type" : "ohm_meter",
-                            // "current" : 80
-
+                             ,"resistance1" : "120kOhm",
+                             "resistance2" : "3570Ohm",
+                             "type" : "ohm_meter",
+                             "current" : 80
                         },
                         {
                             "id" : "BAT",
