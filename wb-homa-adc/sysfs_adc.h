@@ -5,9 +5,10 @@
 #include <vector>
 #include "imx233.h"
 #define OHM_METER "ohm_meter"
-#define DELAY 1
-#define ADC_OLD_SCALE 0.451660156 // default scale for file "in_voltageNUMBER_scale"
-#define VALUE_MAXIMUM 4095
+#define DELAY 10
+#define ADC_OLD_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
+#define ADC_VALUE_MAX 4095
+#define ADC_DEFAULT_MAX_VOLTAGE 3100 // voltage in mV
 using namespace std;
 
 struct TMUXChannel // config for mux channel
@@ -29,6 +30,7 @@ struct TChannel
     int ChannelNumber = 1;//Number of TMUXChannels in vector Mux
     int MinSwitchIntervalMs = 0;
     string Type = "";
+    float MaxVoltage = ADC_DEFAULT_MAX_VOLTAGE;
     vector<int> Gpios;
     vector<TMUXChannel> Mux;
 };
@@ -57,6 +59,8 @@ public:
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
     double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
+    virtual void SetMuxABC(int n); // switch mux channels 
+    bool CheckVoltage(int value); // check if voltage is bigger than ADC_MAX_VOLTAGE
 protected:
     virtual int GetRawValue(int index) = 0;
     int AveragingWindow;
@@ -67,12 +71,14 @@ protected:
     friend class TSysfsAdcChannel;
     TChannel ChannelConfig;
     int NumberOfChannels;
+    float MaxVoltage;
 };
 
 class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
 {
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
+        void SetMuxABC(int n);
     private:
         int GetRawValue(int index);
         void InitMux();
@@ -80,7 +86,6 @@ class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
         void SetGPIOValue(int gpio, int value);
         std::string GPIOPath(int gpio, const std::string& suffix) const;
         void MaybeWaitBeforeSwitching();
-        void SetMuxABC(int n);
         int MinSwitchIntervalMs;
         int CurrentMuxInput;
         struct timespec PrevSwitchTS;

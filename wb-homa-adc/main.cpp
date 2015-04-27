@@ -60,6 +60,9 @@ namespace {
                 if (new_channel.AveragingWindow < 1)
                     throw TAdcException("bad averaging window specified in the config");
             }
+            if (item.isMember("max_voltage")) {
+                new_channel.MaxVoltage = 1000 * item["max_voltage"].asFloat();
+            }
             if (item.isMember("id")) {
                 TMUXChannel buf_channel;
                 buf_channel.Id = item["id"].asString();

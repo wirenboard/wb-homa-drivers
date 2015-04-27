@@ -74,9 +74,10 @@ namespace {
 */
 TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : SysfsDir(sysfs_dir),
-    ChannelConfig(channel_config)
+    ChannelConfig(channel_config),
+    MaxVoltage(ChannelConfig.MaxVoltage)
 {
-    ScaleFactor = 1;
+    ScaleFactor = ADC_OLD_SCALE_FACTOR;
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
@@ -99,7 +100,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
                 buf += c;
             }
         }
-        double max = ADC_OLD_SCALE;
+        double max = ADC_OLD_SCALE_FACTOR;
         int i = 0;
         int position = 0; 
         for (const auto& element : scales) {
@@ -115,10 +116,10 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
         if (!write_scale.is_open()) {
             throw TAdcException("error opening sysfs Adc scale file");
         }
-        ScaleFactor = max / ADC_OLD_SCALE;
+        ScaleFactor = max;
         write_scale << scales[position]; 
         write_scale.close();
-    } 
+    }
     NumberOfChannels = channel_config.Mux.size();
 }
 
@@ -145,10 +146,22 @@ int TSysfsAdc::ReadValue()
     int val;
     AdcValStream.seekg(0);
     AdcValStream >> val;
-    val *= round(ScaleFactor);
     return val;
 }
 
+bool TSysfsAdc::CheckVoltage(int value)
+{
+    float voltage = ScaleFactor * value;
+    if (voltage > MaxVoltage) {
+        return false;
+    }
+    return true;
+}
+
+void TSysfsAdc::SetMuxABC(int n)
+{
+    return;
+}
 
 TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : TSysfsAdc(sysfs_dir, debug, channel_config)
@@ -242,7 +255,8 @@ void TSysfsAdcMux::SetMuxABC(int n)
     SetGPIOValue(GpioMuxB, n & 2);
     SetGPIOValue(GpioMuxC, n & 4);
     CurrentMuxInput = n;
-    usleep(MinSwitchIntervalMs * 1000);
+    this_thread::sleep_for(chrono::milliseconds(DELAY));
+    //usleep(MinSwitchIntervalMs * 1000);
 }
 
 TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
@@ -303,11 +317,15 @@ const std::string& TSysfsAdcChannel::GetName() const
 
 float TSysfsAdcChannel::GetValue()
 {
-    float result;
+    float result = -1;
     int value = GetAverageValue();
-    if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
-        result = (float) value * Multiplier / 1000;// set voltage to V from mV
-    } else {
+    if (value < ADC_VALUE_MAX) {
+        if (d->Owner->CheckVoltage(value)) {
+            result = (float) value * Multiplier / 1000; // set voltage to V from mV
+            result *= d->Owner->ScaleFactor / ADC_OLD_SCALE_FACTOR;
+        }
+    }
+    if (result < 0) {
         result = std::nan("");
     }
     return result;
@@ -330,14 +348,19 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 
 float TSysfsAdcChannelRes::GetValue()
 {
+    d->Owner->SetMuxABC(d->Index);
     SetUpCurrentSource(); 
+    this_thread::sleep_for(chrono::milliseconds(DELAY));
     int value = GetAverageValue(); 
-    float result;
-    if (value < d->Owner->ScaleFactor * VALUE_MAXIMUM) {
-        float voltage = 1.85 * value / VALUE_MAXIMUM;
-        result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
-        result = round(result);
-    } else {
+    float result = -1;
+    if (value < ADC_VALUE_MAX) {
+        if (d->Owner->CheckVoltage(value)) {
+            float voltage = d->Owner->ScaleFactor * value / 1000;// get voltage in V (from mV)
+            result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+            result = round(result);
+        }
+    }
+    if (result < 0) {
         result = std::nan("");
     }
     SwitchOffCurrentSource();
