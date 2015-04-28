@@ -423,14 +423,19 @@ Modbus-устройствами необходимо создать коррек
     ]
 }
 ```
-*Таблица шаблонов modbus*
+**Таблица шаблонов modbus**
 
-|                                     Device                                    | device_type |          id         |        name        |   |
-|:-----------------------------------------------------------------------------:|:-----------:|:-------------------:|:------------------:|:-:|
-| "Разумный дом" четырёхканальный диммер светодиодов DDL4                       | "DDL24"     | "ddl24" + slave_id  | "DDL24" + slave_id |   |
-| "Разумный дом" исполнительные модули DRB88                                    | "DRB88"     | "drb88" + slave_id  | "DRB88" + slave_id |   |
-| 1-channel AC Digital Input and 3-channel Relay Output Lighting Control Module | "LC-103"    | "lc-103" + slave_id |                    |   |
-
+|                                     Device                                    | device_type |          id          |         name         |
+|:-----------------------------------------------------------------------------:|:-----------:|:--------------------:|:--------------------:|
+| "Разумный дом" четырёхканальный диммер светодиодов DDL4                       | "DDL24"     | "ddl24" + slave_id   | "DDL24" + slave_id   |
+| "Разумный дом" исполнительные модули DRB88                                    | "DRB88"     | "drb88" + slave_id   | "DRB88" + slave_id   |
+| 1-channel AC Digital Input and 3-channel Relay Output Lighting Control Module | "LC-103"    | "lc-103" + slave_id  | "LC-103" + slave_id  |
+| "Разумный дом" датчики msu24                                                  | "MSU24"     | "msu24" + slave_id   | "MSU24" + slave_id   |
+| "Разумный дом" датчики msu21                                                  | "MSU21"     | "msu21" + slave_id   | "MSU21" + slave_id   |
+| "Разумный дом" датчики msu34                                                  | "MSU34"     | "msu34" + slave_id   | "MSU34" + slave_id   |
+| 3-channel Isolated Digital Input and 3-channel Relay Output Module            | "TM-P3R3"   | "TM-P3R3" + slave_id | "tmp3r3" + slave_id  |
+| Релейный модуль WB-MRM2                                                       | "WB-MRGB"   | "WB-MRGB" + slave_id | "wb-mrgb" + slave_id |
+| RGB-диммер WB-MRGB                                                            | "WB-MRM2"   | "WB-MRM2" + slave_id | "wb-mrm2" + slave_id |
 
 Устройства Uniel
 -------------
