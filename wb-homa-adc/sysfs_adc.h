@@ -6,7 +6,7 @@
 #include "imx233.h"
 #define OHM_METER "ohm_meter"
 #define DELAY 10
-#define ADC_OLD_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
+#define ADC_DEFAULT_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
 #define ADC_VALUE_MAX 4095
 #define ADC_DEFAULT_MAX_VOLTAGE 3100 // voltage in mV
 using namespace std;
@@ -20,8 +20,9 @@ struct TMUXChannel // config for mux channel
     int Resistance1 = 1000;// resistance in Ohm
     int Resistance2 = 1000;// resistance in Ohm
     int MuxChannelNumber = 0;// ADC channel number
-    int ReadingsNumber = 10; // number of reading value during one selection
-    int DecimalPlaces = 3;
+    int ReadingsNumber = 10;// number of reading value during one selection
+    int DecimalPlaces = 3;// number of figures after point 
+    int DischargeChannel = -1;// discharge channel ADC should switch to, before switching to current mux channel
 };
 struct TChannel
 {
@@ -114,6 +115,7 @@ struct TSysfsAdcChannelPrivate
     int Pos = 0;
     int ReadingsNumber;
     int ChannelAveragingWindow;
+    int DischargeChannel;
 
 }; 
 class TSysfsAdcChannel 
@@ -123,8 +125,8 @@ class TSysfsAdcChannel
         virtual float GetValue(); 
         const std::string& GetName() const;
         virtual std::string GetType();
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, float multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, int discharge_channel, float multiplier);
         int DecimalPlaces;
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
@@ -136,7 +138,7 @@ class TSysfsAdcChannel
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
-         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int current, int resistance1, int resistance2);
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, int current, int resistance1, int resistance2);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();

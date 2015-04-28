@@ -77,7 +77,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     ChannelConfig(channel_config),
     MaxVoltage(ChannelConfig.MaxVoltage)
 {
-    ScaleFactor = ADC_OLD_SCALE_FACTOR;
+    ScaleFactor = ADC_DEFAULT_SCALE_FACTOR;
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
@@ -100,7 +100,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
                 buf += c;
             }
         }
-        double max = ADC_OLD_SCALE_FACTOR;
+        double max = ADC_DEFAULT_SCALE_FACTOR;
         int i = 0;
         int position = 0; 
         for (const auto& element : scales) {
@@ -135,9 +135,9 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
     std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
     else
-        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].Multiplier));
+        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Multiplier));
     return ptr;
 }
 
@@ -255,8 +255,7 @@ void TSysfsAdcMux::SetMuxABC(int n)
     SetGPIOValue(GpioMuxB, n & 2);
     SetGPIOValue(GpioMuxC, n & 4);
     CurrentMuxInput = n;
-    this_thread::sleep_for(chrono::milliseconds(DELAY));
-    //usleep(MinSwitchIntervalMs * 1000);
+    usleep(MinSwitchIntervalMs * 1000);
 }
 
 TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
@@ -270,7 +269,7 @@ int TSysfsAdcPhys::GetRawValue(int index)
 }
 
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel)
     : DecimalPlaces(decimal_places)
     , d(new TSysfsAdcChannelPrivate())
 {
@@ -280,10 +279,11 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     d->ReadingsNumber = readings_number;
     d->ChannelAveragingWindow = readings_number * d->Owner->AveragingWindow;
     d->Buffer = new int[d->ChannelAveragingWindow](); // () initializes with zeros
+    d->DischargeChannel = discharge_channel;
 }
 
-TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, float multiplier)
-    :TSysfsAdcChannel(owner, index, name, readings_number, decimal_places)
+TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, float multiplier)
+    :TSysfsAdcChannel(owner, index, name, readings_number, decimal_places, discharge_channel)
 {
     Multiplier = multiplier;
 }
@@ -322,7 +322,7 @@ float TSysfsAdcChannel::GetValue()
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
             result = (float) value * Multiplier / 1000; // set voltage to V from mV
-            result *= d->Owner->ScaleFactor / ADC_OLD_SCALE_FACTOR;
+            result *= d->Owner->ScaleFactor / ADC_DEFAULT_SCALE_FACTOR;
         }
     }
     if (result < 0) {
@@ -335,8 +335,8 @@ std::string TSysfsAdcChannel::GetType()
     return "voltage";
 }
 
-TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int current, int resistance1, int resistance2)
-    : TSysfsAdcChannel(owner, index, name, readings_number, decimal_places)
+TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, int current, int resistance1, int resistance2)
+    : TSysfsAdcChannel(owner, index, name, readings_number, decimal_places, discharge_channel)
 {
     Current = current;
     Resistance1 = resistance1;
@@ -348,6 +348,9 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
 
 float TSysfsAdcChannelRes::GetValue()
 {
+    if (d->DischargeChannel != -1) {
+        d->Owner->SetMuxABC(d->DischargeChannel);
+    }
     d->Owner->SetMuxABC(d->Index);
     SetUpCurrentSource(); 
     this_thread::sleep_for(chrono::milliseconds(DELAY));
