@@ -1,6 +1,5 @@
 wb-homa-drivers
-===============
-
+=============== 
 MQTT drivers for compatible with HomA conventions
     * Kernel 1-wire interface driver (currently thermometers only)
     * GPIO-drivern switches driver
@@ -424,6 +423,12 @@ Modbus-устройствами необходимо создать коррек
     ]
 }
 ```
+*Таблица шаблонов modbus*
+| Device    | device_type  | id    | name  |
+|___    |___   |___    |___    | 
+| "Разумный дом" четырёхканальный | "DDL24"   | "ddl24" + slave_id    | "DDL24" + slave_id  | 
+ диммер светодиодов DDL24
+
 
 Устройства Uniel
 -------------
