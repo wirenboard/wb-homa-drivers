@@ -43,7 +43,7 @@ LOGGER_BIN=mqtt-logger
 COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
 COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean test_need_fix
+.PHONY: all clean test
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
@@ -166,7 +166,7 @@ $(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
 $(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-test_need_fix: $(TEST_DIR)/$(TEST_BIN)
+test: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \

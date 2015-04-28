@@ -5,14 +5,14 @@ Ports:
     PollInterval: 10
     DeviceConfigs:
         ------
-        Id: msu34tlp
-        Name: MSU34+TLP
+        Id: msu34tlp_2
+        Name: MSU34+TLP 2
         SlaveId: 2
         ModbusChannels:
             ------
             Name: Temp 1
             Type: temperature
-            DeviceId: msu34tlp
+            DeviceId: msu34tlp_2
             Order: 1
             OnValue: -1
             Max: -1
@@ -21,7 +21,7 @@ Ports:
             ------
             Name: Illuminance
             Type: lux
-            DeviceId: msu34tlp
+            DeviceId: msu34tlp_2
             Order: 2
             OnValue: -1
             Max: -1
@@ -30,7 +30,7 @@ Ports:
             ------
             Name: Pressure
             Type: pressure
-            DeviceId: msu34tlp
+            DeviceId: msu34tlp_2
             Order: 3
             OnValue: -1
             Max: -1
@@ -39,7 +39,7 @@ Ports:
             ------
             Name: Temp 2
             Type: temperature
-            DeviceId: msu34tlp
+            DeviceId: msu34tlp_2
             Order: 4
             OnValue: -1
             Max: -1
@@ -92,14 +92,14 @@ Ports:
             ReadOnly: 1
             Registers: <34:input: 1>
         ------
-        Id: ddl24
+        Id: ddl24_23
         Name: DDL24
         SlaveId: 23
         ModbusChannels:
             ------
             Name: RGB
             Type: rgb
-            DeviceId: ddl24
+            DeviceId: ddl24_23
             Order: 1
             OnValue: -1
             Max: -1
@@ -108,7 +108,7 @@ Ports:
             ------
             Name: White
             Type: dimmer
-            DeviceId: ddl24
+            DeviceId: ddl24_23
             Order: 2
             OnValue: -1
             Max: 255
@@ -117,7 +117,7 @@ Ports:
             ------
             Name: RGB_All
             Type: range
-            DeviceId: ddl24
+            DeviceId: ddl24_23
             Order: 3
             OnValue: -1
             Max: 100
@@ -126,7 +126,7 @@ Ports:
             ------
             Name: White1
             Type: range
-            DeviceId: ddl24
+            DeviceId: ddl24_23
             Order: 4
             OnValue: -1
             Max: 100
@@ -135,7 +135,7 @@ Ports:
             ------
             Name: Voltage
             Type: text
-            DeviceId: ddl24
+            DeviceId: ddl24_23
             Order: 5
             OnValue: -1
             Max: -1
@@ -143,7 +143,7 @@ Ports:
             Registers: <23:holding: 18>
         ------
         Id: drb88
-        Name: DRB88
+        Name: DRB88 22
         SlaveId: 22
         ModbusChannels:
             ------
@@ -304,14 +304,14 @@ Ports:
     PollInterval: 100
     DeviceConfigs:
         ------
-        Id: tmp3r3
+        Id: tmp3r3_1
         Name: tM-P3R3
         SlaveId: 1
         ModbusChannels:
             ------
             Name: Relay 0
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 1
             OnValue: -1
             Max: -1
@@ -320,7 +320,7 @@ Ports:
             ------
             Name: Relay 1
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 2
             OnValue: -1
             Max: -1
@@ -329,7 +329,7 @@ Ports:
             ------
             Name: Relay 2
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 3
             OnValue: -1
             Max: -1
@@ -338,7 +338,7 @@ Ports:
             ------
             Name: Input 0
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 4
             OnValue: -1
             Max: -1
@@ -347,7 +347,7 @@ Ports:
             ------
             Name: Input 1
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 5
             OnValue: -1
             Max: -1
@@ -356,7 +356,7 @@ Ports:
             ------
             Name: Input 2
             Type: switch
-            DeviceId: tmp3r3
+            DeviceId: tmp3r3_1
             Order: 6
             OnValue: -1
             Max: -1
