@@ -424,10 +424,12 @@ Modbus-устройствами необходимо создать коррек
 }
 ```
 *Таблица шаблонов modbus*
-| Device    | device_type  | id    | name  |
-|___    |___   |___    |___    | 
-| "Разумный дом" четырёхканальный | "DDL24"   | "ddl24" + slave_id    | "DDL24" + slave_id  | 
- диммер светодиодов DDL24
+
+|                                     Device                                    | device_type |          id         |        name        |   |
+|:-----------------------------------------------------------------------------:|:-----------:|:-------------------:|:------------------:|:-:|
+| "Разумный дом" четырёхканальный диммер светодиодов DDL4                       | "DDL24"     | "ddl24" + slave_id  | "DDL24" + slave_id |   |
+| "Разумный дом" исполнительные модули DRB88                                    | "DRB88"     | "drb88" + slave_id  | "DRB88" + slave_id |   |
+| 1-channel AC Digital Input and 3-channel Relay Output Lighting Control Module | "LC-103"    | "lc-103" + slave_id |                    |   |
 
 
 Устройства Uniel
