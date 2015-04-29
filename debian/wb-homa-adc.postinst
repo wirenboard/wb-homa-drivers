@@ -9,7 +9,7 @@ case "$WB_VERSION" in
     ;;
 
     "32" )
-        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wbsh3"
+        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb3.5"
     ;;
 
     "KMON1" )
