@@ -64,7 +64,8 @@
                              ,"resistance1" : "100kOhm",
                              "resistance2" : "3570Ohm",
                              "type" : "ohm_meter",
-                             "current" : 80
+                             "current" : 80,
+                             "discharge_channel" : 3
                         },
                         {
                             "id" : "R2",
@@ -77,7 +78,8 @@
                              ,"resistance1" : "100kOhm",
                              "resistance2" : "3570Ohm",
                              "type" : "ohm_meter",
-                             "current" : 80
+                             "current" : 80,
+                             "discharge_channel" : 3
                         },
                         {
                             "id" : "BAT",

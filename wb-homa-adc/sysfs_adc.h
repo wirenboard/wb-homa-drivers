@@ -5,9 +5,10 @@
 #include <vector>
 #include "imx233.h"
 #define OHM_METER "ohm_meter"
-#define DELAY 1
-#define ADC_OLD_SCALE 0.451660156 // default scale for file "in_voltageNUMBER_scale"
-#define VALUE_MAXIMUM 4095
+#define DELAY 10
+#define ADC_DEFAULT_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
+#define ADC_VALUE_MAX 4095
+#define ADC_DEFAULT_MAX_VOLTAGE 3100 // voltage in mV
 using namespace std;
 
 struct TMUXChannel // config for mux channel
@@ -19,8 +20,9 @@ struct TMUXChannel // config for mux channel
     int Resistance1 = 1000;// resistance in Ohm
     int Resistance2 = 1000;// resistance in Ohm
     int MuxChannelNumber = 0;// ADC channel number
-    int ReadingsNumber = 10; // number of reading value during one selection
-    int DecimalPlaces = 3;
+    int ReadingsNumber = 10;// number of reading value during one selection
+    int DecimalPlaces = 3;// number of figures after point 
+    int DischargeChannel = -1;// discharge channel ADC should switch to, before switching to current mux channel
 };
 struct TChannel
 {
@@ -29,6 +31,7 @@ struct TChannel
     int ChannelNumber = 1;//Number of TMUXChannels in vector Mux
     int MinSwitchIntervalMs = 0;
     string Type = "";
+    float MaxVoltage = ADC_DEFAULT_MAX_VOLTAGE;
     vector<int> Gpios;
     vector<TMUXChannel> Mux;
 };
@@ -57,6 +60,8 @@ public:
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
     double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
+    virtual void SetMuxABC(int n); // switch mux channels 
+    bool CheckVoltage(int value); // check if voltage is bigger than ADC_MAX_VOLTAGE
 protected:
     virtual int GetRawValue(int index) = 0;
     int AveragingWindow;
@@ -67,12 +72,14 @@ protected:
     friend class TSysfsAdcChannel;
     TChannel ChannelConfig;
     int NumberOfChannels;
+    float MaxVoltage;
 };
 
 class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
 {
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
+        void SetMuxABC(int n);
     private:
         int GetRawValue(int index);
         void InitMux();
@@ -80,7 +87,6 @@ class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
         void SetGPIOValue(int gpio, int value);
         std::string GPIOPath(int gpio, const std::string& suffix) const;
         void MaybeWaitBeforeSwitching();
-        void SetMuxABC(int n);
         int MinSwitchIntervalMs;
         int CurrentMuxInput;
         struct timespec PrevSwitchTS;
@@ -109,6 +115,7 @@ struct TSysfsAdcChannelPrivate
     int Pos = 0;
     int ReadingsNumber;
     int ChannelAveragingWindow;
+    int DischargeChannel;
 
 }; 
 class TSysfsAdcChannel 
@@ -118,8 +125,8 @@ class TSysfsAdcChannel
         virtual float GetValue(); 
         const std::string& GetName() const;
         virtual std::string GetType();
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, float multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, int discharge_channel, float multiplier);
         int DecimalPlaces;
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
@@ -131,7 +138,7 @@ class TSysfsAdcChannel
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
-         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int current, int resistance1, int resistance2);
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, int current, int resistance1, int resistance2);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();
