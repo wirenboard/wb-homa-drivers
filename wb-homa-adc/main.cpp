@@ -60,6 +60,9 @@ namespace {
                 if (new_channel.AveragingWindow < 1)
                     throw TAdcException("bad averaging window specified in the config");
             }
+            if (item.isMember("max_voltage")) {
+                new_channel.MaxVoltage = 1000 * item["max_voltage"].asFloat();
+            }
             if (item.isMember("id")) {
                 TMUXChannel buf_channel;
                 buf_channel.Id = item["id"].asString();
@@ -70,6 +73,9 @@ namespace {
                 }
                 if (item.isMember("decimal_places")) {
                     buf_channel.DecimalPlaces = item["decimal_places"].asInt();
+                }
+                if (item.isMember("discharge_channel")) {
+                    buf_channel.DischargeChannel = item["discharge_channel"].asInt();
                 }
                 new_channel.Mux.push_back(buf_channel);
             }
@@ -130,6 +136,9 @@ namespace {
                     if (channel_iterator.isMember("resistance2")){
                         int resistance = ReadResistance(channel_iterator["resistance2"].asString());
                         element.Resistance2 = resistance;
+                    }
+                    if (channel_iterator.isMember("discharge_channel")) {
+                        element.DischargeChannel = channel_iterator["discharge_channel"].asInt();
                     }
                     new_channel.Mux.push_back(element);
                 }
