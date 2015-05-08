@@ -30,8 +30,9 @@ void TModbusClientTest::SetUp()
                 ModbusClient->GetTextValue(reg);
         });
     ModbusClient->SetErrorCallback([this](std::shared_ptr<TModbusRegister> reg) {
-            Emit() << "Modbus ErrorCallback: " << reg->ToString() << " becomes " <<
-                ModbusClient->GetTextValue(reg);
+            string error = (reg->ErrorMessage == "Poll") ? "read" : "write";
+            Emit() << "Modbus ErrorCallback: " << reg->ToString() << " gets " <<
+                error << " error";
         });
     Slave = Connector->AddSlave(TFakeModbusConnector::PORT0, 1,
                                 TRegisterRange(0, 10),
