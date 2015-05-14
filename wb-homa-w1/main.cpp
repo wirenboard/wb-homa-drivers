@@ -12,8 +12,8 @@
 
 #include <mosquittopp.h>
 
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <utils.h>
+#include <mqtt_wrapper.h>
 
 #include "sysfs_w1.h"
 

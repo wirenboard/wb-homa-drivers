@@ -13,8 +13,8 @@
 #include <mosquittopp.h>
 
 #include "sysfs_gpio.h"
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <utils.h>
+#include <mqtt_wrapper.h>
 #include<chrono>
 #include<thread>
 

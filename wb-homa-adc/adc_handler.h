@@ -1,7 +1,7 @@
 #include <mosquittopp.h>
 #include <fstream>
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <utils.h>
+#include <mqtt_wrapper.h>
 #include "sysfs_adc.h"
 
 using namespace std;

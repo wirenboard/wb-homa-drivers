@@ -7,27 +7,27 @@ Build-Depends: debhelper (>= 9), pkg-config, g++, libjsoncpp-dev, libmosquittopp
 
 Package: wb-homa-gpio
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, ucf
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, ucf, libwbmqtt
 Description: Wiren Board Smart Home MQTT generic sysfs GPIO driver compatible with HomA conventions
 
 Package: wb-homa-adc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, libwbmqtt
 Description: Wiren Board Smart Home MQTT ADC driver (WB-specific) compatible with HomA conventions
 
 Package: wb-homa-modbus
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, bsdutils
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, bsdutils, libwbmqtt
 Description: Wiren Board Smart Home MQTT Modbus-RTU driver compatible with HomA conventions
 
 Package: wb-homa-w1
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, libwbmqtt
 Description: Wiren Board Smart Home MQTT generic 1-wire (w1) driver compatible with HomA conventions
 
 Package: wb-homa-ninja-bridge
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, libwbmqtt
 Description: Wiren Board Smart Home MQTT bridge to Ninja Blocks cloud platform
 
 Package: wb-homa-drivers
@@ -37,5 +37,5 @@ Description: Wiren Board Smart Home MQTT drivers, metapackage for compatibility
 
 Package: mqtt-logger
 Architecture: any
-Depends: libmosquittopp1, libmosquitto1
+Depends: libmosquittopp1, libmosquitto1, libwbmqtt
 Description: logger for mqtt messages
