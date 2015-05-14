@@ -12,7 +12,7 @@
 #define WATER_METER "water_meter"
 #define MICROSECONDS_DELAY 200000
 #define CURRENT_TIME_INTERVAL 1
-#define NULL_TIME_INTERVAL 10
+#define NULL_TIME_INTERVAL 100
 
 using namespace std;
 
