@@ -262,7 +262,6 @@ bool TSysfsGpio::GetInterval()
         if (measured_interval < MICROSECONDS_DELAY) return false;
         Interval = measured_interval;
         Counts++;
-        cout << "in getInterval Counts " << Counts << endl;
         Previous_Interrupt_Time = time_now;
     }
     else {

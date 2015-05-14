@@ -122,7 +122,6 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
     else
         Power = 3600.0 * 1000000 * ConvertingMultiplier/ (Interval * Multiplier);// convert microseconds to seconds, hours to seconds
     Total = (float) Counts / Multiplier + InitialTotal;
-    cout << "Counts " << Counts << " Type " << Type <<  endl;
     output_vector.push_back(make_pair(Topic1, SetDecimalPoints(Total, DecimalPointsTotal)));
     output_vector.push_back(make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent)));
     return output_vector;
