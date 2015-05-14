@@ -1,14 +1,18 @@
 #include "sysfs_gpio.h"
 #include <iostream>
 #include <memory>
+#include <string.h>
 
 using namespace std;
 
-TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string interrupt_edge, string type, int multiplier)
+TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string interrupt_edge, string type, int multiplier, int decimal_points_total, int decimal_points_current)
     : TSysfsGpio( gpio, inverted, interrupt_edge)
     , Type(type)
     , Multiplier(multiplier)
     , Total(0)
+    , DecimalPointsTotal(decimal_points_total)
+    , DecimalPointsCurrent(decimal_points_current) 
+    , PrintedNULL(false)
 {
     bool succes = false;
     if (Type == WATT_METER) {
@@ -17,6 +21,8 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
         Topic1 = "_total";
         Value_Topic1 = "power_consumption";
         ConvertingMultiplier = 1000;// convert  kW to W
+        DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 2: DecimalPointsCurrent;
+        DecimalPointsTotal = (DecimalPointsTotal == -1) ? 3: DecimalPointsTotal;
         succes = true;
     }
     if (Type == WATER_METER) {
@@ -25,6 +31,8 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
         Topic1 = "_total";
         Value_Topic1 = "water_consumption";
         ConvertingMultiplier = 1.0;
+        DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 3: DecimalPointsCurrent;
+        DecimalPointsTotal = (DecimalPointsTotal == -1) ? 2: DecimalPointsTotal;
         succes = true;
     }
     if (!succes) {
@@ -39,6 +47,35 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter( TSysfsGpioBaseCounter&& tmp)
     , Multiplier(tmp.Multiplier)
     , Total(tmp.Total)
 {
+}
+
+void TSysfsGpioBaseCounter::SetInitialValues(float total) 
+{
+   InitialTotal = total; 
+   Total = total;
+}
+
+TPublishPair TSysfsGpioBaseCounter::CheckTimeInterval()
+{
+    if (Counts != 0) {
+        std::chrono::steady_clock::time_point time_now=std::chrono::steady_clock::now();
+        long long unsigned int measured_interval = std::chrono::duration_cast<std::chrono::microseconds> (time_now - Previous_Interrupt_Time).count();
+        if (measured_interval > NULL_TIME_INTERVAL * Interval) {
+            if (PrintedNULL) {
+                return make_pair(string(""),string(""));
+                } else {
+                    Power = 0;
+                    PrintedNULL = true;
+                    return make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent));
+                }
+        }
+        if (measured_interval > CURRENT_TIME_INTERVAL * Interval) {
+            PrintedNULL = false;
+            Power = 3600.0 * 1000000 * ConvertingMultiplier/ (measured_interval * Multiplier);// convert microseconds to seconds, hours to seconds
+            return make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent));
+        }
+    }
+        return make_pair(string(""),string(""));
 }
 
 int TSysfsGpioBaseCounter::InterruptUp()
@@ -64,9 +101,7 @@ vector<TPublishPair> TSysfsGpioBaseCounter::MetaType()
     return output_vector;
 }
 vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
-{
-    vector<TPublishPair> output_vector;
-    if (FirstTime) {
+{ vector<TPublishPair> output_vector; if (FirstTime) {
         FirstTime = false;
         return output_vector;
     }
@@ -83,13 +118,36 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
     }
     // in other cases we have correct interrupt and handle it
     if (Interval == 0)
-        Power =-1;
+        Power = -1;
     else
         Power = 3600.0 * 1000000 * ConvertingMultiplier/ (Interval * Multiplier);// convert microseconds to seconds, hours to seconds
-    Total = (float) Counts / Multiplier;
-    output_vector.push_back(make_pair(Topic1, to_string(Total)));
-    output_vector.push_back(make_pair(Topic2, to_string(Power)));
+    Total = (float) Counts / Multiplier + InitialTotal;
+    cout << "Counts " << Counts << " Type " << Type <<  endl;
+    output_vector.push_back(make_pair(Topic1, SetDecimalPoints(Total, DecimalPointsTotal)));
+    output_vector.push_back(make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent)));
     return output_vector;
+}
+
+string TSysfsGpioBaseCounter::SetDecimalPoints(float value, int set_decimal_points)
+{
+    string output;
+    char buff[10];
+    sprintf(buff, "%.5f", value);
+    int decimal_places = -1;
+    bool stop = false;
+    for(int i = 0; (i < strlen(buff)) && (!stop); i++) {
+        if (buff[i] == '.' ) 
+            decimal_places = 0;
+        if (decimal_places > -1) {
+            if (decimal_places > set_decimal_points) {
+                buff[i] = '\0';
+                stop = true;
+            }
+            decimal_places++;
+        }
+    }
+    output = buff;
+    return output;
 }
 
 TSysfsGpioBaseCounter::~TSysfsGpioBaseCounter()

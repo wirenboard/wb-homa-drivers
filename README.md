@@ -576,7 +576,13 @@ wb-homa-gpio драйвер
             "type" : "watt_meter",
 
     //множитель для расчета, количество импульсов на kWh
-            "multiplier" : 1000
+            "multiplier" : 1000,
+    // decimal_points_total указывает количество значащих цифр после запятой
+    // для топика power_consumption, по умолчанию 3
+            "decimal_points_total" : 3,
+    // decimal_points_current указывает количество значащих цифр после запятой
+    // для топика power, по умолчанию 2
+            "decimal_points_current" : 1
         },
 
     //для работы с счетчиком воды
@@ -590,7 +596,13 @@ wb-homa-gpio драйвер
             "type" : "water_meter",
 
     //множитель для расчета, количество импульсов на м^3
-            "multiplier" : 100
+            "multiplier" : 100,
+    // decimal_points_total указывает количество значащих цифр после запятой
+    // для топика water_consumption, по умолчанию 2
+            "decimal_points_total" : 3,
+    // decimal_points_current указывает количество значащих цифр после запятой
+    // для топика water_flow, по умолчанию 3
+            "decimal_points_current" : 1
         }
     ]
 }
