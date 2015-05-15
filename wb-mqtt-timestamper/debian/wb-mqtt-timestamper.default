@@ -1,0 +1,6 @@
+#uncomment and set your parameter instead of YOUR_PARAMETER if you want add option
+#size in KB 
+#PORT="-p YOUR_PARAMETER"
+#HOST="-h YOUR_PARAMETER"
+# default MASK "/devices/+/controls/+" - all control messages from broker
+#MASK="/devices/+/controls/+"

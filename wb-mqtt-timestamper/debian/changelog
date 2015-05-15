@@ -1,0 +1,5 @@
+wb-mqtt-timestamper (1.8.7) stable; urgency=low
+
+  * Initial release.
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 15 May 2015 14:22:08 +0000
