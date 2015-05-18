@@ -12,9 +12,9 @@
 #include <mosquittopp.h>
 #include <curl/curl.h>
 
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
-#include "http_helper.h"
+#include <utils.h>
+#include <mqtt_wrapper.h>
+#include <http_helper.h>
 using namespace std;
 
 class TMQTTNinjaCloudHandler;

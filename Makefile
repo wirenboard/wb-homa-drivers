@@ -14,9 +14,8 @@ endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
 CFLAGS=-Wall -std=c++0x -Os -I.
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt
 
-COMMON_DIR=common
 
 GPIO_DIR=wb-homa-gpio
 GPIO_BIN=wb-homa-gpio
@@ -40,104 +39,92 @@ TEST_BIN=wb-homa-test
 LOGGER=mqtt-logger
 LOGGER_BIN=mqtt-logger
 
-COMMON_H=$(COMMON_DIR)/utils.h $(COMMON_DIR)/mqtt_wrapper.h
-COMMON_O=$(COMMON_DIR)/mqtt_wrapper.o $(COMMON_DIR)/utils.o
 
-.PHONY: all clean test
+.PHONY: all clean test_fix
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
-$(COMMON_DIR)/utils.o : $(COMMON_DIR)/utils.cpp $(COMMON_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-$(COMMON_DIR)/mqtt_wrapper.o : $(COMMON_DIR)/mqtt_wrapper.cpp $(COMMON_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-
 # GPIO
-$(GPIO_DIR)/main.o : $(GPIO_DIR)/main.cpp $(COMMON_H)
+$(GPIO_DIR)/main.o : $(GPIO_DIR)/main.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp $(COMMON_H)
+$(GPIO_DIR)/sysfs_gpio.o : $(GPIO_DIR)/sysfs_gpio.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/sysfs_gpio_base_counter.o : $(GPIO_DIR)/sysfs_gpio_base_counter.cpp $(COMMON_H)
+$(GPIO_DIR)/sysfs_gpio_base_counter.o : $(GPIO_DIR)/sysfs_gpio_base_counter.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_gpio_base_counter.o  $(COMMON_O)
+$(GPIO_DIR)/$(GPIO_BIN) : $(GPIO_DIR)/main.o $(GPIO_DIR)/sysfs_gpio.o $(GPIO_DIR)/sysfs_gpio_base_counter.o
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Modbus
-$(MODBUS_DIR)/main.o : $(MODBUS_DIR)/main.cpp $(COMMON_H)
+$(MODBUS_DIR)/main.o : $(MODBUS_DIR)/main.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/modbus_client.o : $(MODBUS_DIR)/modbus_client.cpp $(COMMON_H)
+$(MODBUS_DIR)/modbus_client.o : $(MODBUS_DIR)/modbus_client.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/modbus_config.o : $(MODBUS_DIR)/modbus_config.cpp $(COMMON_H)
+$(MODBUS_DIR)/modbus_config.o : $(MODBUS_DIR)/modbus_config.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/modbus_port.o : $(MODBUS_DIR)/modbus_port.cpp $(COMMON_H)
+$(MODBUS_DIR)/modbus_port.o : $(MODBUS_DIR)/modbus_port.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/modbus_observer.o : $(MODBUS_DIR)/modbus_observer.cpp $(COMMON_H)
+$(MODBUS_DIR)/modbus_observer.o : $(MODBUS_DIR)/modbus_observer.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/uniel.o : $(MODBUS_DIR)/uniel.cpp $(COMMON_H)
+$(MODBUS_DIR)/uniel.o : $(MODBUS_DIR)/uniel.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/uniel_context.o : $(MODBUS_DIR)/uniel_context.cpp $(COMMON_H)
+$(MODBUS_DIR)/uniel_context.o : $(MODBUS_DIR)/uniel_context.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_OBJS) $(COMMON_O)
+$(MODBUS_DIR)/$(MODBUS_BIN) : $(MODBUS_DIR)/main.o $(MODBUS_OBJS)
 	${CXX} $^ ${LDFLAGS} -o $@ $(MODBUS_LIBS)
 
 # W1
 W1_H=$(W1_DIR)/sysfs_w1.h
 
-$(W1_DIR)/main.o : $(W1_DIR)/main.cpp $(COMMON_H) $(W1_H)
+$(W1_DIR)/main.o : $(W1_DIR)/main.cpp $(W1_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(W1_DIR)/sysfs_w1.o : $(W1_DIR)/sysfs_w1.cpp $(COMMON_H) $(W1_H)
+$(W1_DIR)/sysfs_w1.o : $(W1_DIR)/sysfs_w1.cpp $(W1_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(W1_DIR)/$(W1_BIN) : $(W1_DIR)/main.o $(W1_DIR)/sysfs_w1.o $(COMMON_O)
+$(W1_DIR)/$(W1_BIN) : $(W1_DIR)/main.o $(W1_DIR)/sysfs_w1.o
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # ADC
 ADC_H=$(ADC_DIR)/sysfs_adc.h $(ADC_DIR)/adc_handler.h
 
-$(ADC_DIR)/main.o : $(ADC_DIR)/main.cpp $(COMMON_H) $(ADC_H)
+$(ADC_DIR)/main.o : $(ADC_DIR)/main.cpp $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(ADC_DIR)/adc_handler.o : $(ADC_DIR)/adc_handler.cpp $(COMMON_H) $(ADC_H)
+$(ADC_DIR)/adc_handler.o : $(ADC_DIR)/adc_handler.cpp $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
-$(ADC_DIR)/sysfs_adc.o : $(ADC_DIR)/sysfs_adc.cpp $(COMMON_H) $(ADC_H)
+$(ADC_DIR)/sysfs_adc.o : $(ADC_DIR)/sysfs_adc.cpp $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 $(ADC_DIR)/imx233.o : $(ADC_DIR)/imx233.c
 	${CC} -c $< -o $@
 
-$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_handler.o $(ADC_DIR)/imx233.o $(COMMON_O)
+$(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_handler.o $(ADC_DIR)/imx233.o
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
-NINJABRIDGE_H=$(NINJABRIDGE_DIR)/http_helper.h $(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
+NINJABRIDGE_H=$(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
 NINJABRIDGE_LDFLAGS= -lcurl
 
-$(NINJABRIDGE_DIR)/main.o : $(NINJABRIDGE_DIR)/main.cpp $(COMMON_H) $(NINJABRIDGE_H)
+$(NINJABRIDGE_DIR)/main.o : $(NINJABRIDGE_DIR)/main.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(NINJABRIDGE_DIR)/http_helper.o : $(NINJABRIDGE_DIR)/http_helper.cpp $(COMMON_H) $(NINJABRIDGE_H)
+$(NINJABRIDGE_DIR)/cloud_connection.o : $(NINJABRIDGE_DIR)/cloud_connection.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(NINJABRIDGE_DIR)/cloud_connection.o : $(NINJABRIDGE_DIR)/cloud_connection.cpp $(COMMON_H) $(NINJABRIDGE_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-$(NINJABRIDGE_DIR)/local_connection.o : $(NINJABRIDGE_DIR)/local_connection.cpp $(COMMON_H) $(NINJABRIDGE_H)
+$(NINJABRIDGE_DIR)/local_connection.o : $(NINJABRIDGE_DIR)/local_connection.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 
-$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o  $(NINJABRIDGE_DIR)/http_helper.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o $(COMMON_O)
+$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o
 	${CXX} $^ ${LDFLAGS} ${NINJABRIDGE_LDFLAGS} -o $@
 
 $(TEST_DIR)/testlog.o: $(TEST_DIR)/testlog.cpp
@@ -155,18 +142,18 @@ $(TEST_DIR)/fake_mqtt.o: $(TEST_DIR)/fake_mqtt.cpp
 $(TEST_DIR)/main.o: $(TEST_DIR)/main.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) $(COMMON_O) \
+$(TEST_DIR)/$(TEST_BIN): $(MODBUS_OBJS) \
   $(TEST_DIR)/testlog.o $(TEST_DIR)/modbus_test.o $(TEST_DIR)/fake_modbus.o \
   $(TEST_DIR)/fake_mqtt.o $(TEST_DIR)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@ $(TEST_LIBS) $(MODBUS_LIBS)
 
 #mqtt-logger
-$(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o $(COMMON_O)
+$(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o
 	${CXX} $^ ${LDFLAGS} -o $@
-$(LOGGER)/main.o: $(LOGGER)/main.cpp $(COMMON_H)
+$(LOGGER)/main.o: $(LOGGER)/main.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-test: $(TEST_DIR)/$(TEST_BIN)
+test_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
@@ -174,7 +161,6 @@ test: $(TEST_DIR)/$(TEST_BIN)
           else $(TEST_DIR)/abt.sh show; exit 1; fi
 
 clean :
-	-rm -f $(COMMON_DIR)/*.o
 	-rm -f $(GPIO_DIR)/*.o $(GPIO_DIR)/$(GPIO_BIN)
 	-rm -f $(MODBUS_DIR)/*.o $(MODBUS_DIR)/$(MODBUS_BIN)
 	-rm -f $(W1_DIR)/*.o $(W1_DIR)/$(W1_BIN)
