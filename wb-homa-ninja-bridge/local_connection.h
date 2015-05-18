@@ -14,7 +14,7 @@
 
 #include <utils.h>
 #include <mqtt_wrapper.h>
-#include "http_helper.h"
+#include <http_helper.h>
 using namespace std;
 
 class TMQTTNinjaCloudHandler;

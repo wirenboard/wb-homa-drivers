@@ -40,7 +40,7 @@ LOGGER=mqtt-logger
 LOGGER_BIN=mqtt-logger
 
 
-.PHONY: all clean test_fixed
+.PHONY: all clean test_fix
 
 all : $(GPIO_DIR)/$(GPIO_BIN) $(MODBUS_DIR)/$(MODBUS_BIN) $(W1_DIR)/$(W1_BIN) $(ADC_DIR)/$(ADC_BIN) $(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) $(LOGGER)/$(LOGGER_BIN)
 
@@ -111,13 +111,10 @@ $(ADC_DIR)/$(ADC_BIN) : $(ADC_DIR)/main.o $(ADC_DIR)/sysfs_adc.o $(ADC_DIR)/adc_
 	${CXX} $^ ${LDFLAGS} -o $@
 
 # Ninja blocks bridge
-NINJABRIDGE_H=$(NINJABRIDGE_DIR)/http_helper.h $(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
+NINJABRIDGE_H=$(NINJABRIDGE_DIR)/cloud_connection.h $(NINJABRIDGE_DIR)/local_connection.h
 NINJABRIDGE_LDFLAGS= -lcurl
 
 $(NINJABRIDGE_DIR)/main.o : $(NINJABRIDGE_DIR)/main.cpp $(NINJABRIDGE_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-$(NINJABRIDGE_DIR)/http_helper.o : $(NINJABRIDGE_DIR)/http_helper.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 $(NINJABRIDGE_DIR)/cloud_connection.o : $(NINJABRIDGE_DIR)/cloud_connection.cpp $(NINJABRIDGE_H)
@@ -127,7 +124,7 @@ $(NINJABRIDGE_DIR)/local_connection.o : $(NINJABRIDGE_DIR)/local_connection.cpp 
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 
-$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o  $(NINJABRIDGE_DIR)/http_helper.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o
+$(NINJABRIDGE_DIR)/$(NINJABRIDGE_BIN) : $(NINJABRIDGE_DIR)/main.o $(NINJABRIDGE_DIR)/cloud_connection.o $(NINJABRIDGE_DIR)/local_connection.o
 	${CXX} $^ ${LDFLAGS} ${NINJABRIDGE_LDFLAGS} -o $@
 
 $(TEST_DIR)/testlog.o: $(TEST_DIR)/testlog.cpp
@@ -156,7 +153,7 @@ $(LOGGER)/$(LOGGER_BIN): $(LOGGER)/main.o
 $(LOGGER)/main.o: $(LOGGER)/main.cpp
 	${CXX} -c $< -o $@ ${CFLAGS}
 
-test: $(TEST_DIR)/$(TEST_BIN)
+test_fix: $(TEST_DIR)/$(TEST_BIN)
 	valgrind --error-exitcode=180 -q $(TEST_DIR)/$(TEST_BIN) || \
           if [ $$? = 180 ]; then \
             echo "*** VALGRIND DETECTED ERRORS ***" 1>& 2; \
