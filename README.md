@@ -1,8 +1,6 @@
 Table of Contents
 =================
 
-  * [Table of Contents](#table-of-contents)
-  * [wb-homa-drivers](#wb-homa-drivers)
   * [wb-homa-adc](wb-homa-adc/README.md)
   * [wb-homa-modbus](wb-homa-modbus/README.md)
     * [Устройства Uniel](wb-homa-modbus/README.md#%D0%A3%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%B0-uniel)
@@ -12,12 +10,3 @@ Table of Contents
 
 
 
-wb-homa-drivers
-===============
-MQTT drivers for compatible with HomA conventions
-    * Kernel 1-wire interface driver (currently thermometers only)
-    * GPIO-drivern switches driver
-    * Ninja Cloud (ninjablocks.com) bridge
-
-
-Lanuage: C++11, g++-4.7 is required
