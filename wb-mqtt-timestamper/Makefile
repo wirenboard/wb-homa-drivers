@@ -30,7 +30,7 @@ main.o: main.cpp
 	${CXX} -c $< -o $@ ${CFLAGS};
 
 clean :
-	-rm -f *.o $(TIME_LOGGER_BIN)
+	-rm -f *.o $(TIME_STAMPER_BIN)
 
 
 
