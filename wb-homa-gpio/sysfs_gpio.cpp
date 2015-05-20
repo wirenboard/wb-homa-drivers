@@ -278,6 +278,7 @@ vector<TPublishPair> TSysfsGpio::MetaType()
     output_vector.push_back(make_pair("", "switch"));
     return output_vector;
 }
+
 vector<TPublishPair>  TSysfsGpio::GpioPublish()
 {
     vector<TPublishPair> output_vector;
@@ -289,6 +290,7 @@ vector<TPublishPair>  TSysfsGpio::GpioPublish()
     output_vector.push_back(make_pair("", to_string(output_value)));//output saved value 
     return output_vector; 
 }
+
 string TSysfsGpio::GetInterruptEdge()
 {
     if (InterruptEdge == "") {
@@ -297,10 +299,21 @@ string TSysfsGpio::GetInterruptEdge()
     else 
         return InterruptEdge;
 }
+
 void TSysfsGpio::SetInterruptEdge (string s)
 {
     InterruptEdge = s;
 }
+
+void TSysfsGpio::SetInitialValues(float total)
+{
+}
+
+TPublishPair TSysfsGpio::CheckTimeInterval()
+{
+    return make_pair(string(""),string(""));
+}
+
 TSysfsGpio::~TSysfsGpio()
 {
     if ( FileDes >= 0 ) {
