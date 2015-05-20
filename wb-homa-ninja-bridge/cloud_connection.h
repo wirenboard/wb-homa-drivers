@@ -1,16 +1,16 @@
 #pragma once
 #include <memory>
-#include <common/utils.h>
+#include <utils.h>
 
-using namespace std;
-class TMQTTNinjaBridgeHandler;
-class TControlDesc;
+    using namespace std;
+    class TMQTTNinjaBridgeHandler;
+    class TControlDesc;
 
 
-class TMQTTNinjaCloudHandler : public TMQTTWrapper
-{
-	public:
-        TMQTTNinjaCloudHandler(const TMQTTNinjaCloudHandler::TConfig& mqtt_config, TMQTTNinjaBridgeHandler* parent);
+    class TMQTTNinjaCloudHandler : public TMQTTWrapper
+    {
+        public:
+            TMQTTNinjaCloudHandler(const TMQTTNinjaCloudHandler::TConfig& mqtt_config, TMQTTNinjaBridgeHandler* parent);
 		//~ ~TMQTTNinjaCloudHandler();
 
 		void OnConnect(int rc);
