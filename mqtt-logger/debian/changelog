@@ -1,0 +1,5 @@
+mqtt-logger (1.8.7) stable; urgency=low
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 15 May 2015 08:43:59 +0000

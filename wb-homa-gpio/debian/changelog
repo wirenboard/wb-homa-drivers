@@ -1,0 +1,5 @@
+wb-homa-gpio (1.8.7) stable; urgency=low
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 15 May 2015 10:27:09 +0000
