@@ -24,13 +24,10 @@ all : $(NINJABRIDGE_BIN)
 
 
 # Ninja blocks bridge
-NINJABRIDGE_H=http_helper.h cloud_connection.h local_connection.h
+NINJABRIDGE_H=cloud_connection.h local_connection.h
 NINJABRIDGE_LDFLAGS= -lcurl
 
 main.o : main.cpp $(NINJABRIDGE_H)
-	${CXX} -c $< -o $@ ${CFLAGS}
-
-http_helper.o : http_helper.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 cloud_connection.o : cloud_connection.cpp $(NINJABRIDGE_H)
@@ -40,7 +37,7 @@ local_connection.o : local_connection.cpp $(NINJABRIDGE_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 
 
-$(NINJABRIDGE_BIN) : main.o  http_helper.o cloud_connection.o local_connection.o
+$(NINJABRIDGE_BIN) : main.o cloud_connection.o local_connection.o
 	${CXX} $^ ${LDFLAGS} ${NINJABRIDGE_LDFLAGS} -o $@
 
 
