@@ -39,6 +39,8 @@ struct TGpioDesc
     string Type = "";
     int Multiplier;
     int Order;
+    int DecimalPointsTotal = -1;
+    int DecimalPointsCurrent = -1;
 };
 
 
@@ -98,7 +100,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         if (gpio_desc.Type == "")
                 gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
         else
-            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier));
+            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier, gpio_desc.DecimalPointsTotal, gpio_desc.DecimalPointsCurrent));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
@@ -139,6 +141,9 @@ void TMQTTGpioHandler::OnConnect(int rc)
                 Publish(NULL, control_prefix + tmp.first + "/meta/type", tmp.second, 0, true);
                 order++;
             }
+            if (what_to_publish.size() > 1) {
+                Subscribe(NULL, control_prefix + "_total");
+            }
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
             else
@@ -161,6 +166,23 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
 
     const vector<string>& tokens = StringSplit(topic, '/');
 
+    if (  (tokens.size() == 5) &&
+          (tokens[0] == "") && (tokens[1] == "devices") &&
+          (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
+          (tokens[4].find("_total") == (tokens[4].size() - 6)) )
+    {
+        int pos = tokens[4].find("_total");
+        string gpio_name = tokens[4].substr(0, pos);
+        for (TChannelDesc& channel_desc : Channels) {
+            const auto& gpio_desc = channel_desc.first;
+            const auto& gpio_handler = channel_desc.second;
+            if (gpio_desc.Name == gpio_name) {
+                float total = stof(payload);
+                gpio_handler->SetInitialValues(total); 
+                unsubscribe(NULL,topic.c_str());
+            }
+        }
+    }
     if (  (tokens.size() == 6) &&
           (tokens[0] == "") && (tokens[1] == "devices") &&
           (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
@@ -228,6 +250,12 @@ void TMQTTGpioHandler::UpdateChannelValues()
         const auto& gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
         UpdateValue(gpio_desc,gpio_handler);
+        if (gpio_desc.Type != "") {
+            TPublishPair what_to_publish = gpio_handler->CheckTimeInterval();
+            if (what_to_publish.first != "") {
+                Publish(NULL, GetChannelTopic(gpio_desc) + what_to_publish.first, what_to_publish.second, 0, true);
+            }
+        }
     }
 }
 
@@ -367,6 +395,12 @@ int main(int argc, char *argv[])
                 gpio_desc.Multiplier = item["multiplier"].asInt();
             if (item.isMember("edge"))
                 gpio_desc.InterruptEdge = item["edge"].asString();
+            if (item.isMember("decimal_points_current")) {
+                gpio_desc.DecimalPointsCurrent = item["decimal_points_current"].asInt();
+            }
+            if (item.isMember("decimal_points_total")) {
+                gpio_desc.DecimalPointsTotal = item["decimal_points_total"].asInt();
+            }
             gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
