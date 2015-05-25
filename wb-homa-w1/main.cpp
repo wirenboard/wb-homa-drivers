@@ -12,8 +12,8 @@
 
 #include <mosquittopp.h>
 
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <utils.h>
+#include <mqtt_wrapper.h>
 
 #include "sysfs_w1.h"
 
@@ -43,7 +43,7 @@ class TMQTTOnewireHandler : public TMQTTWrapper
     private:
         vector<TSysfsOnewireDevice> Channels;
         bool PrepareInit;// needed for cleaning mqtt messages before start working
-        string Retained_hack;// we need some message to be sure, that we got all retained messages in starting
+        string Retained_old;// we need some message to be sure, that we got all retained messages in starting
 
 };
 
@@ -56,7 +56,7 @@ TMQTTOnewireHandler::TMQTTOnewireHandler(const TMQTTOnewireHandler::TConfig& mqt
 {
 	Connect();
 
-    Retained_hack = string("/tmp/") + MQTTConfig.Id + "/retained_hack";
+    Retained_old = string("/tmp/") + MQTTConfig.Id + "/retained_old";
 
 }
 
@@ -74,8 +74,8 @@ void TMQTTOnewireHandler::OnConnect(int rc)
         if (PrepareInit){
             string controls = string("/devices/") + MQTTConfig.Id + "/controls/+";
             Subscribe(NULL, controls);
-            Subscribe(NULL, Retained_hack);
-            Publish(NULL, Retained_hack, "1", 0, false);
+            Subscribe(NULL, Retained_old);
+            Publish(NULL, Retained_old, "1", 0, false);
          }else{
             RescanBus();
          }
@@ -145,9 +145,9 @@ void TMQTTOnewireHandler::OnMessage(const struct mosquitto_message *message)
 {
     string topic = message->topic;
     string controls_prefix = string("/devices/") + MQTTConfig.Id + "/controls/";
-    if (topic == Retained_hack) {// if we get hack_message it means that we've read all retained messages
-        Publish(NULL, Retained_hack, "", 0, true);
-        unsubscribe(NULL, Retained_hack.c_str());
+    if (topic == Retained_old) {// if we get old_message it means that we've read all retained messages
+        Publish(NULL, Retained_old, "", 0, true);
+        unsubscribe(NULL, Retained_old.c_str());
         unsubscribe(NULL, (controls_prefix + "+").c_str());
         PrepareInit = false;
     }else {
