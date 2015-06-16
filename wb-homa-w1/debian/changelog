@@ -1,3 +1,9 @@
+wb-homa-w1 (1.8.8) stable; urgency=medium
+
+  * split libwbmqtt
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 25 May 2015 15:44:06 +0300
+
 wb-homa-w1 (1.8.7) stable; urgency=medium
 
   * Initial release. (Package was separated from wb-homa-drivers)
