@@ -13,7 +13,7 @@ ifneq ($(CC_PATH),)
 endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
-CFLAGS=-Wall -std=c++0x -Os -I. -g
+CFLAGS=-Wall -std=c++0x -Os -I.
 CPPFLAGS=$(CFLAGS)
 LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3
 
