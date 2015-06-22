@@ -6,5 +6,6 @@
             "values_total" : 1000000,
             "min_interval" : 30
         }
-    }
+    },
+    "database" : "/var/lib/wirenboard/db/data.db"
 }

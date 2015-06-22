@@ -34,6 +34,7 @@ struct TLoggingGroup
 struct TMQTTDBLoggerConfig
 {
     vector<TLoggingGroup> Groups;
+    string DBFile;
 };
 
 class TMQTTDBLogger: public TMQTTWrapper
@@ -75,7 +76,7 @@ TMQTTDBLogger::~TMQTTDBLogger()
 
 void TMQTTDBLogger::InitDB()
 {
-    DB.reset(new SQLite::Database("data.db", SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
+    DB.reset(new SQLite::Database(LoggerConfig.DBFile, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
 
     DB->exec("CREATE TABLE IF NOT EXISTS data ( "
             "uid INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -345,44 +346,49 @@ int main (int argc, char *argv[])
             return 1;
         }
 
+        if (!root.isMember("database")) {
+            throw TBaseException("database location should be specified in config");
+        }
+
+        config.DBFile = root["database"].asString();
 
 
-            for(auto group_it = root["groups"].begin(); group_it !=root["groups"].end(); ++group_it) {
-                const auto & group_item = *group_it;
+        for(auto group_it = root["groups"].begin(); group_it !=root["groups"].end(); ++group_it) {
+            const auto & group_item = *group_it;
 
-                TLoggingGroup group;
-                group.Id = group_it.key().asString();
+            TLoggingGroup group;
+            group.Id = group_it.key().asString();
 
-                if (! group_item.isMember("channels")) {
-                    throw TBaseException("no channels specified for group");
-                }
-
-                for (const auto & channel_item : group_item["channels"]) {
-                    TLoggingChannel channel = {channel_item.asString()};
-                    group.Channels.push_back(channel);
-                }
-
-                if (group_item.isMember("values")) {
-                    if (group_item["values"].asInt() < 0)
-                        throw TBaseException("'values' must be positive or zero");
-                    group.Values = group_item["values"].asInt();
-                }
-
-                if (group_item.isMember("values_total")) {
-                    if (group_item["values_total"].asInt() < 0)
-                        throw TBaseException("'values_total' must be positive or zero");
-                    group.ValuesTotal = group_item["values_total"].asInt();
-                }
-
-                if (group_item.isMember("min_interval")) {
-                    if (group_item["min_interval"].asInt() < 0)
-                        throw TBaseException("'min_interval' must be positive or zero");
-                    group.MinInterval = group_item["min_interval"].asInt();
-                }
-
-
-                config.Groups.push_back(group);
+            if (! group_item.isMember("channels")) {
+                throw TBaseException("no channels specified for group");
             }
+
+            for (const auto & channel_item : group_item["channels"]) {
+                TLoggingChannel channel = {channel_item.asString()};
+                group.Channels.push_back(channel);
+            }
+
+            if (group_item.isMember("values")) {
+                if (group_item["values"].asInt() < 0)
+                    throw TBaseException("'values' must be positive or zero");
+                group.Values = group_item["values"].asInt();
+            }
+
+            if (group_item.isMember("values_total")) {
+                if (group_item["values_total"].asInt() < 0)
+                    throw TBaseException("'values_total' must be positive or zero");
+                group.ValuesTotal = group_item["values_total"].asInt();
+            }
+
+            if (group_item.isMember("min_interval")) {
+                if (group_item["min_interval"].asInt() < 0)
+                    throw TBaseException("'min_interval' must be positive or zero");
+                group.MinInterval = group_item["min_interval"].asInt();
+            }
+
+
+            config.Groups.push_back(group);
+        }
     }
 
 

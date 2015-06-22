@@ -12,5 +12,6 @@
             "values_total" : 20
 
         }
-    }
+    },
+    "database": "/tmp/data.db"
 }
