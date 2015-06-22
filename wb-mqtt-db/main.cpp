@@ -109,7 +109,6 @@ void TMQTTDBLogger::OnConnect(int rc)
 
 void TMQTTDBLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos)
 {
-    cout << "subscription succeded\n";
 }
 
 void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
@@ -117,7 +116,6 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
 
-    cout << "topic: " << topic << endl;
 
     bool match;
 
@@ -147,7 +145,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
                     if (static_cast<double>(search_recent_query.getColumn(0)) < group.MinInterval) {
                         //limit rate, i.e. ignore this message
-                        cout << "rate limit" << endl;
+                        cout << "warning: rate limit for topic: " << topic <<  endl;
                         return;
                     }
                 }
