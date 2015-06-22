@@ -13,6 +13,7 @@
 #include  "SQLiteCpp/SQLiteCpp.h"
 
 using namespace std;
+using namespace std::chrono;
 
 
 
@@ -58,6 +59,9 @@ class TMQTTDBLogger: public TMQTTWrapper
         std::unique_ptr<SQLite::Database> DB;
         TMQTTDBLoggerConfig LoggerConfig;
         shared_ptr<TMQTTRPCServer> RPCServer;
+        map<pair<const string, const string>, steady_clock::time_point> LastSavedTimestamps;
+        map<pair<const string, const string>, int> ControlRowNumberCache;
+        map<pair<const string, const string>, int> GroupRowNumberCache;
 
 };
 
@@ -133,22 +137,22 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
             if (group.MinInterval > 0) {
 
-                static SQLite::Statement search_recent_query(*DB, "SELECT (julianday('now') - julianday(timestamp))*86400.0 FROM data "
-                                      "WHERE device=? AND control=? ORDER BY timestamp DESC LIMIT 1");
 
-                search_recent_query.reset();
-                search_recent_query.bind(1, tokens[2]);
-                search_recent_query.bind(2, tokens[4]);
+                auto  last_saved = LastSavedTimestamps[make_pair(tokens[2], tokens[4])];
 
-                if (search_recent_query.executeStep()) {
-                    // at least one row with the same device and control was saved before
-
-                    if (static_cast<double>(search_recent_query.getColumn(0)) < group.MinInterval) {
-                        //limit rate, i.e. ignore this message
-                        cout << "warning: rate limit for topic: " << topic <<  endl;
-                        return;
-                    }
+                //~ cout << "last_saved: " < last_saved << endl;
+                if (duration_cast<milliseconds>(steady_clock::now() - last_saved).count() < group.MinInterval * 1000) {
+                    //limit rate, i.e. ignore this message
+                    cout << "warning: rate limit for topic: " << topic <<  endl;
+                    return;
                 }
+
+                LastSavedTimestamps[make_pair(tokens[2], tokens[4])] = steady_clock::now();
+
+
+
+
+
             }
 
 
@@ -162,9 +166,11 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             insert_row_query.bind(4, group.Id);
 
             insert_row_query.exec();
+            cout << insert_row_query.getQuery() << endl;
 
 
             if (group.Values > 0) {
+
                 static SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) FROM data WHERE device = ? and control = ?");
                 count_channel_query.reset();
                 count_channel_query.bind(1, tokens[2]);
@@ -172,6 +178,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                 if (!count_channel_query.executeStep()) {
                     throw TBaseException("cannot execute select count(*)");
                 }
+
+                cout << count_channel_query.getQuery() << endl;
 
                 int found = count_channel_query.getColumn(0);
 
@@ -183,6 +191,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                     clean_channel_query.bind(3, found - group.Values);
 
                     clean_channel_query.exec();
+                    cout << clean_channel_query.getQuery() << endl;
                 }
             }
 
