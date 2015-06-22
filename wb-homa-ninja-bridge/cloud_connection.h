@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include <utils.h>
+#include <wbmqtt/utils.h>
 
     using namespace std;
     class TMQTTNinjaBridgeHandler;

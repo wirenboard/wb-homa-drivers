@@ -13,8 +13,8 @@
 #include <mosquittopp.h>
 
 #include "sysfs_gpio.h"
-#include <utils.h>
-#include <mqtt_wrapper.h>
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 #include<chrono>
 #include<thread>
 
@@ -178,7 +178,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
             const auto& gpio_handler = channel_desc.second;
             if (gpio_desc.Name == gpio_name) {
                 float total = stof(payload);
-                gpio_handler->SetInitialValues(total); 
+                gpio_handler->SetInitialValues(total);
                 unsubscribe(NULL,topic.c_str());
             }
         }

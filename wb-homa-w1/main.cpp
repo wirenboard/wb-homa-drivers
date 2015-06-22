@@ -7,13 +7,11 @@
 #include "dirent.h"
 #include <getopt.h>
 #include <chrono>
-// This is the JSON header
-#include "jsoncpp/json/json.h"
 
 #include <mosquittopp.h>
 
-#include <utils.h>
-#include <mqtt_wrapper.h>
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 
 #include "sysfs_w1.h"
 

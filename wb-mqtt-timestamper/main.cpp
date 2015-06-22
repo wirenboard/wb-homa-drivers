@@ -1,5 +1,5 @@
-#include <utils.h>
-#include <mqtt_wrapper.h>
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -65,7 +65,7 @@ int main (int argc, char *argv[])
     mqtt_config.Host = "localhost";
     mqtt_config.Port = 1883;
     int c;
-    
+
     while ((c = getopt(argc, argv, "hp:H:")) != -1) {
         switch(c) {
             case 'p' :
