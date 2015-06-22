@@ -1,16 +1,10 @@
 {
     "groups": {
-        "1-wire" : {
-            "channels" : ["/devices/wb-w1/controls/+"],
-            "values" : 5,
-            "values_total" : 10,
-            "min_interval" : 1
-        },
         "all": {
             "channels" : ["/devices/+/controls/+"],
-            "values" : 5,
-            "values_total" : 20
-
+            "values" : 50000,
+            "values_total" : 1000000,
+            "min_interval" : 30
         }
     }
 }

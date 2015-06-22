@@ -1,0 +1,5 @@
+wb-mqtt-db (1.0) stable; urgency=medium
+
+  * Initial release. 
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 22 Jun 2015 19:26:53 +0300

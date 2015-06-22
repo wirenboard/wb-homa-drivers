@@ -47,5 +47,10 @@ install: all
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
+	install -d $(DESTDIR)/var/lib/wirenboard
+	install -d $(DESTDIR)/var/lib/wirenboard/db
 
 	install -m 0755  $(DB_BIN) $(DESTDIR)/usr/bin/$(DB_BIN)
+	install -m 0755  config.json $(DESTDIR)/etc/wb-mqtt-db.conf
+
+
