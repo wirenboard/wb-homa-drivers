@@ -4,7 +4,8 @@
             "channels" : ["/devices/wb-w1/controls/+"],
             "values" : 5,
             "values_total" : 10,
-            "min_interval" : 1
+            "min_interval" : 2,
+            "min_unchanged_interval" : 10
         },
         "all": {
             "channels" : ["/devices/+/controls/+"],

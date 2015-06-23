@@ -28,6 +28,7 @@ struct TLoggingGroup
     int Values = 0;
     int ValuesTotal = 0;
     int MinInterval = 0;
+    int MinUnchangedInterval = 0;
     string Id;
 
 };
@@ -37,6 +38,17 @@ struct TMQTTDBLoggerConfig
     vector<TLoggingGroup> Groups;
     string DBFile;
 };
+
+struct TChannel
+{
+    string Device;
+    string Control;
+
+    bool operator <(const TChannel& rhs) const {
+        return std::tie(this->Device, this->Control) < std::tie(rhs.Device, rhs.Control);
+    }
+};
+
 
 class TMQTTDBLogger: public TMQTTWrapper
 
@@ -59,9 +71,10 @@ class TMQTTDBLogger: public TMQTTWrapper
         std::unique_ptr<SQLite::Database> DB;
         TMQTTDBLoggerConfig LoggerConfig;
         shared_ptr<TMQTTRPCServer> RPCServer;
-        map<pair<const string, const string>, steady_clock::time_point> LastSavedTimestamps;
-        map<pair<const string, const string>, int> ControlRowNumberCache;
-        map<pair<const string, const string>, int> GroupRowNumberCache;
+        map<TChannel, steady_clock::time_point> LastSavedTimestamps;
+        map<TChannel, int> ControlRowNumberCache;
+        map<TChannel, int> GroupRowNumberCache;
+        map<TChannel, string> ControlValueCache;
 
 };
 
@@ -134,25 +147,33 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
         if (match) {
             const vector<string>& tokens = StringSplit(topic, '/');
+            TChannel channel = {tokens[2], tokens[4]};
 
-            if (group.MinInterval > 0) {
+            if ((group.MinInterval > 0) || (group.MinUnchangedInterval > 0)) {
+                auto  last_saved = LastSavedTimestamps[channel];
+                const auto& now = steady_clock::now();
 
-
-                auto  last_saved = LastSavedTimestamps[make_pair(tokens[2], tokens[4])];
-
-                //~ cout << "last_saved: " < last_saved << endl;
-                if (duration_cast<milliseconds>(steady_clock::now() - last_saved).count() < group.MinInterval * 1000) {
-                    //limit rate, i.e. ignore this message
-                    cout << "warning: rate limit for topic: " << topic <<  endl;
-                    return;
+                if (group.MinInterval > 0) {
+                    if (duration_cast<milliseconds>(now - last_saved).count() < group.MinInterval * 1000) {
+                        //limit rate, i.e. ignore this message
+                        cout << "warning: rate limit for topic: " << topic <<  endl;
+                        return;
+                    }
                 }
 
-                LastSavedTimestamps[make_pair(tokens[2], tokens[4])] = steady_clock::now();
 
+                if (group.MinUnchangedInterval > 0) {
+                    if (ControlValueCache[channel] == payload) {
+                        if (duration_cast<milliseconds>(now - last_saved).count() < group.MinUnchangedInterval * 1000) {
+                            cout << "warning: rate limit (unchanged value) for topic: " << topic <<  endl;
+                            return;
+                        }
+                    }
 
+                    ControlValueCache[channel] = payload;
+                }
 
-
-
+                LastSavedTimestamps[channel] = now;
             }
 
 
@@ -160,8 +181,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, control, value, group_id) VALUES (?, ?, ?, ?)");
 
             insert_row_query.reset();
-            insert_row_query.bind(1, tokens[2]);
-            insert_row_query.bind(2, tokens[4]);
+            insert_row_query.bind(1, channel.Device);
+            insert_row_query.bind(2, channel.Control);
             insert_row_query.bind(3, payload);
             insert_row_query.bind(4, group.Id);
 
@@ -173,8 +194,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
                 static SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) FROM data WHERE device = ? and control = ?");
                 count_channel_query.reset();
-                count_channel_query.bind(1, tokens[2]);
-                count_channel_query.bind(2, tokens[4]);
+                count_channel_query.bind(1, channel.Device);
+                count_channel_query.bind(2, channel.Control);
                 if (!count_channel_query.executeStep()) {
                     throw TBaseException("cannot execute select count(*)");
                 }
@@ -186,8 +207,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                 if (found > group.Values) {
                     static SQLite::Statement clean_channel_query(*DB, "DELETE FROM data WHERE device = ? AND control = ? ORDER BY rowid ASC LIMIT ?");
                     clean_channel_query.reset();
-                    clean_channel_query.bind(1, tokens[2]);
-                    clean_channel_query.bind(2, tokens[4]);
+                    clean_channel_query.bind(1, channel.Device);
+                    clean_channel_query.bind(2, channel.Control);
                     clean_channel_query.bind(3, found - group.Values);
 
                     clean_channel_query.exec();
@@ -392,6 +413,13 @@ int main (int argc, char *argv[])
                     throw TBaseException("'min_interval' must be positive or zero");
                 group.MinInterval = group_item["min_interval"].asInt();
             }
+
+            if (group_item.isMember("min_unchanged_interval")) {
+                if (group_item["min_unchanged_interval"].asInt() < 0)
+                    throw TBaseException("'min_unchanged_interval' must be positive or zero");
+                group.MinUnchangedInterval = group_item["min_unchanged_interval"].asInt();
+            }
+
 
 
             config.Groups.push_back(group);
