@@ -12,8 +12,12 @@ case "$WB_VERSION" in
         BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb3.5"
     ;;
 
-    "KMON1" )
+    "28" )
         BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb2.8"
+    ;;
+
+    "KMON1" )
+        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.netmon1"
     ;;
 
     * )

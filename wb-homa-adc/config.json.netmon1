@@ -1,0 +1,74 @@
+// Configuration options
+{
+    "device_name" : "ADCs",
+    "debug" : false,
+    "iio_channels" : [
+         {
+                "id" : "Vin",
+                "averaging_window": 1,
+                "poll_interval" : 0,
+                "channel_number" : 0,
+                "multiplier" : 5.873,
+                "decimal_places" : 2
+
+        },
+        {
+                "type" : "mux",
+                "averaging_window": 1,
+                "readings_number": 10,
+                "min_switch_interval_ms": 200,
+                "gpios" : [32, 33, 34],
+                "channels" : [
+                        {
+                            "id" : "A1",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 5,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A2",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 0,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A3",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 2,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A4",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 4,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A5",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 6,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A6",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 7,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A7",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 3,
+                            "decimal_places" : 1
+                        },
+                        {
+                            "id" : "A8",
+                            "multiplier" : 3.446,
+                            "mux_channel_number" : 1,
+                            "decimal_places" : 1
+                        }
+                ]
+        }
+    ]
+}
+
