@@ -258,6 +258,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     Json::Value result;
     int limit = -1;
     double timestamp_gt = 0;
+    int64_t uid_gt = -1;
     double timestamp_lt = 10675199167;
 
 
@@ -270,6 +271,14 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         if (params["timestamp"].isMember("lt"))
             timestamp_gt = params["timestamp"]["lt"].asDouble();
     }
+
+    if (params.isMember("uid")) {
+        if (params["uid"].isMember("gt")) {
+            uid_gt = params["uid"]["gt"].asInt64();
+        }
+    }
+
+
 
     if (params.isMember("limit"))
         limit = params["limit"].asInt();
@@ -292,13 +301,14 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
 
         static SQLite::Statement get_values_query(*DB, "SELECT uid, device, control, value,  (julianday(timestamp) - 2440587.5)*86400.0  FROM data "
-                              "WHERE device=? AND control=? AND timestamp > datetime(?,'unixepoch') AND timestamp < datetime(?,'unixepoch') ORDER BY uid ASC LIMIT ?");
+                              "WHERE device=? AND control=? AND timestamp > datetime(?,'unixepoch') AND timestamp < datetime(?,'unixepoch') AND uid > ? ORDER BY uid ASC LIMIT ?");
         get_values_query.reset();
         get_values_query.bind(1, device_id);
         get_values_query.bind(2, control_id);
         get_values_query.bind(3, timestamp_gt);
         get_values_query.bind(4, timestamp_lt);
-        get_values_query.bind(5, limit - row_count + 1); // we request one extra row to know whether there are more than 'limit' available
+        get_values_query.bind(5, static_cast<sqlite3_int64>(uid_gt));
+        get_values_query.bind(6, limit - row_count + 1); // we request one extra row to know whether there are more than 'limit' available
 
         while (get_values_query.executeStep()) {
             if (row_count >= limit) {
