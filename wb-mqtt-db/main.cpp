@@ -233,6 +233,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                     clean_group_query.bind(1, group.Id);
                     clean_group_query.bind(2, found - group.ValuesTotal);
                     clean_group_query.exec();
+                    cout << clean_group_query.getQuery() << endl;
+
                 }
             }
 
@@ -276,6 +278,11 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     if (! params.isMember("channels"))
         throw TBaseException("no channels specified");
 
+
+    int row_count = 0;
+    bool has_more = false;
+
+
     for (const auto& channel_item : params["channels"]) {
         if (!(channel_item.isArray() && (channel_item.size() == 2)))
             throw TBaseException("'channels' items must be an arrays of size two ");
@@ -291,9 +298,14 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         get_values_query.bind(2, control_id);
         get_values_query.bind(3, timestamp_gt);
         get_values_query.bind(4, timestamp_lt);
-        get_values_query.bind(5, limit);
+        get_values_query.bind(5, limit - row_count + 1); // we request one extra row to know whether there are more than 'limit' available
 
         while (get_values_query.executeStep()) {
+            if (row_count >= limit) {
+                has_more = true;
+                break;
+            }
+
             Json::Value row;
             row["uid"] = static_cast<int>(get_values_query.getColumn(0));
             row["device"] = get_values_query.getColumn(1).getText();
@@ -301,8 +313,20 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
             row["value"] = get_values_query.getColumn(3).getText();
             row["timestamp"] = static_cast<double>(get_values_query.getColumn(4));
             result["values"].append(row);
+            row_count += 1;
         }
+
+        if (has_more) {
+            // limit + 1 rows found, no need to request other channels
+            break;
+        }
+
     }
+
+    if (has_more) {
+        result["has_more"] = true;
+    }
+
 
     return result;
 }
