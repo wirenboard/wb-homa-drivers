@@ -2,10 +2,10 @@
     "groups": {
         "all": {
             "channels" : ["/devices/+/controls/+"],
-            "values" : 5000,
+            "values" : 10000,
             "values_total" : 100000,
-            "min_interval" : 20,
-            "min_unchanged_interval" : 600
+            "min_interval" : 120,
+            "min_unchanged_interval" : 1200
         }
     },
     "database" : "/var/lib/wirenboard/db/data.db"
