@@ -291,6 +291,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     int row_count = 0;
     bool has_more = false;
 
+    result["values"] = Json::Value(Json::arrayValue);
 
     for (const auto& channel_item : params["channels"]) {
         if (!(channel_item.isArray() && (channel_item.size() == 2)))
