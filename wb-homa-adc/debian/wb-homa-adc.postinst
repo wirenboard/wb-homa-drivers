@@ -4,6 +4,10 @@
 CONFFILE=/etc/wb-homa-adc.conf
 
 case "$WB_VERSION" in
+    "50" )
+        BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb5"
+    ;;
+
     "41" )
         BOARD_CONF="/usr/share/wb-homa-adc/wb-homa-adc.conf.wb4"
     ;;
