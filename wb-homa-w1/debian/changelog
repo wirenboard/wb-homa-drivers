@@ -1,3 +1,15 @@
+wb-homa-w1 (1.9) stable; urgency=medium
+
+  * libwbmqtt 1.3
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 00:30:01 +0300
+
+wb-homa-w1 (1.8.9) stable; urgency=medium
+
+  * build with new mosquitto
+
+ -- Evgeny Boger <boger@contactless.ru>  Wed, 01 Jul 2015 14:56:14 +0300
+
 wb-homa-w1 (1.8.8) stable; urgency=medium
 
   * split libwbmqtt

@@ -1,3 +1,9 @@
+wb-homa-adc (1.9) stable; urgency=medium
+
+  * libwbmqtt 1.3
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 00:32:57 +0300
+
 wb-homa-adc (1.8.11) stable; urgency=medium
 
   * add wb5 config
