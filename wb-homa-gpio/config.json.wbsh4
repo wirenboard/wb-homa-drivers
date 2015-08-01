@@ -1,6 +1,6 @@
 // Configuration options
 {
-    "device_name" : "Relays & FETs",
+    "device_name" : "Relays, FETs & Inputs",
 
     "channels" : [
         {
@@ -91,6 +91,18 @@
         {
             "gpio" : 39,
             "name" : "D4_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 16,
+            "name" : "R1_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 6,
+            "name" : "R2_IN",
             "inverted" : false,
             "direction": "input"
         }

@@ -10,9 +10,9 @@
 #include <mosquittopp.h>
 #include <curl/curl.h>
 
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
-#include "common/http_helper.h"
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
+#include <wbmqtt/http_helper.h>
 #include "cloud_connection.h"
 #include "local_connection.h"
 

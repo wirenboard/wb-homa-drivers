@@ -73,23 +73,42 @@ public:
 
 struct TModbusRegister
 {
-    enum RegisterFormat { U16, S16, U8, S8 };
+    enum RegisterFormat { U16, S16, U8, S8, U32, S32, S64, U64, Float, Double };
     enum RegisterType { COIL, DISCRETE_INPUT, HOLDING_REGISTER, INPUT_REGISTER };
+
     TModbusRegister(int slave = 0, RegisterType type = COIL, int address = 0,
                      RegisterFormat format = U16, double scale = 1,
-                     bool poll = true)
+                     bool poll = true, bool readonly = false)
         : Slave(slave), Type(type), Address(address), Format(format),
-          Scale(scale), Poll(poll) {}
+          Scale(scale), Poll(poll), ForceReadOnly(readonly), ErrorMessage("") {}
+
     int Slave;
     RegisterType Type;
     int Address;
     RegisterFormat Format;
     double Scale;
     bool Poll;
+    bool ForceReadOnly;
+    std::string ErrorMessage;
 
     bool IsReadOnly() const {
         return Type == RegisterType::DISCRETE_INPUT ||
-            Type == RegisterType::INPUT_REGISTER;
+            Type == RegisterType::INPUT_REGISTER || ForceReadOnly;
+    }
+
+    uint8_t Width() const {
+        switch (Format) {
+            case S64:
+            case U64:
+            case Double:
+                return 4;
+            case U32:
+            case S32:
+            case Float:
+                return 2;
+            default:
+                return 1;
+        }
     }
 
     std::string ToString() const {
@@ -118,16 +137,22 @@ struct TModbusRegister
     bool operator== (const TModbusRegister& reg) const {
         return Slave == reg.Slave && Type == reg.Type && Address == reg.Address;
     }
+
+
 };
+
+inline ::std::ostream& operator<<(::std::ostream& os, std::shared_ptr<TModbusRegister> reg) {
+    return os << reg->ToString();
+}
 
 inline ::std::ostream& operator<<(::std::ostream& os, const TModbusRegister& reg) {
     return os << reg.ToString();
 }
 
 namespace std {
-    template <> struct hash<TModbusRegister> {
-        size_t operator()(const TModbusRegister& p) const {
-            return hash<int>()(p.Slave) ^ hash<int>()(p.Type) ^ hash<int>()(p.Address);
+    template <> struct hash<std::shared_ptr<TModbusRegister>> {
+        size_t operator()(std::shared_ptr<TModbusRegister> p) const {
+            return hash<int>()(p->Slave) ^ hash<int>()(p->Type) ^ hash<int>()(p->Address);
         }
     };
 }
@@ -144,7 +169,7 @@ private:
     std::string message;
 };
 
-typedef std::function<void(const TModbusRegister& reg)> TModbusCallback;
+typedef std::function<void(std::shared_ptr<TModbusRegister> reg)> TModbusCallback;
 
 class TModbusClient
 {
@@ -154,33 +179,36 @@ public:
     TModbusClient(const TModbusClient& client) = delete;
     TModbusClient& operator=(const TModbusClient&) = delete;
     ~TModbusClient();
-    void AddRegister(const TModbusRegister& reg);
+    void AddRegister(std::shared_ptr<TModbusRegister> reg);
     void Connect();
     void Disconnect();
     void Cycle();
-    void SetRawValue(const TModbusRegister& reg, int value);
-    void SetScaledValue(const TModbusRegister& reg, double value);
-    void SetTextValue(const TModbusRegister& reg, const std::string& value);
-    int GetRawValue(const TModbusRegister& reg) const;
-    double GetScaledValue(const TModbusRegister& reg) const;
-    std::string GetTextValue(const TModbusRegister& reg) const;
-    bool DidRead(const TModbusRegister& reg) const;
+    void SetTextValue(std::shared_ptr<TModbusRegister> reg, const std::string& value);
+    std::string GetTextValue(std::shared_ptr<TModbusRegister> reg) const;
+    bool DidRead(std::shared_ptr<TModbusRegister> reg) const;
     void SetCallback(const TModbusCallback& callback);
+    void SetErrorCallback(const TModbusCallback& callback);
+    void SetDeleteErrorsCallback(const TModbusCallback& callback);
     void SetPollInterval(int ms);
     void SetModbusDebug(bool debug);
     bool DebugEnabled() const;
     void WriteHoldingRegister(int slave, int address, uint16_t value);
 
 private:
-    const std::unique_ptr<TRegisterHandler>& GetHandler(const TModbusRegister&) const;
-    TRegisterHandler* CreateRegisterHandler(const TModbusRegister& reg);
-    std::map< TModbusRegister, std::unique_ptr<TRegisterHandler> > handlers;
+
+
+    const std::unique_ptr<TRegisterHandler>& GetHandler(std::shared_ptr<TModbusRegister>) const;
+    TRegisterHandler* CreateRegisterHandler(std::shared_ptr<TModbusRegister> reg);
+    std::map<std::shared_ptr<TModbusRegister>, std::unique_ptr<TRegisterHandler> > handlers;
     PModbusContext Context;
     bool Active;
     int PollInterval;
     const int MAX_REGS = 65536;
     TModbusCallback Callback;
+    TModbusCallback ErrorCallback;
+    TModbusCallback DeleteErrorsCallback;
     bool Debug = false;
 };
 
 typedef std::shared_ptr<TModbusClient> PModbusClient;
+

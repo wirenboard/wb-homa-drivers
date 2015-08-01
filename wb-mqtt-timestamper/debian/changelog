@@ -1,0 +1,11 @@
+wb-mqtt-timestamper (1.10) stable; urgency=medium
+
+  * minimal libwbmqtt version
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 00:28:07 +0300
+
+wb-mqtt-timestamper (1.8.7) stable; urgency=low
+
+  * Initial release.
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 15 May 2015 14:22:08 +0000

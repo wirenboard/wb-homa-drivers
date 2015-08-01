@@ -13,20 +13,21 @@ struct TModbusChannel
 {
     TModbusChannel(std::string name = "", std::string type = "text",
                    std::string device_id = "", int order = 0,
-                   int on_value = -1, int max = - 1, bool read_only = false,
-                   const std::vector<TModbusRegister>& regs =
-                       std::vector<TModbusRegister>())
+                   std::string on_value = "", int max = - 1, bool read_only = false,
+                   const std::vector<std::shared_ptr<TModbusRegister>> regs =
+                       std::vector<std::shared_ptr<TModbusRegister>>())
         : Name(name), Type(type), DeviceId(device_id),
           Order(order), OnValue(on_value), Max(max),
-          ReadOnly(read_only), Registers(regs) {}
+          ReadOnly(read_only), Registers(regs), PrintedErrorMessage(false) {}
     std::string Name;
     std::string Type;
     std::string DeviceId; // FIXME
     int Order;
-    int OnValue;
+    std::string OnValue;
     int Max;
     bool ReadOnly;
-    std::vector<TModbusRegister> Registers;
+    std::vector<std::shared_ptr<TModbusRegister>> Registers;
+    bool PrintedErrorMessage;
 };
 
 typedef std::shared_ptr<TModbusChannel> PModbusChannel;
@@ -97,7 +98,7 @@ private:
 class TConfigActionParser
 {
     public :
-        TModbusRegister LoadRegister(PDeviceConfig device_config, const Json::Value& register_data, std::string& default_type_str);
+        std::shared_ptr<TModbusRegister> LoadRegister(PDeviceConfig device_config, const Json::Value& register_data, std::string& default_type_str);
         void LoadChannel(PDeviceConfig device_config, const Json::Value& channel_data);
         void LoadSetupItem(PDeviceConfig device_config, const Json::Value& item_data);
         void LoadDeviceVectors(PDeviceConfig device_config, const Json::Value& device_data);
@@ -126,8 +127,14 @@ class TConfigTemplateParser
 class TConfigParser : TConfigActionParser
 {
 public:
+    TConfigParser(const std::string& config_fname, bool force_debug)
+        : ConfigFileName(config_fname), HandlerConfig(new THandlerConfig) 
+    {
+        HandlerConfig->Debug = force_debug;
+    }
     TConfigParser(const std::string& config_fname, bool force_debug, const std::map<std::string, TDeviceJson>& templates)
-        : ConfigFileName(config_fname), HandlerConfig(new THandlerConfig), TemplatesMap(templates) {
+        : ConfigFileName(config_fname), HandlerConfig(new THandlerConfig), TemplatesMap(templates) 
+    {
         HandlerConfig->Debug = force_debug;
     }
     PHandlerConfig Parse();

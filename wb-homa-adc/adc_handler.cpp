@@ -1,5 +1,7 @@
 #include <iostream>
 #include <math.h>
+#include <string.h>
+#include <stdio.h>
 #include "adc_handler.h"
 
 using namespace std;
@@ -13,7 +15,7 @@ namespace {
 }
 
 
-TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, THandlerConfig handler_config )
+TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, THandlerConfig handler_config)
     : TMQTTWrapper(mqtt_config),
     Config(handler_config)
 {
@@ -32,7 +34,8 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
 	Connect();
 }
 
-TMQTTAdcHandler::~TMQTTAdcHandler(){
+TMQTTAdcHandler::~TMQTTAdcHandler()
+{
     Channels.clear();
     AdcHandlers.clear();
 }
@@ -74,7 +77,8 @@ string TMQTTAdcHandler::GetChannelTopic(const TSysfsAdcChannel& channel) const
     return controls_prefix + channel.GetName();
 }
 
-void TMQTTAdcHandler::UpdateValue(){
+void TMQTTAdcHandler::UpdateValue()
+{
     UpdateChannelValues();
 }
 void TMQTTAdcHandler::UpdateChannelValues()
@@ -83,13 +87,31 @@ void TMQTTAdcHandler::UpdateChannelValues()
         float value = channel->GetValue();
         if (Config.Debug)
             std::cerr << "channel: " << channel->GetName() << " value: " << value << std::endl;
-        char buff[10];
-        if (value == round(value)) {
-                sprintf(buff, "%.0f", value);
+        string output; 
+        if (isnan(value)) {
+            output = "nan";
         } else {
-            sprintf(buff, "%.3f", value);
+            char buff[10];
+            if (value == round(value)) {
+                    sprintf(buff, "%.0f", value);
+            } else {
+                sprintf(buff, "%.5f", value);
+                int decimal_places = -1;
+                bool stop = false;
+                for(int i = 0; (i < strlen(buff)) && (!stop); i++) {
+                    if (buff[i] == '.' ) 
+                        decimal_places = 0;
+                    if (decimal_places > -1) {
+                        if (decimal_places > channel->DecimalPlaces) {
+                            buff[i] = '\0';
+                            stop = true;
+                        }
+                        decimal_places++;
+                    }
+                }
+            }
+            output = buff;
         }
-        string output(buff);
         Publish(NULL, GetChannelTopic(*channel), output, 0, true);
     }
 }

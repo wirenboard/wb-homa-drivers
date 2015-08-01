@@ -9,8 +9,8 @@
 #include "jsoncpp/json/json.h"
 #include <mosquittopp.h>
 
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 #include "cloud_connection.h"
 #include "local_connection.h"
 #include <cstdlib>

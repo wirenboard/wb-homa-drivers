@@ -1,11 +1,11 @@
 #include <mosquittopp.h>
 #include <fstream>
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 #include "sysfs_adc.h"
 
 using namespace std;
-   
+
 struct THandlerConfig
 {
     std::string DeviceName = "Adcs";

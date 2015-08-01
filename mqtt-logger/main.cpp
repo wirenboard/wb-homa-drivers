@@ -1,5 +1,5 @@
-#include "common/utils.h"
-#include "common/mqtt_wrapper.h"
+#include <wbmqtt/utils.h>
+#include <wbmqtt/mqtt_wrapper.h>
 #include <chrono>
 #include <getopt.h>
 #include <iostream>

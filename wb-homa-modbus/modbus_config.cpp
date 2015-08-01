@@ -8,7 +8,7 @@
 #include <string>
 
 #include "modbus_config.h"
-#include "../common/utils.h"
+#include "wbmqtt/utils.h"
 
 using namespace std;
 
@@ -63,7 +63,7 @@ void TConfigTemplateParser::LoadDeviceTemplate(const Json::Value& root, const st
         cerr << "malformed config in file " + filepath;
         exit(EXIT_FAILURE);
     }
-    if (root.isMember("device_type")) { 
+    if (root.isMember("device_type")) {
             Templates[root["device_type"].asString()] = root["device"];
     } else {
         if (Debug)
@@ -71,7 +71,7 @@ void TConfigTemplateParser::LoadDeviceTemplate(const Json::Value& root, const st
     }
 }
 
-TModbusRegister TConfigActionParser::LoadRegister(PDeviceConfig device_config,
+std::shared_ptr<TModbusRegister> TConfigActionParser::LoadRegister(PDeviceConfig device_config,
                                             const Json::Value& register_data,
                                             std::string& default_type_str)
 {
@@ -103,13 +103,30 @@ TModbusRegister TConfigActionParser::LoadRegister(PDeviceConfig device_config,
             format = TModbusRegister::U8;
         else if (format_str == "s8")
             format = TModbusRegister::S8;
+        else if (format_str == "u32")
+            format = TModbusRegister::U32;
+        else if (format_str == "s32")
+            format = TModbusRegister::S32;
+        else if (format_str == "s64")
+            format = TModbusRegister::S64;
+        else if (format_str == "u64")
+            format = TModbusRegister::U64;
+        else if (format_str == "float")
+            format = TModbusRegister::Float;
+        else if (format_str == "double")
+            format = TModbusRegister::Double;
     }
 
     double scale = 1;
     if (register_data.isMember("scale"))
         scale = register_data["scale"].asDouble(); // TBD: check for zero, too
 
-    return TModbusRegister(device_config->SlaveId, type, address, format, scale, true);
+    bool force_readonly = false;
+    if (register_data.isMember("readonly"))
+        force_readonly = register_data["readonly"].asBool();
+
+    std::shared_ptr<TModbusRegister> ptr(new TModbusRegister(device_config->SlaveId, type, address, format, scale, true, force_readonly));
+    return ptr;
 }
 
 void TConfigActionParser::LoadChannel(PDeviceConfig device_config, const Json::Value& channel_data)
@@ -119,7 +136,7 @@ void TConfigActionParser::LoadChannel(PDeviceConfig device_config, const Json::V
 
     std::string name = channel_data["name"].asString();
     std::string default_type_str;
-    std::vector<TModbusRegister> registers;
+    std::vector<std::shared_ptr<TModbusRegister>> registers;
     if (channel_data.isMember("consists_of")) {
         const Json::Value array = channel_data["consists_of"];
         for(unsigned int index = 0; index < array.size(); ++index) {
@@ -127,7 +144,7 @@ void TConfigActionParser::LoadChannel(PDeviceConfig device_config, const Json::V
             registers.push_back(LoadRegister(device_config, array[index], def_type));
             if (!index)
                 default_type_str = def_type;
-            else if (registers[index].IsReadOnly() != registers[0].IsReadOnly())
+            else if (registers[index]->IsReadOnly() != registers[0]->IsReadOnly())
                 throw TConfigParserException(string("can't mix read-only and writable registers "
                                              "in one channel") + " " + device_config->DeviceType);
         }
@@ -142,14 +159,14 @@ void TConfigActionParser::LoadChannel(PDeviceConfig device_config, const Json::V
     if (type_str == "wo-switch") {
         type_str = "switch";
         for (auto& reg: registers)
-            reg.Poll = false;
+            reg->Poll = false;
     }
 
-    int on_value = -1;
+    std::string on_value = "";
     if (channel_data.isMember("on_value")) {
         if (registers.size() != 1)
             throw TConfigParserException(string("can only use on_value for single-valued controls") + " " + device_config->DeviceType);
-        on_value = GetInt(channel_data, "on_value");
+        on_value = to_string(GetInt(channel_data, "on_value"));
     }
 
     int max = -1;
@@ -158,7 +175,7 @@ void TConfigActionParser::LoadChannel(PDeviceConfig device_config, const Json::V
 
     int order = device_config->NextOrderValue();
     PModbusChannel channel(new TModbusChannel(name, type_str, device_config->Id, order,
-                                              on_value, max, registers[0].IsReadOnly(),
+                                              on_value, max, registers[0]->IsReadOnly(),
                                               registers));
     device_config->AddChannel(channel);
 }
@@ -257,7 +274,7 @@ void TConfigParser::LoadDevice(PPortConfig port_config,
                     throw TConfigParserException(" Not set the device_name for " + device_config->DeviceType);
             }
             if (it->second.isMember("id")) {
-                if (device_config->Id == default_id) 
+                if (device_config->Id == default_id)
                     device_config->Id = it->second["id"].asString() + "_" + to_string(device_config->SlaveId);
             }
 
@@ -291,8 +308,8 @@ void TConfigParser::LoadPort(const Json::Value& port_data,
         port_config->ConnSettings.BaudRate = GetInt(port_data, "baud_rate");
 
     if (port_data.isMember("parity"))
-        port_config->ConnSettings.DataBits = port_data["parity"].asCString()[0]; // FIXME (can be '\0')
-        
+        port_config->ConnSettings.Parity = port_data["parity"].asCString()[0]; // FIXME (can be '\0')
+
     if (port_data.isMember("data_bits"))
         port_config->ConnSettings.DataBits = GetInt(port_data, "data_bits");
 
