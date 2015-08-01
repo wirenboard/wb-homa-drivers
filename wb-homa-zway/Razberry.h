@@ -4,7 +4,7 @@
 #include <time.h>
 #include "ZWaveBase.h"
 #include <iostream>
-#include "common/mqtt_wrapper.h"
+#include <wbmqtt/mqtt_wrapper.h>
 #include "jsoncpp/json/json.h"
 
 namespace Json

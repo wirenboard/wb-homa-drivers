@@ -1,5 +1,5 @@
 #include "Razberry.h"
-#include "../common/utils.h"
+#include <wbmqtt/utils.h>
 using namespace std;
 
 TMQTTZWay::TMQTTZWay(const TMQTTZWay::TConfig& mqtt_config, TZWayConfig zway_config)

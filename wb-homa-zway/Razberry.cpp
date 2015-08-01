@@ -5,8 +5,8 @@
 #include <vector>
 #include <ctype.h>
 
-#include "common/utils.h"
-#include "common/http_helper.h"
+#include <wbmqtt/utils.h>
+#include <wbmqtt/http_helper.h>
 
 #pragma warning(disable: 4996)
 
@@ -33,6 +33,16 @@ static std::string readInputTestFile( const char *path )
 	fclose( file );
 	delete[] buffer;
 	return text;
+}
+
+static time_t mytime(time_t * _Time)
+{
+	time_t acttime=time(_Time);
+	static time_t m_lasttime = 0;
+	if (acttime<m_lasttime)
+		return m_lasttime;
+	m_lasttime=acttime;
+	return acttime;
 }
 
 CRazberry::CRazberry(TMQTTZWay* owner, const int ID, const std::string &ipaddress, const int port, const std::string &username, const std::string &password)
@@ -385,10 +395,15 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 					const Json::Value inVal = instance["commandClasses"]["48"]["data"];
 					for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
 						const std::string sKey = itt2.key().asString();
-						if (!isInt(sKey))
+						int sensorID;
+						try {
+							sensorID = std::stoi(sKey);
+						}
+						catch (...) {
 							continue; //not a scale
+						}
 						if ((*itt2)["level"].empty() == false) {
-							_device.sensorID = atoi(sKey.c_str());
+							_device.sensorID = sensorID;
 							_device.indexID = 0;
 							std::string vstring = (*itt2)["level"]["value"].asString();
 							if (vstring == "true")
@@ -412,9 +427,12 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 				const Json::Value inVal = instance["commandClasses"]["49"]["data"];
 				for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
 					const std::string sKey = itt2.key().asString();
-					if (!isInt(sKey))
+					try {
+						_device.scaleID = std::stoi(sKey);
+					}
+					catch (...) {
 						continue; //not a scale
-					_device.scaleID = atoi(sKey.c_str());
+					}
 					std::string sensorTypeString = (*itt2)["sensorTypeString"]["value"].asString();
 					if (sensorTypeString == "Power") {
 						_device.floatValue = (*itt2)["val"]["value"].asFloat();
@@ -451,10 +469,12 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 				//COMMAND_CLASS_METER
 				const Json::Value inVal = instance["commandClasses"]["50"]["data"];
 				for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
-					const std::string sKey = itt2.key().asString();
-					if (!isInt(sKey))
+					try {
+						_device.scaleID = std::stoi(itt2.key().asString());
+					}
+					catch (...) {
 						continue; //not a scale
-					_device.scaleID = atoi(sKey.c_str());
+					}
 					int sensorType = (*itt2)["sensorType"]["value"].asInt();
 					_device.floatValue = (*itt2)["val"]["value"].asFloat();
 					std::string scaleString = (*itt2)["scaleString"]["value"].asString();
@@ -492,10 +512,12 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 				//COMMAND_CLASS_METER
 				const Json::Value inVal = instance["commandClasses"]["50"]["data"];
 				for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
-					const std::string sKey = itt2.key().asString();
-					if (!isInt(sKey))
-						continue; //not a scale
-					_device.scaleID = atoi(sKey.c_str());
+					try {
+						_device.scaleID = std::stoi(itt2.key().asString());
+					}
+					catch (...) {
+						continue;
+					}
 					int sensorType = (*itt2)["sensorType"]["value"].asInt();
 					_device.floatValue = (*itt2)["val"]["value"].asFloat();
 					std::string scaleString = (*itt2)["scaleString"]["value"].asString();
@@ -542,11 +564,14 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 				const Json::Value inVal = instance["commandClasses"]["67"]["data"];
 				for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
 					const std::string sKey = itt2.key().asString();
-					if (!isInt(sKey))
+					try {
+						_device.sensorID = std::stoi(sKey);
+					}
+					catch (...) {
 						continue; //not a scale
+					}
 					_device.floatValue = (*itt2)["val"]["value"].asFloat();
                     string control_id = to_string(_device.instanceID) + "_" + to_string(_device.commandClassID) + "_" + "_" + sKey;
-                    _device.sensorID = atoi(sKey.c_str());
 					_device.commandClassID = 67;
 					_device.scaleMultiply = 1;
 					_device.devType = ZDTYPE_SENSOR_SETPOINT;
@@ -558,9 +583,12 @@ void CRazberry::parseDevices(const Json::Value &devroot)
 				const Json::Value inVal = instance["commandClasses"]["156"]["data"];
 				for (Json::Value::iterator itt2 = inVal.begin(); itt2!=inVal.end(); ++itt2) {
 					const std::string sKey = itt2.key().asString();
-					if (!isInt(sKey))
+					try {
+	                    _device.sensorID = std::stoi(sKey);
+					}
+					catch (...) {
 						continue; //not a scale
-                    _device.sensorID = atoi(sKey.c_str());
+					}
 					_device.intvalue = (*itt2)["sensorState"]["value"].asInt();// sensorSate or sensorState ??
                     string control_id = to_string(_device.instanceID) + "_" + to_string(_device.commandClassID) + "_" + sKey;
 					_device.commandClassID = 156;

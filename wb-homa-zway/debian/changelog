@@ -1,0 +1,5 @@
+wb-homa-zway (1.0.0) stable; urgency=medium
+
+  * Initial release. (Package was separated from wb-homa-drivers)
+
+ -- Alexey Ignatov <lexszero@gmail.com>  Sat, 01 July 2015 20:06:41 +0000
