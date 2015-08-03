@@ -40,6 +40,6 @@ install: all
 	install -d $(DESTDIR)
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
-	install -d $(DESTDIR)/usr/lib
 
 	install -m 0755  $(ZWAY_BIN) $(DESTDIR)/usr/bin/$(ZWAY_BIN)
+	install -m 0644  config.json $(DESTDIR)/etc/wb-homa-zway.conf

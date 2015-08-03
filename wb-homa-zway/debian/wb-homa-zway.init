@@ -21,7 +21,7 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="Z-Way to MQTT bridge for WB-HomA"
 NAME=wb-homa-zway
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS=""
+DAEMON_ARGS="-c /etc/wb-homa-zway.conf"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
