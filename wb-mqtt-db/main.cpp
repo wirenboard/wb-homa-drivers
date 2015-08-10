@@ -287,57 +287,61 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     if (! params.isMember("channels"))
         throw TBaseException("no channels specified");
 
-
-    int row_count = 0;
-    bool has_more = false;
-
     result["values"] = Json::Value(Json::arrayValue);
+
+    string get_values_query_str = "SELECT uid, device, control, value,  (julianday(timestamp) - 2440587.5)*86400.0  FROM data WHERE (0  ";
+
+    for (size_t i = 0; i < params["channels"].size(); ++i) {
+        get_values_query_str += " OR (device = ? AND control = ?) ";
+    }
+
+    get_values_query_str += " ) AND timestamp > datetime(?,'unixepoch') AND timestamp < datetime(?,'unixepoch') AND uid > ? ORDER BY uid ASC LIMIT ?";
+
+    SQLite::Statement get_values_query(*DB, get_values_query_str);
+    get_values_query.reset();
+
+    int param_num = 0;
 
     for (const auto& channel_item : params["channels"]) {
         if (!(channel_item.isArray() && (channel_item.size() == 2)))
             throw TBaseException("'channels' items must be an arrays of size two ");
 
-        const string& device_id = channel_item[0u].asString();
-        const string& control_id = channel_item[1u].asString();
+        const string device_id = channel_item[0u].asString();
+        const string control_id = channel_item[1u].asString();
+
+        get_values_query.bind(++param_num, device_id);
+        get_values_query.bind(++param_num, control_id);
+    }
 
 
-        static SQLite::Statement get_values_query(*DB, "SELECT uid, device, control, value,  (julianday(timestamp) - 2440587.5)*86400.0  FROM data "
-                              "WHERE device=? AND control=? AND timestamp > datetime(?,'unixepoch') AND timestamp < datetime(?,'unixepoch') AND uid > ? ORDER BY uid ASC LIMIT ?");
-        get_values_query.reset();
-        get_values_query.bind(1, device_id);
-        get_values_query.bind(2, control_id);
-        get_values_query.bind(3, timestamp_gt);
-        get_values_query.bind(4, timestamp_lt);
-        get_values_query.bind(5, static_cast<sqlite3_int64>(uid_gt));
-        get_values_query.bind(6, limit - row_count + 1); // we request one extra row to know whether there are more than 'limit' available
+    get_values_query.bind(++param_num, timestamp_gt);
+    get_values_query.bind(++param_num, timestamp_lt);
+    get_values_query.bind(++param_num, static_cast<sqlite3_int64>(uid_gt));
+    get_values_query.bind(++param_num, limit + 1); // we request one extra row to know whether there are more than 'limit' available
 
-        while (get_values_query.executeStep()) {
-            if (row_count >= limit) {
-                has_more = true;
-                break;
-            }
+    int row_count = 0;
+    bool has_more = false;
 
-            Json::Value row;
-            row["uid"] = static_cast<int>(get_values_query.getColumn(0));
-            row["device"] = get_values_query.getColumn(1).getText();
-            row["control"] = get_values_query.getColumn(2).getText();
-            row["value"] = get_values_query.getColumn(3).getText();
-            row["timestamp"] = static_cast<double>(get_values_query.getColumn(4));
-            result["values"].append(row);
-            row_count += 1;
-        }
-
-        if (has_more) {
-            // limit + 1 rows found, no need to request other channels
+    while (get_values_query.executeStep()) {
+        if (row_count >= limit) {
+            has_more = true;
             break;
         }
 
+        Json::Value row;
+        row["uid"] = static_cast<int>(get_values_query.getColumn(0));
+        row["device"] = get_values_query.getColumn(1).getText();
+        row["control"] = get_values_query.getColumn(2).getText();
+        row["value"] = get_values_query.getColumn(3).getText();
+        row["timestamp"] = static_cast<double>(get_values_query.getColumn(4));
+        result["values"].append(row);
+        row_count += 1;
     }
+
 
     if (has_more) {
         result["has_more"] = true;
     }
-
 
     return result;
 }
