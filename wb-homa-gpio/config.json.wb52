@@ -1,0 +1,81 @@
+// Configuration options
+{
+    "device_name" : "FETs & Inputs",
+
+    "channels" : [
+        {
+            "gpio" : 26,
+            "name" : "A1_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 16,
+            "name" : "A2_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 24,
+            "name" : "A3_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 20,
+            "name" : "A4_OUT",
+            "inverted" : false
+        },
+
+
+
+        {
+            "gpio" : 6,
+            "name" : "A1_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 7,
+            "name" : "A2_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 28,
+            "name" : "A3_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 27,
+            "name" : "A4_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" :  5,
+            "name" : "R1_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 4,
+            "name" : "R2_IN",
+            "inverted" : false,
+            "direction": "input"
+        },
+
+
+        {
+            "gpio" : 102,
+            "name" : "CHARGER_STAT_1",
+            "inverted" : false,
+            "direction": "input"
+        },
+        {
+            "gpio" : 62,
+            "name" : "CHARGER_STAT_2",
+            "inverted" : false,
+            "direction": "input"
+        }
+
+    ]
+}
