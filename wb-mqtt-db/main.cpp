@@ -269,7 +269,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
             timestamp_gt = params["timestamp"]["gt"].asDouble();
 
         if (params["timestamp"].isMember("lt"))
-            timestamp_gt = params["timestamp"]["lt"].asDouble();
+            timestamp_lt = params["timestamp"]["lt"].asDouble();
     }
 
     if (params.isMember("uid")) {
