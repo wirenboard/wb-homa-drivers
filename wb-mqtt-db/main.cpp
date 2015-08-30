@@ -130,6 +130,9 @@ void TMQTTDBLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos)
 
 void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 {
+    if (!message->payload)
+        return;
+
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
 
