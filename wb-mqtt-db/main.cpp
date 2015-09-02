@@ -381,11 +381,12 @@ int main (int argc, char *argv[])
             case 'h':
                 printf ( "help menu\n");
             default:
-                printf("Usage:\n wb-mqtt-timestamper [options] [mask]\n");
+                printf("Usage:\n wb-mqtt-db [options] [mask]\n");
                 printf("Options:\n");
-                printf("\t-p PORT   \t\t\t set to what port wb-mqtt-timestamper should connect (default: 1883)\n");
-                printf("\t-H IP     \t\t\t set to what IP wb-mqtt-timestamper should connect (default: localhost)\n");
-                printf("\tmask      \t\t\t Mask, what topics subscribe to (default: /devices/+/controls/+)\n");
+                printf("\t-p PORT   \t\t\t set to what port wb-mqtt-db should connect (default: 1883)\n");
+                printf("\t-H IP     \t\t\t set to what IP wb-mqtt-db should connect (default: localhost)\n");
+                printf("\t-c config     \t\t\t config file\n");
+
                 return 0;
         }
     }
