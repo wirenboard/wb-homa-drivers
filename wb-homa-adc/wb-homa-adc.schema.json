@@ -1,0 +1,188 @@
+{
+  "type": "object",
+  "title": "ADC Driver Configuration",
+  "description": "Analog inputs configuration",
+   "configPath": "/etc/wb-homa-adc.conf",
+
+  "definitions": {
+    "iio_channel": {
+      "type": "object",
+      "title": "SoC ADC channel",
+      "headerTemplate": "ADC channel {{ |self.channel_number|}} {{(|self.id|)}}",
+      
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "MQTT id",
+          "propertyOrder": 1
+        },
+        "channel_number": {
+          "type": "integer",
+          "title": "SoC channel number",
+          "enum": [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15],
+          "propertyOrder": 2,
+          "default": 1
+        },
+        "multiplier": {
+          "type": "number",
+          "title": "Multiplier",
+          "description" : "Calculated as 1.85V * [resistor divider value] / 4095.",
+          "propertyOrder": 3
+        },
+        "averaging_window": {
+          "type": "integer",
+          "title": "Averaging window",
+          "description" : "Number of samples to use while calculating moving average",
+          "propertyOrder": 4
+        },
+        "decimal_places": {
+          "type": "integer",
+          "title": "Decimal places in value",
+          "propertyOrder": 5
+        },
+        "max_voltage": {
+          "type": "number",
+          "title": "Overvoltage threshold (V)",
+          "propertyOrder": 6
+        },
+        "readings_number" : {
+          "type": "integer",
+          "title": "Number of ADC reading per sample",
+          "propertyOrder": 7
+        },
+        "channels": {
+          "type": "array",
+          "title": "List of multiplexed channels",
+          "items": { "$ref": "#/definitions/mux_channel" },
+          "_format": "tabs",
+          "propertyOrder": 4
+        },
+        
+        "gpios" : {
+          "type" : "array",
+          "title" : "MUX control gpios",
+          "_format" : "tabs",
+          "propertyOrder" : 5,
+          "items" : {
+            "type" : "integer",
+            "title" : "GPIO"
+          }
+        },
+        "type" :  {
+          "type" : "string",
+          "title" : "Channel type",
+          "propertyOrder": 6,
+          "default" : "",
+          "enum" : ["", "mux", "ohm_meter"]
+        },
+        "min_switch_interval_ms" : {
+          "type" : "integer",
+          "title" : "Mux switch interval",
+          "description" : "Time to wait after mux switch (ms) for multiplexed channels",
+          "propertyOrder": 7
+        }
+        
+      },
+      
+      "defaultProperties": ["channel_number", "multiplier", "id"]
+      
+    },
+    
+    "mux_channel": {
+      "type": "object",
+      "title": "Multiplexed ADC channel",
+      "headerTemplate": "MUX channel {{ |self.mux_channel_number|}} {{(|self.id|)}}",
+      
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "MQTT id",
+          "minLength": 1,
+          "propertyOrder": 1
+        },
+        "mux_channel_number": {
+          "type": "integer",
+          "title": "MUX channel number",
+          "enum": [0, 1, 2, 3, 4, 5, 6, 7],
+          "propertyOrder": 2,
+          "default": 1
+        },
+        "multiplier": {
+          "type": "number",
+          "title": "Multiplier",
+          "description" : "Calculated as 1.85V * [resistor divider value] / 4095.",
+          "propertyOrder": 3
+        },
+        
+        "decimal_places": {
+          "type": "integer",
+          "title": "Decimal places in value",
+          "propertyOrder": 4
+        },
+                
+        "type" :  {
+          "type" : "string",
+          "title" : "Channel type",
+          "propertyOrder": 5,
+          "default" : "",
+          "enum" : ["ohm_meter"]
+        },
+        "resistance1" : {
+          "type" : "string",
+          "title" : "r1 constant",
+          "description" : "r1 constant for ohm_meter channels. Format: number followed by suffix (kOhm or Ohm), i.e. 100kOhm",
+          "propertyOrder": 6         
+        },
+        "resistance2" : {
+          "type" : "string",
+          "title" : "r2 constant",
+          "description" : "r2 constant for ohm_meter channels. Format: number followed by suffix (kOhm or Ohm), i.e. 100kOhm",
+          "propertyOrder": 7         
+        },
+        "current" : {
+          "type" : "integer",
+          "title" : "Current",
+          "description" : "Value of the current source used to measure resistance (uA)",
+          "propertyOrder": 8,
+          "enum" : [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300]
+        },
+        "discharge_channel" : {
+          "type" : "integer",
+          "title" : "Discharge MUX channel",
+          "description" : "Number of MUX channel used to discharge channel before measurement",
+          "propertyOrder": 9,
+          "enum" : [0, 1, 2, 3, 4, 5, 6, 7]
+        },
+        
+        
+      }
+    }    
+  },
+  
+  "properties": {
+  "device_name": {
+    "type": "string",
+    "title": "MQTT device name",
+    "default": "ADCs",
+    "propertyOrder": 1
+  },
+    "debug": {
+      "type": "boolean",
+      "title": "Enable debug logging",
+      "default": false,
+      "_format": "checkbox",
+      "propertyOrder": 2
+    },
+    "iio_channels": {
+      "type": "array",
+      "title": "List of SoC channels",
+      "items": { "$ref": "#/definitions/iio_channel" },
+      "minItems": 1,
+      "_format": "tabs",
+      "propertyOrder":3
+    }
+  },
+  "required": ["device_name", "iio_channels"]
+
+}
+
