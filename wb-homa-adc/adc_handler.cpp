@@ -21,13 +21,14 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
 {
     for (auto& channel_config : Config.Channels){
         std::shared_ptr<TSysfsAdc> adc_handler(nullptr); 
-        if (channel_config.Type == "mux"){
+        if (channel_config.Type == "mux") {
             adc_handler.reset(new TSysfsAdcMux(GetSysfsPrefix(), Config.Debug, channel_config));
-                    }else {
+		} else {
             adc_handler.reset(new TSysfsAdcPhys(GetSysfsPrefix(), Config.Debug, channel_config));
         }
-        for (int i = 0; i < adc_handler->GetNumberOfChannels(); ++i)
-                Channels.push_back(adc_handler->GetChannel(i));
+        for (int i = 0; i < adc_handler->GetNumberOfChannels(); ++i) {
+			Channels.push_back(adc_handler->GetChannel(i));
+		}
         AdcHandlers.push_back(adc_handler);
 
     }
@@ -98,7 +99,7 @@ void TMQTTAdcHandler::UpdateChannelValues()
                 sprintf(buff, "%.5f", value);
                 int decimal_places = -1;
                 bool stop = false;
-                for(int i = 0; (i < strlen(buff)) && (!stop); i++) {
+                for(size_t i = 0; (i < strlen(buff)) && (!stop); i++) {
                     if (buff[i] == '.' ) 
                         decimal_places = 0;
                     if (decimal_places > -1) {

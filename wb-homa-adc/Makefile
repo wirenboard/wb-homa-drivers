@@ -13,7 +13,7 @@ ifneq ($(CC_PATH),)
 endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
-CFLAGS=-Wall -std=c++0x -Os -I.
+CFLAGS=-Wall -std=c++0x -std=c++11 -Os -I.
 LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt
 
 ADC_BIN=wb-homa-adc
@@ -25,7 +25,7 @@ all : $(ADC_BIN)
 
 
 # ADC
-ADC_H=sysfs_adc.h adc_handler.h
+ADC_H=sysfs_adc.h adc_handler.h lradc_isrc.h
 
 main.o : main.cpp $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
@@ -36,8 +36,10 @@ sysfs_adc.o : sysfs_adc.cpp $(ADC_H)
 	${CXX} -c $< -o $@ ${CFLAGS}
 imx233.o : imx233.c
 	${CC} -c $< -o $@
+lradc_isrc.o : lradc_isrc.cpp
+	${CXX} -c $< -o $@ ${CFLAGS}
 
-$(ADC_BIN) : main.o sysfs_adc.o adc_handler.o imx233.o
+$(ADC_BIN) : main.o sysfs_adc.o adc_handler.o imx233.o lradc_isrc.o
 	${CXX} $^ ${LDFLAGS} -o $@
 
 clean :

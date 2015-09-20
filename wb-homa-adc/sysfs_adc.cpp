@@ -10,68 +10,11 @@
 #include <math.h>
 
 #include "sysfs_adc.h"
+#include "lradc_isrc.h"
 namespace {
-        extern "C" int imx233_rd(long offset);
-        extern "C" int imx233_wr(long offset, long value);
         extern "C" void usleep(int value);
 };
-/*
-namespace {
-    struct ChannelName {
-        int n;
-        const char* name;
-    };
 
-    ChannelName channel_names[] = {
-        {0, "adc0"},
-        {1, "adc1"},
-        {2, "adc2"},
-        {3, "adc3"},
-        {4, "adc4"},
-        {5, "adc5"},
-        {6, "adc6"},
-        {7, "adc7"},
-#if 0
-        // later
-        {0, "a1"},
-        {0, "adc1"},
-        {1, "a2"},
-        {1, "adc2"},
-        {2, "a3"},
-        {2, "adc3"},
-        {3, "a4"},
-        {3, "adc4"},
-        {4, "r1"},
-        {5, "r4"},
-        {6, "r2"},
-        {7, "r3"},
-#endif
-        {-1, 0}
-    };
-    int GetChannelIndex(const std::string& name)
-    {
-        std::string locase_name = name;
-        std::transform(locase_name.begin(), locase_name.end(), locase_name.begin(), ::tolower);
-        for (ChannelName* name_item = channel_names; name_item->n >= 0; ++name_item) {
-            if (locase_name == name_item->name)
-                return name_item->n;
-        }
-        throw TAdcException("invalid channel name " + name);
-    }
-
-    int GetGPIOFromEnv(const std::string& name)
-    {
-        char* s = getenv(name.c_str());
-        if (!s)
-            throw TAdcException("Environment variable not set: " + name);
-        try {
-            return std::stoi(s);
-        } catch (std::exception) {
-            throw TAdcException("Invalid value of environment variable '" + name + "': " + s);
-        }
-    }
-};
-*/
 TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : SysfsDir(sysfs_dir),
     ChannelConfig(channel_config),
@@ -81,12 +24,12 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
-    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(ChannelConfig.ChannelNumber) + "_raw";
+    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_raw";
     AdcValStream.open(path_to_value);
     if (AdcValStream < 0) {
         throw TAdcException("error opening sysfs Adc file");
     }
-    string scale_prefix = "/sys/bus/iio/devices/iio:device0/in_voltage" + to_string(ChannelConfig.ChannelNumber) + "_scale";
+    string scale_prefix = "/sys/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_scale";
     ifstream scale_file(scale_prefix + "_available");
     if (scale_file.is_open()) {
         vector<string> scales;
@@ -342,7 +285,7 @@ TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std:
     Resistance1 = resistance1;
     Resistance2 = resistance2;
     Type = OHM_METER;
-    Ctrl2_val = (current / 20) << 4;
+    CurrentSourceChannel =  GetCurrentSourceChannelNumber(owner->GetLradcChannel());
 }
 
 
@@ -376,12 +319,10 @@ std::string TSysfsAdcChannelRes::GetType()
 }
 void TSysfsAdcChannelRes::SetUpCurrentSource()
 {
-    imx233_wr(HW_LRADC_CTRL2_SET, 0x0200); //set TEMP_SENSOR_IENABLE1
-    imx233_wr(HW_LRADC_CTRL2_CLR, 0xF0); //clear TEMP_ISRC1
-    imx233_wr(HW_LRADC_CTRL2_SET, Ctrl2_val); //set TEMP_ISRC1
+	::SetUpCurrentSource(CurrentSourceChannel, Current);
 }
 
 void TSysfsAdcChannelRes::SwitchOffCurrentSource()
 {
-    imx233_wr(HW_LRADC_CTRL2_CLR, 0x0200); //set TEMP_SENSOR_IENABLE1=0
+	::SwitchOffCurrentSource(CurrentSourceChannel);
 }

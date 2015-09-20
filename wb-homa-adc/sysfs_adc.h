@@ -3,7 +3,6 @@
 #include <exception>
 #include <memory>
 #include <vector>
-#include "imx233.h"
 #define OHM_METER "ohm_meter"
 #define DELAY 10
 #define ADC_DEFAULT_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
@@ -28,7 +27,7 @@ struct TChannel
 {
     int AveragingWindow = 10;
     int PollInterval;
-    int ChannelNumber = 1;//Number of TMUXChannels in vector Mux
+    int ChannelNumber = 1;//SoC channel
     int MinSwitchIntervalMs = 0;
     string Type = "";
     float MaxVoltage = ADC_DEFAULT_MAX_VOLTAGE;
@@ -62,6 +61,7 @@ public:
     double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
     virtual void SetMuxABC(int n); // switch mux channels 
     bool CheckVoltage(int value); // check if voltage is bigger than ADC_MAX_VOLTAGE
+    int GetLradcChannel() { return ChannelConfig.ChannelNumber; }; // return LRADC channel number
 protected:
     virtual int GetRawValue(int index) = 0;
     int AveragingWindow;
@@ -148,5 +148,5 @@ class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resis
         int Resistance1;
         int Resistance2;
         std::string Type;
-        unsigned int Ctrl2_val;
+        int CurrentSourceChannel;
 };
