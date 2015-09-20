@@ -1,3 +1,12 @@
+wb-mqtt-db (1.2.2) stable; urgency=medium
+
+  * Speedup data saving:
+    1) Per-channel and per-group counters are cached
+    2) excess rows are deleted in bulk. Threshold is 
+       specified in source code (RingBufferClearThreshold constant)
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 20 Sep 2015 21:20:17 +0300
+
 wb-mqtt-db (1.2.1) stable; urgency=medium
 
   * fix timstamp_lt

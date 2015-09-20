@@ -15,7 +15,7 @@
 using namespace std;
 using namespace std::chrono;
 
-
+const float RingBufferClearThreshold = 0.02; // ring buffer will be cleared on limit * (1 + RingBufferClearThreshold) entries
 
 struct TLoggingChannel
 {
@@ -72,8 +72,8 @@ class TMQTTDBLogger: public TMQTTWrapper
         TMQTTDBLoggerConfig LoggerConfig;
         shared_ptr<TMQTTRPCServer> RPCServer;
         map<TChannel, steady_clock::time_point> LastSavedTimestamps;
-        map<TChannel, int> ControlRowNumberCache;
-        map<TChannel, int> GroupRowNumberCache;
+        map<TChannel, int> ChannelRowNumberCache;
+        map<string, int> GroupRowNumberCache;
         map<TChannel, string> ControlValueCache;
 
 };
@@ -83,8 +83,8 @@ TMQTTDBLogger::TMQTTDBLogger (const TMQTTDBLogger::TConfig& mqtt_config, const T
     , LoggerConfig(config)
 {
 
-    Connect();
     InitDB();
+    Connect();
 }
 
 TMQTTDBLogger::~TMQTTDBLogger()
@@ -112,6 +112,20 @@ void TMQTTDBLogger::InitDB()
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid_timestamp ON data (group_id, timestamp)");
 
 
+   SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) as cnt, group_id FROM data GROUP BY group_id ");
+
+    while (count_group_query.executeStep()) {
+        GroupRowNumberCache[count_group_query.getColumn(1).getText()] = count_group_query.getColumn(0);
+    }
+
+   SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, device, control FROM data GROUP BY device, control ");
+
+    while (count_channel_query.executeStep()) {
+        ChannelRowNumberCache[{
+            count_channel_query.getColumn(1).getText(),
+            count_channel_query.getColumn(2).getText()
+        }] = count_channel_query.getColumn(0);
+    }
 
 }
 
@@ -132,6 +146,9 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 {
     if (!message->payload)
         return;
+
+    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
+
 
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
@@ -193,51 +210,32 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             cout << insert_row_query.getQuery() << endl;
 
 
+            // local cache is needed here since SELECT COUNT are extremely slow in sqlite
+            // so we only ask DB at startup. This applies to two if blocks below.
+
             if (group.Values > 0) {
-
-                static SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) FROM data WHERE device = ? and control = ?");
-                count_channel_query.reset();
-                count_channel_query.bind(1, channel.Device);
-                count_channel_query.bind(2, channel.Control);
-                if (!count_channel_query.executeStep()) {
-                    throw TBaseException("cannot execute select count(*)");
-                }
-
-                cout << count_channel_query.getQuery() << endl;
-
-                int found = count_channel_query.getColumn(0);
-
-                if (found > group.Values) {
+                if ((++ChannelRowNumberCache[channel]) > group.Values * (1 + RingBufferClearThreshold) ) {
                     static SQLite::Statement clean_channel_query(*DB, "DELETE FROM data WHERE device = ? AND control = ? ORDER BY rowid ASC LIMIT ?");
                     clean_channel_query.reset();
                     clean_channel_query.bind(1, channel.Device);
                     clean_channel_query.bind(2, channel.Control);
-                    clean_channel_query.bind(3, found - group.Values);
+                    clean_channel_query.bind(3, ChannelRowNumberCache[channel] - group.Values);
 
                     clean_channel_query.exec();
                     cout << clean_channel_query.getQuery() << endl;
+                    ChannelRowNumberCache[channel] = group.Values;
                 }
             }
 
             if (group.ValuesTotal > 0) {
-                static SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) FROM data WHERE group_id = ? ");
-                count_group_query.reset();
-                count_group_query.bind(1, group.Id);
-
-                if (!count_group_query.executeStep()) {
-                    throw TBaseException("cannot execute select count(*)");
-                }
-
-                int found = count_group_query.getColumn(0);
-
-                if (found > group.ValuesTotal) {
+                if ((++GroupRowNumberCache[group.Id]) > group.ValuesTotal * (1 + RingBufferClearThreshold)) {
                     static SQLite::Statement clean_group_query(*DB, "DELETE FROM data WHERE group_id = ? ORDER BY rowid ASC LIMIT ?");
                     clean_group_query.reset();
                     clean_group_query.bind(1, group.Id);
-                    clean_group_query.bind(2, found - group.ValuesTotal);
+                    clean_group_query.bind(2, GroupRowNumberCache[group.Id] - group.ValuesTotal);
                     clean_group_query.exec();
                     cout << clean_group_query.getQuery() << endl;
-
+                    GroupRowNumberCache[group.Id] = group.ValuesTotal;
                 }
             }
 
@@ -245,6 +243,11 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
         }
     }
 
+    //FIXME: debug
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+
+    cout << "msg for " << topic << " took " << duration << "ms" << endl;
 }
 
 void TMQTTDBLogger::Init2()
