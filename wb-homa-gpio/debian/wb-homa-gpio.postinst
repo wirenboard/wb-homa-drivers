@@ -24,6 +24,10 @@ case "$WB_VERSION" in
         BOARD_CONF="/usr/share/wb-homa-gpio/wb-homa-gpio.conf.mka3"
     ;;
 
+    "CQC10" )
+        BOARD_CONF="/usr/share/wb-homa-gpio/wb-homa-gpio.conf.cqc10"
+    ;;
+
     * )
         BOARD_CONF="/usr/share/wb-homa-gpio/wb-homa-gpio.conf.default"
     ;;

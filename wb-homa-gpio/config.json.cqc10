@@ -1,0 +1,13 @@
+// Configuration options
+{
+    "device_name" : "Inputs",
+
+    "channels" : [
+        {
+            "gpio" : 37,
+            "name" : "Reset",
+            "inverted" : true,
+            "direction" : "input"
+        }
+    ]
+}
