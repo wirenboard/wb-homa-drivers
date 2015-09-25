@@ -2,7 +2,11 @@
   "type": "object",
   "title": "ADC Driver Configuration",
   "description": "Analog inputs configuration",
-   "configPath": "/etc/wb-homa-adc.conf",
+
+  "configFile": {
+    "path": "/etc/wb-homa-adc.conf",
+    "service": "wb-homa-adc"
+  },
 
   "definitions": {
     "iio_channel": {
