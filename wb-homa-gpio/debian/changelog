@@ -1,3 +1,9 @@
+wb-homa-gpio (1.12) stable; urgency=medium
+
+  * adds CQC10 config 
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 25 Sep 2015 21:41:02 +0300
+
 wb-homa-gpio (1.11) stable; urgency=medium
 
   * Add config for wb5.2
