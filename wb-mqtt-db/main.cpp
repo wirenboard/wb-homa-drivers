@@ -30,6 +30,7 @@ struct TLoggingGroup
     int MinInterval = 0;
     int MinUnchangedInterval = 0;
     string Id;
+    int IntId;
 
 };
 
@@ -67,14 +68,30 @@ class TMQTTDBLogger: public TMQTTWrapper
 
     private:
         void InitDB();
+        void CreateTables();
+        int GetOrCreateChannelId(const TChannel& channel);
+        int GetOrCreateDeviceId(const string& device);
+        void InitChannelIds();
+        void InitDeviceIds();
+        void InitGroupIds();
+        void InitCounterCaches();
+        int ReadDBVersion();
+        void UpdateDB(int prev_version);
+
         string Mask;
         std::unique_ptr<SQLite::Database> DB;
         TMQTTDBLoggerConfig LoggerConfig;
         shared_ptr<TMQTTRPCServer> RPCServer;
-        map<TChannel, steady_clock::time_point> LastSavedTimestamps;
-        map<TChannel, int> ChannelRowNumberCache;
-        map<string, int> GroupRowNumberCache;
-        map<TChannel, string> ControlValueCache;
+        map<TChannel, int> ChannelIds;
+        map<string, int> DeviceIds;
+
+        map<int, steady_clock::time_point> LastSavedTimestamps;
+        map<int, int> ChannelRowNumberCache;
+        map<int, int> GroupRowNumberCache;
+        map<int, string> ChannelValueCache;
+
+
+        const int DBVersion = 1;
 
 };
 
@@ -91,46 +108,246 @@ TMQTTDBLogger::~TMQTTDBLogger()
 {
 }
 
-void TMQTTDBLogger::InitDB()
+
+void TMQTTDBLogger::CreateTables()
 {
-    DB.reset(new SQLite::Database(LoggerConfig.DBFile, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
+    DB->exec("CREATE TABLE IF NOT EXISTS devices ( "
+             "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+             "device VARCHAR(255) UNIQUE "
+             " )  ");
 
-    DB->exec("CREATE TABLE IF NOT EXISTS data ( "
-            "uid INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "device VARCHAR(255), "
-            "control VARCHAR(255), "
-            "value VARCHAR(255), "
-            "timestamp DATETIME DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')), "
-            "group_id VARCHAR(32)"
-            ")  "
-            );
+    DB->exec("CREATE TABLE IF NOT EXISTS channels ( "
+             "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+             "device VARCHAR(255), "
+             "control VARCHAR(255) "
+             ")  ");
 
-    DB->exec("CREATE INDEX IF NOT EXISTS data_topic ON data (device, control)");
-    DB->exec("CREATE INDEX IF NOT EXISTS data_topic_timestamp ON data (device, control, timestamp)");
+    DB->exec("CREATE TABLE IF NOT EXISTS groups ( "
+             "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+             "group_id VARCHAR(255) "
+             ")  ");
+
+
+    DB->exec("CREATE TABLE IF NOT EXISTS data ("
+			 "uid INTEGER PRIMARY KEY AUTOINCREMENT, "
+			 "device INTEGER,"
+			 "channel INTEGER,"
+			 "value VARCHAR(255),"
+			 "timestamp REAL DEFAULT(julianday('now')),"
+			 "group_id INTEGER"
+			 ")"
+			);
+
+    DB->exec("CREATE TABLE IF NOT EXISTS variables ("
+			 "name VARCHAR(255) PRIMARY KEY, "
+			 "value VARCHAR(255) )"
+			);
+
+
+    DB->exec("CREATE INDEX IF NOT EXISTS data_topic ON data (channel)");
+    DB->exec("CREATE INDEX IF NOT EXISTS data_topic_timestamp ON data (channel, timestamp)");
 
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid ON data (group_id)");
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid_timestamp ON data (group_id, timestamp)");
 
-
-   SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) as cnt, group_id FROM data GROUP BY group_id ");
-
-    while (count_group_query.executeStep()) {
-        GroupRowNumberCache[count_group_query.getColumn(1).getText()] = count_group_query.getColumn(0);
-    }
-
-   SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, device, control FROM data GROUP BY device, control ");
-
-    while (count_channel_query.executeStep()) {
-        ChannelRowNumberCache[{
-            count_channel_query.getColumn(1).getText(),
-            count_channel_query.getColumn(2).getText()
-        }] = count_channel_query.getColumn(0);
-    }
+	{
+		SQLite::Statement query(*DB, "INSERT OR REPLACE INTO variables (name, value) VALUES ('db_version', ?)");
+		query.bind(1, DBVersion);
+		query.exec();
+	}
 
 }
 
-void TMQTTDBLogger::OnConnect(int rc)
+
+void TMQTTDBLogger::InitCounterCaches()
 {
+    SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) as cnt, group_id FROM data GROUP BY group_id ");
+	while (count_group_query.executeStep()) {
+        GroupRowNumberCache[count_group_query.getColumn(1)] = count_group_query.getColumn(0);
+    }
+
+    SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, channel FROM data GROUP BY channel ");
+    while (count_channel_query.executeStep()) {
+        ChannelRowNumberCache[count_channel_query.getColumn(1)] = count_channel_query.getColumn(0);
+    }
+}
+
+
+void TMQTTDBLogger::InitChannelIds()
+{
+	SQLite::Statement query(*DB, "SELECT int_id, device, control FROM channels");
+    while (query.executeStep()) {
+        ChannelIds[{query.getColumn(1).getText(),
+					query.getColumn(2).getText()}] = query.getColumn(0);
+    }
+}
+
+void TMQTTDBLogger::InitDeviceIds()
+{
+	SQLite::Statement query(*DB, "SELECT int_id, device FROM devices");
+    while (query.executeStep()) {
+        DeviceIds[query.getColumn(1).getText()] = query.getColumn(0);
+    }
+}
+
+void TMQTTDBLogger::InitGroupIds()
+{
+	map<string, int> stored_group_ids;
+	{
+		SQLite::Statement query(*DB, "SELECT int_id, group_id FROM groups");
+	    while (query.executeStep()) {
+			stored_group_ids[query.getColumn(1).getText()] = query.getColumn(0);
+		}
+	}
+
+    for (auto& group : LoggerConfig.Groups) {
+		auto it = stored_group_ids.find(group.Id);
+		if (it != stored_group_ids.end()) {
+			group.IntId = it->second;
+		} else {
+			// new group, no id is stored
+
+			static SQLite::Statement query(*DB, "INSERT INTO groups (group_id) VALUES (?) ");
+			query.reset();
+			query.bind(1, group.Id);
+			query.exec();
+			group.IntId = DB->getLastInsertRowid();
+		}
+	}
+}
+
+int TMQTTDBLogger::ReadDBVersion()
+{
+	if (!DB->tableExists("variables")) {
+		return 0;
+	}
+
+	SQLite::Statement query(*DB, "SELECT value FROM variables WHERE name = 'db_version'");
+    while (query.executeStep()) {
+		return query.getColumn(0).getInt();
+	}
+
+	return 0;
+}
+
+void TMQTTDBLogger::UpdateDB(int prev_version)
+{
+	if (prev_version == 0) {
+	    // Begin transaction
+	    SQLite::Transaction transaction(*DB);
+
+	    DB->exec("ALTER TABLE data RENAME TO tmp");
+
+		// drop existing indexes
+		DB->exec("DROP INDEX data_topic");
+		DB->exec("DROP INDEX data_topic_timestamp");
+		DB->exec("DROP INDEX data_gid");
+		DB->exec("DROP INDEX data_gid_timestamp");
+
+		// create tables with most recent schema
+		CreateTables();
+
+		// generate internal integer ids from old data table
+	    DB->exec("INSERT OR IGNORE INTO devices (device) SELECT device FROM tmp GROUP BY device");
+	    DB->exec("INSERT OR IGNORE INTO channels (device, control) SELECT device, control FROM tmp GROUP BY device, control");
+	    DB->exec("INSERT OR IGNORE INTO groups (group_id) SELECT group_id FROM tmp GROUP BY group_id");
+
+		// populate data table using values from old data table
+		DB->exec("INSERT INTO data(uid, device, channel,value,timestamp,group_id) "
+                  "SELECT uid, devices.int_id, channels.int_id, value, julianday(timestamp), groups.int_id FROM tmp "
+                  "LEFT JOIN devices ON tmp.device = devices.device "
+                  "LEFT JOIN channels ON tmp.device = channels.device AND tmp.control = channels.control "
+                  "LEFT JOIN groups ON tmp.group_id = groups.group_id ");
+
+	    DB->exec("DROP TABLE tmp");
+
+		transaction.commit();
+
+		// defragment database
+		DB->exec("VACUUM");
+
+	} else {
+		throw TBaseException("Unsupported DB version. Please consider deleting DB file.");
+	}
+}
+
+void TMQTTDBLogger::InitDB()
+{
+	DB.reset(new SQLite::Database(LoggerConfig.DBFile, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
+
+	if (!DB->tableExists("data")) {
+		// new DB file created
+		std::cerr << "Creating tables" << std::endl;
+		CreateTables();
+	} else {
+		int file_db_version = ReadDBVersion();
+		if (file_db_version > DBVersion) {
+			throw TBaseException("Database file is created by newer version of wb-mqtt-db");
+		} else if (file_db_version < DBVersion) {
+			std::cerr << "Old datatabase format found, trying to update..." << std::endl;
+			UpdateDB(file_db_version);
+		} else {
+			std::cerr << "Creating tables if necessary" << std::endl;
+			CreateTables();
+		}
+	}
+
+
+
+	std::cerr << "Initializing counter caches" << std::endl;
+	InitCounterCaches();
+
+	std::cerr << "Getting internal ids for devices and channels" << std::endl;
+	InitDeviceIds();
+	InitChannelIds();
+
+	std::cerr << "Getting and assigning group ids" << std::endl;
+	InitGroupIds();
+}
+
+int TMQTTDBLogger::GetOrCreateChannelId(const TChannel & channel)
+{
+	auto it = ChannelIds.find(channel);
+	if (it != ChannelIds.end()) {
+		return it->second;
+	} else {
+
+		static SQLite::Statement query(*DB, "INSERT INTO channels (device, control) VALUES (?, ?) ");
+
+		query.reset();
+		query.bind(1, channel.Device);
+		query.bind(2, channel.Control);
+
+		query.exec();
+
+		int channel_id = DB->getLastInsertRowid();
+		ChannelIds[channel] = channel_id;
+		return channel_id;
+	}
+}
+
+int TMQTTDBLogger::GetOrCreateDeviceId(const string& device)
+{
+	auto it = DeviceIds.find(device);
+	if (it != DeviceIds.end()) {
+		return it->second;
+	} else {
+
+		static SQLite::Statement query(*DB, "INSERT INTO devices (device) VALUES (?) ");
+
+		query.reset();
+		query.bind(1, device);
+
+		query.exec();
+
+		int device_id = DB->getLastInsertRowid();
+		DeviceIds[device] = device_id;
+		return device_id;
+	}
+}
+
+
+void TMQTTDBLogger::OnConnect(int rc){
     for (const auto& group : LoggerConfig.Groups) {
         for (const auto& channel : group.Channels) {
             Subscribe(NULL, channel.Pattern);
@@ -167,10 +384,12 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
         if (match) {
             const vector<string>& tokens = StringSplit(topic, '/');
-            TChannel channel = {tokens[2], tokens[4]};
+            int channel_int_id = GetOrCreateChannelId({tokens[2], tokens[4]});
+            int device_int_id = GetOrCreateDeviceId(tokens[2]);
+
 
             if ((group.MinInterval > 0) || (group.MinUnchangedInterval > 0)) {
-                auto  last_saved = LastSavedTimestamps[channel];
+                auto  last_saved = LastSavedTimestamps[channel_int_id];
                 const auto& now = steady_clock::now();
 
                 if (group.MinInterval > 0) {
@@ -183,28 +402,28 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 
 
                 if (group.MinUnchangedInterval > 0) {
-                    if (ControlValueCache[channel] == payload) {
+                    if (ChannelValueCache[channel_int_id] == payload) {
                         if (duration_cast<milliseconds>(now - last_saved).count() < group.MinUnchangedInterval * 1000) {
                             cout << "warning: rate limit (unchanged value) for topic: " << topic <<  endl;
                             return;
                         }
                     }
 
-                    ControlValueCache[channel] = payload;
+                    ChannelValueCache[channel_int_id] = payload;
                 }
 
-                LastSavedTimestamps[channel] = now;
+                LastSavedTimestamps[channel_int_id] = now;
             }
 
 
 
-            static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, control, value, group_id) VALUES (?, ?, ?, ?)");
+            static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id) VALUES (?, ?, ?, ?)");
 
             insert_row_query.reset();
-            insert_row_query.bind(1, channel.Device);
-            insert_row_query.bind(2, channel.Control);
+            insert_row_query.bind(1, device_int_id);
+            insert_row_query.bind(2, channel_int_id);
             insert_row_query.bind(3, payload);
-            insert_row_query.bind(4, group.Id);
+            insert_row_query.bind(4, group.IntId);
 
             insert_row_query.exec();
             cout << insert_row_query.getQuery() << endl;
@@ -214,28 +433,27 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             // so we only ask DB at startup. This applies to two if blocks below.
 
             if (group.Values > 0) {
-                if ((++ChannelRowNumberCache[channel]) > group.Values * (1 + RingBufferClearThreshold) ) {
-                    static SQLite::Statement clean_channel_query(*DB, "DELETE FROM data WHERE device = ? AND control = ? ORDER BY rowid ASC LIMIT ?");
+                if ((++ChannelRowNumberCache[channel_int_id]) > group.Values * (1 + RingBufferClearThreshold) ) {
+                    static SQLite::Statement clean_channel_query(*DB, "DELETE FROM data WHERE channel = ? ORDER BY rowid ASC LIMIT ?");
                     clean_channel_query.reset();
-                    clean_channel_query.bind(1, channel.Device);
-                    clean_channel_query.bind(2, channel.Control);
-                    clean_channel_query.bind(3, ChannelRowNumberCache[channel] - group.Values);
+                    clean_channel_query.bind(1, channel_int_id);
+                    clean_channel_query.bind(2, ChannelRowNumberCache[channel_int_id] - group.Values);
 
                     clean_channel_query.exec();
                     cout << clean_channel_query.getQuery() << endl;
-                    ChannelRowNumberCache[channel] = group.Values;
+                    ChannelRowNumberCache[channel_int_id] = group.Values;
                 }
             }
 
             if (group.ValuesTotal > 0) {
-                if ((++GroupRowNumberCache[group.Id]) > group.ValuesTotal * (1 + RingBufferClearThreshold)) {
+                if ((++GroupRowNumberCache[group.IntId]) > group.ValuesTotal * (1 + RingBufferClearThreshold)) {
                     static SQLite::Statement clean_group_query(*DB, "DELETE FROM data WHERE group_id = ? ORDER BY rowid ASC LIMIT ?");
                     clean_group_query.reset();
-                    clean_group_query.bind(1, group.Id);
-                    clean_group_query.bind(2, GroupRowNumberCache[group.Id] - group.ValuesTotal);
+                    clean_group_query.bind(1, group.IntId);
+                    clean_group_query.bind(2, GroupRowNumberCache[group.IntId] - group.ValuesTotal);
                     clean_group_query.exec();
                     cout << clean_group_query.getQuery() << endl;
-                    GroupRowNumberCache[group.Id] = group.ValuesTotal;
+                    GroupRowNumberCache[group.IntId] = group.ValuesTotal;
                 }
             }
 
@@ -295,13 +513,13 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     result["values"] = Json::Value(Json::arrayValue);
 
-    string get_values_query_str = "SELECT uid, device, control, value,  (julianday(timestamp) - 2440587.5)*86400.0  FROM data WHERE (0  ";
+    string get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data WHERE (0  ";
 
     for (size_t i = 0; i < params["channels"].size(); ++i) {
-        get_values_query_str += " OR (device = ? AND control = ?) ";
+        get_values_query_str += " OR channel = ? ";
     }
 
-    get_values_query_str += " ) AND timestamp > datetime(?,'unixepoch') AND timestamp < datetime(?,'unixepoch') AND uid > ? ORDER BY uid ASC LIMIT ?";
+    get_values_query_str += " ) AND timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ORDER BY uid ASC LIMIT ?";
 
     SQLite::Statement get_values_query(*DB, get_values_query_str);
     get_values_query.reset();
@@ -315,8 +533,9 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         const string device_id = channel_item[0u].asString();
         const string control_id = channel_item[1u].asString();
 
-        get_values_query.bind(++param_num, device_id);
-        get_values_query.bind(++param_num, control_id);
+		int channel_int_id = GetOrCreateChannelId({device_id, control_id});
+
+        get_values_query.bind(++param_num, channel_int_id);
     }
 
 
@@ -336,8 +555,8 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
         Json::Value row;
         row["uid"] = static_cast<int>(get_values_query.getColumn(0));
-        row["device"] = get_values_query.getColumn(1).getText();
-        row["control"] = get_values_query.getColumn(2).getText();
+        row["device"] = "device";//FIXME: get_values_query.getColumn(1).getText();
+        row["control"] = "control";//FIXME: get_values_query.getColumn(2).getText();
         row["value"] = get_values_query.getColumn(3).getText();
         row["timestamp"] = static_cast<double>(get_values_query.getColumn(4));
         result["values"].append(row);
