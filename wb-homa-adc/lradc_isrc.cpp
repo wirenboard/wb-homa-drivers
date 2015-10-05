@@ -39,7 +39,7 @@ ESOCId GetSocId()
 void SetUpCurrentSource(int channel, unsigned current_ua)
 {
 	if (current_ua > 300) return;
-    int isrc_val = current_ua / 4;
+    int isrc_val = current_ua / 20;
 
 	if (channel == 0) {
 		imx233_wr(HW_LRADC_CTRL2_CLR, LRADC_CTRL2_TEMP_ISRC_MASK
