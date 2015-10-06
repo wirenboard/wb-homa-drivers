@@ -484,9 +484,15 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     double timestamp_gt = 0;
     int64_t uid_gt = -1;
     double timestamp_lt = 10675199167;
+	int req_ver = 0;
 
+	if (params.isMember("ver")) {
+		req_ver = params["ver"].asInt();
+	}
 
-
+	if ((req_ver != 0) && (req_ver != 1)) {
+		throw TBaseException("unsupported request version");
+	}
 
     if (params.isMember("timestamp")) {
         if (params["timestamp"].isMember("gt"))
@@ -502,11 +508,8 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         }
     }
 
-
-
     if (params.isMember("limit"))
         limit = params["limit"].asInt();
-
 
     if (! params.isMember("channels"))
         throw TBaseException("no channels specified");
@@ -525,19 +528,22 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     get_values_query.reset();
 
     int param_num = 0;
-
+	std::map<int,int> query_channel_ids; // map channel ids to they serial number in the request
+	std::map<int, TChannel> channel_names; // map channel ids to the their names  ((device, control) pairs)
+	size_t i = 0;
     for (const auto& channel_item : params["channels"]) {
         if (!(channel_item.isArray() && (channel_item.size() == 2)))
             throw TBaseException("'channels' items must be an arrays of size two ");
 
-        const string device_id = channel_item[0u].asString();
-        const string control_id = channel_item[1u].asString();
+        const TChannel channel = {channel_item[0u].asString(), channel_item[1u].asString()};
 
-		int channel_int_id = GetOrCreateChannelId({device_id, control_id});
+		int channel_int_id = GetOrCreateChannelId(channel);
 
         get_values_query.bind(++param_num, channel_int_id);
-    }
 
+        query_channel_ids[channel_int_id] = (i++);
+        channel_names[channel_int_id] = channel;
+    }
 
     get_values_query.bind(++param_num, timestamp_gt);
     get_values_query.bind(++param_num, timestamp_lt);
@@ -554,11 +560,19 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         }
 
         Json::Value row;
-        row["uid"] = static_cast<int>(get_values_query.getColumn(0));
-        row["device"] = "device";//FIXME: get_values_query.getColumn(1).getText();
-        row["control"] = "control";//FIXME: get_values_query.getColumn(2).getText();
-        row["value"] = get_values_query.getColumn(3).getText();
-        row["timestamp"] = static_cast<double>(get_values_query.getColumn(4));
+        row[(req_ver == 1) ? "i" : "uid"] = static_cast<int>(get_values_query.getColumn(0));
+
+        if (req_ver == 0) {
+			const TChannel& channel = channel_names[get_values_query.getColumn(2)];
+			row["device"] = channel.Device;
+			row["control"] = channel.Control;
+		} else if (req_ver == 1) {
+			row["c"] = query_channel_ids[get_values_query.getColumn(2)];
+		}
+
+
+        row[(req_ver == 1) ? "v" : "value"] = get_values_query.getColumn(3).getText();
+        row[(req_ver == 1) ? "t" : "timestamp"] = static_cast<double>(get_values_query.getColumn(4));
         result["values"].append(row);
         row_count += 1;
     }
@@ -570,7 +584,6 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     return result;
 }
-
 
 
 int main (int argc, char *argv[])
