@@ -1,6 +1,7 @@
 wb-mqtt-db (1.3) stable; urgency=medium
 
   * use internal ids instead of channel names
+  * API change. Support for min_interval
 
  -- Evgeny Boger <boger@contactless.ru>  Mon, 05 Oct 2015 21:17:38 +0300
 
