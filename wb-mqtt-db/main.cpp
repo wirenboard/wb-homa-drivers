@@ -485,6 +485,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     int64_t uid_gt = -1;
     double timestamp_lt = 10675199167;
 	int req_ver = 0;
+	int min_interval_ms = 0;
 
 	if (params.isMember("ver")) {
 		req_ver = params["ver"].asInt();
@@ -511,6 +512,15 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     if (params.isMember("limit"))
         limit = params["limit"].asInt();
 
+    if (params.isMember("min_interval")) {
+        min_interval_ms = params["min_interval"].asInt();
+        if (min_interval_ms < 0) {
+			min_interval_ms = 0;
+		}
+	}
+
+
+
     if (! params.isMember("channels"))
         throw TBaseException("no channels specified");
 
@@ -522,7 +532,14 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         get_values_query_str += " OR channel = ? ";
     }
 
-    get_values_query_str += " ) AND timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ORDER BY uid ASC LIMIT ?";
+    get_values_query_str += " ) AND timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ";
+
+
+	if (min_interval_ms > 0) {
+		get_values_query_str +=  " GROUP BY ROUND( timestamp * ?) ";
+	}
+
+	get_values_query_str += " ORDER BY uid ASC LIMIT ?";
 
     SQLite::Statement get_values_query(*DB, get_values_query_str);
     get_values_query.reset();
@@ -548,6 +565,13 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     get_values_query.bind(++param_num, timestamp_gt);
     get_values_query.bind(++param_num, timestamp_lt);
     get_values_query.bind(++param_num, static_cast<sqlite3_int64>(uid_gt));
+
+	if (min_interval_ms > 0) {
+		double day_fraction =   86400000. / min_interval_ms /* ms in day */;
+		cout << "day: fraction :" << day_fraction << endl;
+		get_values_query.bind(++param_num, day_fraction);
+	}
+
     get_values_query.bind(++param_num, limit + 1); // we request one extra row to know whether there are more than 'limit' available
 
     int row_count = 0;
