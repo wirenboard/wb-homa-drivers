@@ -37,7 +37,7 @@ wb-homa-gpio драйвер
             "gpio" : 36,
             "inverted" : false,
 
-    //для этого указать directoin input
+    //для этого указать direction input
             "direction" : "input"
 
     // rising прерывания по восходящему фронту, falling по нисходящему,
@@ -71,7 +71,15 @@ wb-homa-gpio драйвер
             "type" : "water_meter",
 
     //множитель для расчета, количество импульсов на м^3
-            "multiplier" : 100
+            "multiplier" : 100,
+            
+    //число знаков после запятой в текущем потреблении (воды, электричества, etc)
+            "decimal_points_current" : 2,
+
+    //число знаков после запятой в полном потреблении (воды, электричества, etc)
+            "decimal_points_total" : 3,
+            
+            
         }
     ]
 }

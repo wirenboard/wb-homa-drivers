@@ -46,7 +46,7 @@
                     "enum": [
                         "",
                         "watt_meter",
-                        "water_meter",
+                        "water_meter"
                     ],
                     "default": "",
                     "propertyOrder": 5
@@ -55,6 +55,20 @@
                     "type": "number",
                     "title": "Number of pulses per unit (kWh or m^3)",
                     "propertyOrder": 6
+                },
+                "decimal_points_current" : {
+                    "type" : "number",
+                    "title" : "Number of decimal places in _current topic (pulse counters only)",
+                    "default" : 2,
+                    "min" : 0,
+                    "propertyOrder": 7
+                },
+                "decimal_points_total" : {
+                    "type" : "number",
+                    "title" : "Number of decimal places in _total topic (pulse counters only)",
+                    "default" : 2,
+                    "min" : 0,
+                    "propertyOrder": 8
                 }
             },
             "defaultProperties": [
