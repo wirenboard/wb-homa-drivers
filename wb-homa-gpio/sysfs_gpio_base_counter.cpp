@@ -14,7 +14,6 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
     , DecimalPointsCurrent(decimal_points_current) 
     , PrintedNULL(false)
 {
-    bool succes = false;
     if (Type == WATT_METER) {
         Topic2 = "_current";
         Value_Topic2 = "power";
@@ -23,9 +22,7 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
         ConvertingMultiplier = 1000;// convert  kW to W
         DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 2: DecimalPointsCurrent;
         DecimalPointsTotal = (DecimalPointsTotal == -1) ? 3: DecimalPointsTotal;
-        succes = true;
-    }
-    if (Type == WATER_METER) {
+    } else if (Type == WATER_METER) {
         Topic2 = "_current";
         Value_Topic2 = "water_flow";
         Topic1 = "_total";
@@ -33,9 +30,7 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
         ConvertingMultiplier = 1.0;
         DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 3: DecimalPointsCurrent;
         DecimalPointsTotal = (DecimalPointsTotal == -1) ? 2: DecimalPointsTotal;
-        succes = true;
-    }
-    if (!succes) {
+    } else {
         cerr << "Uknown gpio type\n";
         exit(EXIT_FAILURE);
     }
