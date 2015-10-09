@@ -146,8 +146,10 @@ void TMQTTGpioHandler::OnConnect(int rc)
             }
             if (gpio_desc.Direction == TGpioDirection::Input)
                 Publish(NULL, control_prefix + "/meta/readonly", "1", 0, true);
-            else
+            else {
+				Publish(NULL, control_prefix + "/meta/readonly", "", 0, true);
                 Subscribe(NULL, control_prefix + "/on");
+			}
         }
 //~ /devices/293723-demo/controls/Demo-Switch 0
 //~ /devices/293723-demo/controls/Demo-Switch/on 1

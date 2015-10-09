@@ -1,0 +1,89 @@
+{
+    "type": "object",
+    "title": "GPIO Driver Configuration",
+    "description": "Digital inputs and outputs configuration",
+    "configFile": {
+        "path": "/etc/wb-homa-gpio.conf",
+        "service": "wb-homa-gpio"
+    },
+    "definitions": {
+        "gpio_channel": {
+            "type": "object",
+            "title": "GPIO channel",
+            "headerTemplate": "GPIO {{ |self.gpio|}} {{(|self.name|)}}",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "MQTT id",
+                    "propertyOrder": 1
+                },
+                "gpio": {
+                    "type": "integer",
+                    "title": "GPIO number",
+                    "propertyOrder": 2
+                },
+                "direction": {
+                    "type": "string",
+                    "title": "Direction",
+                    "enum": [
+                        "input",
+                        "output"
+                    ],
+                    "enum_titles" : ["Input", "Output"],
+                    "default": "input",
+                    "propertyOrder": 3
+                },
+                "inverted": {
+                    "type": "boolean",
+                    "title": "Invert polarity",
+                    "default": false,
+                    "_format": "checkbox",
+                    "propertyOrder": 4
+                },
+                "type": {
+                    "type": "string",
+                    "title": "Pulse counter type (if any)",
+                    "enum": [
+                        "",
+                        "watt_meter",
+                        "water_meter",
+                    ],
+                    "default": "",
+                    "propertyOrder": 5
+                },
+                "multiplier": {
+                    "type": "number",
+                    "title": "Number of pulses per unit (kWh or m^3)",
+                    "propertyOrder": 6
+                }
+            },
+            "defaultProperties": [
+                "name",
+                "gpio",
+                "direction"
+            ]
+        }
+    },
+    "properties": {
+        "device_name": {
+            "type": "string",
+            "title": "MQTT device name",
+            "default": "GPIOs",
+            "propertyOrder": 1
+        },
+        "channels": {
+            "type": "array",
+            "title": "List of GPIO channels",
+            "items": {
+                "$ref": "#/definitions/gpio_channel"
+            },
+            "minItems": 1,
+            "_format": "table",
+            "propertyOrder": 2
+        }
+    },
+    "required": [
+        "device_name",
+        "channels"
+    ]
+}

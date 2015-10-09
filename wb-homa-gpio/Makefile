@@ -51,6 +51,8 @@ install: all
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
 	install -d $(DESTDIR)/usr/share/wb-homa-gpio
+	install -d $(DESTDIR)/etc/wb-mqtt-confed
+	install -d $(DESTDIR)/etc/wb-mqtt-confed/schemas
 
 	install -m 0644  config.json.wb52 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.wb52
 	install -m 0644  config.json.wbsh5 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.wbsh5
@@ -60,3 +62,4 @@ install: all
 	install -m 0644  config.json.mka3 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.mka3
 	install -m 0644  config.json.cqc10 $(DESTDIR)/usr/share/wb-homa-gpio/wb-homa-gpio.conf.cqc10
 	install -m 0755  $(GPIO_BIN) $(DESTDIR)/usr/bin/$(GPIO_BIN)
+	install -m 0644  wb-homa-gpio.schema.json $(DESTDIR)/etc/wb-mqtt-confed/schemas/wb-homa-gpio.schema.json
