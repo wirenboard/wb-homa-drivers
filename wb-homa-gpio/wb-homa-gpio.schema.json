@@ -15,6 +15,7 @@
                 "name": {
                     "type": "string",
                     "title": "MQTT id",
+                    "minLength" : 1,
                     "propertyOrder": 1
                 },
                 "gpio": {
@@ -92,7 +93,7 @@
                 "$ref": "#/definitions/gpio_channel"
             },
             "minItems": 1,
-            "_format": "table",
+            "_format": "",
             "propertyOrder": 2
         }
     },
