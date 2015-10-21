@@ -307,7 +307,7 @@ float TSysfsAdcChannelRes::GetValue()
         }
     }
     if (result < 0) {
-        result = std::nan("");
+        result = 0;
     }
     SwitchOffCurrentSource();
     return result;
