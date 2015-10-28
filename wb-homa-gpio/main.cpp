@@ -190,6 +190,16 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
           (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
           (tokens[5] == "on") )
     {
+		int val;
+		if (payload == "1") {
+			val = 1;
+		} else if (payload == "0") {
+			val = 0;
+		} else {
+			cerr << "WARNING: invalid payload for /on topic: " << payload << endl;
+			return;
+		}		
+		
         for (TChannelDesc& channel_desc : Channels) {
             const auto& gpio_desc = channel_desc.first;
             if (gpio_desc.Direction != TGpioDirection::Output)
@@ -197,11 +207,10 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
 
             if (tokens[4] == gpio_desc.Name) {
                 auto& gpio_handler = *channel_desc.second;
-
-                int val = payload == "0" ? 0 : 1;
+                
                 if (gpio_handler.SetValue(val) == 0) {
                     // echo, retained
-                    Publish(NULL, GetChannelTopic(gpio_desc), payload, 0, true);
+                    Publish(NULL, GetChannelTopic(gpio_desc), to_string(val), 0, true);
                 }else {
                     cerr << "DEBUG : couldn't set value" << endl;
                     }
