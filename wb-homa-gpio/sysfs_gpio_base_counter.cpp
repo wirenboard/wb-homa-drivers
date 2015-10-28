@@ -10,8 +10,8 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
     , Type(type)
     , Multiplier(multiplier)
     , Total(0)
-    , DecimalPointsTotal(decimal_points_total)
-    , DecimalPointsCurrent(decimal_points_current) 
+    , DecimalPlacesTotal(decimal_points_total)
+    , DecimalPlacesCurrent(decimal_points_current) 
     , PrintedNULL(false)
 {
     if (Type == WATT_METER) {
@@ -20,16 +20,16 @@ TSysfsGpioBaseCounter::TSysfsGpioBaseCounter(int gpio, bool inverted, string int
         Topic1 = "_total";
         Value_Topic1 = "power_consumption";
         ConvertingMultiplier = 1000;// convert  kW to W
-        DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 2: DecimalPointsCurrent;
-        DecimalPointsTotal = (DecimalPointsTotal == -1) ? 3: DecimalPointsTotal;
+        DecimalPlacesCurrent = (DecimalPlacesCurrent == -1) ? 2: DecimalPlacesCurrent;
+        DecimalPlacesTotal = (DecimalPlacesTotal == -1) ? 3: DecimalPlacesTotal;
     } else if (Type == WATER_METER) {
         Topic2 = "_current";
         Value_Topic2 = "water_flow";
         Topic1 = "_total";
         Value_Topic1 = "water_consumption";
         ConvertingMultiplier = 1.0;
-        DecimalPointsCurrent = (DecimalPointsCurrent == -1) ? 3: DecimalPointsCurrent;
-        DecimalPointsTotal = (DecimalPointsTotal == -1) ? 2: DecimalPointsTotal;
+        DecimalPlacesCurrent = (DecimalPlacesCurrent == -1) ? 3: DecimalPlacesCurrent;
+        DecimalPlacesTotal = (DecimalPlacesTotal == -1) ? 2: DecimalPlacesTotal;
     } else {
         cerr << "Uknown gpio type\n";
         exit(EXIT_FAILURE);
@@ -61,13 +61,13 @@ TPublishPair TSysfsGpioBaseCounter::CheckTimeInterval()
                 } else {
                     Power = 0;
                     PrintedNULL = true;
-                    return make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent));
+                    return make_pair(Topic2, SetDecimalPlaces(Power, DecimalPlacesCurrent));
                 }
         }
         if (measured_interval > CURRENT_TIME_INTERVAL * Interval) {
             PrintedNULL = false;
             Power = 3600.0 * 1000000 * ConvertingMultiplier/ (measured_interval * Multiplier);// convert microseconds to seconds, hours to seconds
-            return make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent));
+            return make_pair(Topic2, SetDecimalPlaces(Power, DecimalPlacesCurrent));
         }
     }
         return make_pair(string(""),string(""));
@@ -117,12 +117,12 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
     else
         Power = 3600.0 * 1000000 * ConvertingMultiplier/ (Interval * Multiplier);// convert microseconds to seconds, hours to seconds
     Total = (float) Counts / Multiplier + InitialTotal;
-    output_vector.push_back(make_pair(Topic1, SetDecimalPoints(Total, DecimalPointsTotal)));
-    output_vector.push_back(make_pair(Topic2, SetDecimalPoints(Power, DecimalPointsCurrent)));
+    output_vector.push_back(make_pair(Topic1, SetDecimalPlaces(Total, DecimalPlacesTotal)));
+    output_vector.push_back(make_pair(Topic2, SetDecimalPlaces(Power, DecimalPlacesCurrent)));
     return output_vector;
 }
 
-string TSysfsGpioBaseCounter::SetDecimalPoints(float value, int set_decimal_points)
+string TSysfsGpioBaseCounter::SetDecimalPlaces(float value, int set_decimal_points)
 {
     string output;
     char buff[10];
