@@ -2,6 +2,9 @@
 #include <iostream>
 #include <memory>
 #include <string.h>
+#include <sstream>
+#include <iostream>
+#include <iomanip>  
 
 using namespace std;
 
@@ -122,26 +125,11 @@ vector<TPublishPair> TSysfsGpioBaseCounter::GpioPublish()
     return output_vector;
 }
 
-string TSysfsGpioBaseCounter::SetDecimalPlaces(float value, int set_decimal_points)
+string TSysfsGpioBaseCounter::SetDecimalPlaces(float value, int set_decimal_places)
 {
-    string output;
-    char buff[10];
-    sprintf(buff, "%.5f", value);
-    int decimal_places = -1;
-    bool stop = false;
-    for(int i = 0; (i < strlen(buff)) && (!stop); i++) {
-        if (buff[i] == '.' ) 
-            decimal_places = 0;
-        if (decimal_places > -1) {
-            if (decimal_places > set_decimal_points) {
-                buff[i] = '\0';
-                stop = true;
-            }
-            decimal_places++;
-        }
-    }
-    output = buff;
-    return output;
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(set_decimal_places) << value;
+    return out.str();
 }
 
 TSysfsGpioBaseCounter::~TSysfsGpioBaseCounter()
