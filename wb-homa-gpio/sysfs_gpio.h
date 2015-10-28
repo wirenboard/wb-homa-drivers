@@ -104,7 +104,7 @@ class TSysfsGpioBaseCounter : public TSysfsGpio
         TPublishPair CheckTimeInterval();
     
     private:
-        string SetDecimalPoints(float value, int decimal_points);
+        string SetDecimalPlaces(float value, int decimal_points);
         string Type;
         int Multiplier;
         int ConvertingMultiplier;// multiplier that converts value to appropriate measuring unit according to meter type
@@ -114,8 +114,8 @@ class TSysfsGpioBaseCounter : public TSysfsGpio
         string Topic2;
         string Value_Topic1;
         string Value_Topic2;
-        int DecimalPointsTotal;
-        int DecimalPointsCurrent;
+        int DecimalPlacesTotal;
+        int DecimalPlacesCurrent;
         float InitialTotal;
         bool PrintedNULL;
 

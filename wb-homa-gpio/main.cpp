@@ -39,8 +39,8 @@ struct TGpioDesc
     string Type = "";
     int Multiplier;
     int Order;
-    int DecimalPointsTotal = -1;
-    int DecimalPointsCurrent = -1;
+    int DecimalPlacesTotal = -1;
+    int DecimalPlacesCurrent = -1;
 };
 
 
@@ -100,7 +100,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
         if (gpio_desc.Type == "")
                 gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
         else
-            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier, gpio_desc.DecimalPointsTotal, gpio_desc.DecimalPointsCurrent));
+            gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier, gpio_desc.DecimalPlacesTotal, gpio_desc.DecimalPlacesCurrent));
         gpio_handler->Export();
         if (gpio_handler->IsExported()) {
             if (gpio_desc.Direction == TGpioDirection::Input)
@@ -407,10 +407,10 @@ int main(int argc, char *argv[])
             if (item.isMember("edge"))
                 gpio_desc.InterruptEdge = item["edge"].asString();
             if (item.isMember("decimal_points_current")) {
-                gpio_desc.DecimalPointsCurrent = item["decimal_points_current"].asInt();
+                gpio_desc.DecimalPlacesCurrent = item["decimal_points_current"].asInt();
             }
             if (item.isMember("decimal_points_total")) {
-                gpio_desc.DecimalPointsTotal = item["decimal_points_total"].asInt();
+                gpio_desc.DecimalPlacesTotal = item["decimal_points_total"].asInt();
             }
             gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
