@@ -35,22 +35,6 @@
                 "multiplier" : 3.800,
                 "decimal_places" : 2
         },
-/*        {
-                "id" : "R1",
-                "averaging_window": 1,
-                "poll_interval" : 0,
-                "channel_number" : 0,
-                "multiplier" : 0.535,
-                "decimal_places" : 3
-        },
-        {
-                "id" : "R2",
-                "averaging_window": 1,
-                "poll_interval" : 0,
-                "channel_number" : 6,
-                "multiplier" : 0.535,
-                "decimal_places" : 3
-        },*/
         {
                 "id" : "Vin",
                 "averaging_window": 1,
@@ -78,14 +62,11 @@
                         {
                             "id" : "R1",
                             "mux_channel_number" : 7,
-                            "decimal_places" : 2
-
-                            // The next 4 lines enable resistance measurement on R1
-
-                             ,"resistance1" : "1000kOhm",
-                             "resistance2" : "3150Ohm",
-                             "type" : "ohm_meter",
-                             "current" : 80
+                            "decimal_places" : 2,
+                            "resistance1" : "1000kOhm",
+                            "resistance2" : "3150Ohm",
+                            "type" : "ohm_meter",
+                            "current" : 80
                         }
 				],
                 "channel_number" : 6
@@ -100,14 +81,11 @@
                         {
                             "id" : "R2",
                             "mux_channel_number" : 7,
-                            "decimal_places" : 2
-
-                            // The next 4 lines enable resistance measurement on R1
-
-                             ,"resistance1" : "1000kOhm",
-                             "resistance2" : "3150Ohm",
-                             "type" : "ohm_meter",
-                             "current" : 80
+                            "decimal_places" : 2,
+                            "resistance1" : "1000kOhm",
+                            "resistance2" : "3150Ohm",
+                            "type" : "ohm_meter",
+                            "current" : 80
                         }
 				],
                 "channel_number" : 0
