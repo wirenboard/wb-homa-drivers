@@ -1,7 +1,7 @@
 // Configuration options
 {
     "device_name" : "ADCs",
-    "debug" : false,
+    "debug" : true,
     "iio_channels" : [
          {
                 "id" : "A1",
@@ -35,7 +35,7 @@
                 "multiplier" : 3.800,
                 "decimal_places" : 2
         },
-        {
+/*        {
                 "id" : "R1",
                 "averaging_window": 1,
                 "poll_interval" : 0,
@@ -50,7 +50,7 @@
                 "channel_number" : 6,
                 "multiplier" : 0.535,
                 "decimal_places" : 3
-        },
+        },*/
         {
                 "id" : "Vin",
                 "averaging_window": 1,
@@ -67,8 +67,51 @@
                 "multiplier" : 0.45175,
                 "decimal_places" : 3,
                 "max_voltage" : 7
-        }
+        },
 
+        {
+                "type" : "mux",
+                "averaging_window": 1,
+                "min_switch_interval_ms": 200,
+                "gpios" : [8, 9, 10],
+                "channels" : [
+                        {
+                            "id" : "R1",
+                            "mux_channel_number" : 7,
+                            "decimal_places" : 2
+
+                            // The next 4 lines enable resistance measurement on R1
+
+                             ,"resistance1" : "1000kOhm",
+                             "resistance2" : "3150Ohm",
+                             "type" : "ohm_meter",
+                             "current" : 80
+                        }
+				],
+                "channel_number" : 6
+
+		},
+        {
+                "type" : "mux",
+                "averaging_window": 1,
+                "min_switch_interval_ms": 200,
+                "gpios" : [8, 9, 10],
+                "channels" : [
+                        {
+                            "id" : "R2",
+                            "mux_channel_number" : 7,
+                            "decimal_places" : 2
+
+                            // The next 4 lines enable resistance measurement on R1
+
+                             ,"resistance1" : "1000kOhm",
+                             "resistance2" : "3150Ohm",
+                             "type" : "ohm_meter",
+                             "current" : 80
+                        }
+				],
+                "channel_number" : 0
+		}
     ]
 }
 
