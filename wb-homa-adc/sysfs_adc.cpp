@@ -260,7 +260,7 @@ const std::string& TSysfsAdcChannel::GetName() const
 
 float TSysfsAdcChannel::GetValue()
 {
-    float result = -1;
+    float result = std::nan("");
     int value = GetAverageValue();
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
@@ -268,9 +268,7 @@ float TSysfsAdcChannel::GetValue()
             result *= d->Owner->ScaleFactor / ADC_DEFAULT_SCALE_FACTOR;
         }
     }
-    if (result < 0) {
-        result = std::nan("");
-    }
+
     return result;
 }
 std::string TSysfsAdcChannel::GetType()
@@ -298,16 +296,16 @@ float TSysfsAdcChannelRes::GetValue()
     SetUpCurrentSource(); 
     this_thread::sleep_for(chrono::milliseconds(DELAY));
     int value = GetAverageValue(); 
-    float result = -1;
+    float result = std::nan("");
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
             float voltage = d->Owner->ScaleFactor * value / 1000;// get voltage in V (from mV)
             result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+            if (result < 0) {
+                result = 0;
+            }
             result = round(result);
         }
-    }
-    if (result < 0) {
-        result = 0;
     }
     SwitchOffCurrentSource();
     return result;
@@ -315,14 +313,14 @@ float TSysfsAdcChannelRes::GetValue()
 
 std::string TSysfsAdcChannelRes::GetType()
 {
-        return "resistance";
+    return "resistance";
 }
 void TSysfsAdcChannelRes::SetUpCurrentSource()
 {
-	::SetUpCurrentSource(CurrentSourceChannel, Current);
+    ::SetUpCurrentSource(CurrentSourceChannel, Current);
 }
 
 void TSysfsAdcChannelRes::SwitchOffCurrentSource()
 {
-	::SwitchOffCurrentSource(CurrentSourceChannel);
+    ::SwitchOffCurrentSource(CurrentSourceChannel);
 }
