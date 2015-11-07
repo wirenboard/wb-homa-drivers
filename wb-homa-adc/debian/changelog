@@ -1,6 +1,8 @@
 wb-homa-adc (1.10.2) stable; urgency=medium
 
   * proper handling for floating resistive channels
+  * introduce current source correction factor
+  * allow to use restance measurement channels without mux
 
  -- Evgeny Boger <boger@contactless.ru>  Sat, 07 Nov 2015 15:39:50 +0300
 
