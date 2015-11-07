@@ -58,7 +58,6 @@ void TMQTTAdcHandler::OnConnect(int rc)
     for (auto channel : Channels) {
         std::string topic = GetChannelTopic(*channel);
         std::string type = channel->GetType();
-        //Publish(NULL, topic + "/meta/type", "text", 0, true);
         Publish(NULL, topic + "/meta/order", std::to_string(n++), 0, true);
         Publish(NULL, topic + "/meta/type", type, 0, true);
     }

@@ -15,20 +15,8 @@ namespace {
         extern "C" void usleep(int value);
 };
 
-TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
-    : SysfsDir(sysfs_dir),
-    ChannelConfig(channel_config),
-    MaxVoltage(ChannelConfig.MaxVoltage)
+void TSysfsAdc::SelectMaxScale()
 {
-    ScaleFactor = ADC_DEFAULT_SCALE_FACTOR;
-    AveragingWindow = ChannelConfig.AveragingWindow;
-    Debug = debug;
-    Initialized = false;
-    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_raw";
-    AdcValStream.open(path_to_value);
-    if (AdcValStream < 0) {
-        throw TAdcException("error opening sysfs Adc file");
-    }
     string scale_prefix = "/sys/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_scale";
     ifstream scale_file(scale_prefix + "_available");
     if (scale_file.is_open()) {
@@ -62,7 +50,27 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
         ScaleFactor = max;
         write_scale << scales[position]; 
         write_scale.close();
+    }    
+}
+
+
+TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
+    : SysfsDir(sysfs_dir),
+    ChannelConfig(channel_config),
+    MaxVoltage(ChannelConfig.MaxVoltage)
+{
+    ScaleFactor = ADC_DEFAULT_SCALE_FACTOR;
+    AveragingWindow = ChannelConfig.AveragingWindow;
+    Debug = debug;
+    Initialized = false;
+    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_raw";
+    AdcValStream.open(path_to_value);
+    if (AdcValStream < 0) {
+        throw TAdcException("error opening sysfs Adc file");
     }
+    
+    SelectMaxScale();
+
     NumberOfChannels = channel_config.Mux.size();
 }
 

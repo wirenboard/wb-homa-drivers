@@ -73,6 +73,8 @@ protected:
     TChannel ChannelConfig;
     int NumberOfChannels;
     float MaxVoltage;
+private:
+	void SelectMaxScale();
 };
 
 class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
