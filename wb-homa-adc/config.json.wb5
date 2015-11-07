@@ -61,7 +61,8 @@
 				"decimal_places" : 0,
 				"resistance1" : "1000kOhm",
 				"resistance2" : "3150Ohm",
-				"current" : 80
+				"current" : 80,
+				"multiplier" : 0.4518
 
 		},
         {
@@ -73,7 +74,8 @@
 				"decimal_places" : 0,
 				"resistance1" : "1000kOhm",
 				"resistance2" : "3150Ohm",
-				"current" : 80
+				"current" : 80,
+				"multiplier" : 0.4518
 		}
     ]
 }

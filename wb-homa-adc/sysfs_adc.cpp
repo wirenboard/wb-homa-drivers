@@ -71,6 +71,10 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     
     SelectMaxScale();
 
+     ::SwitchOffCurrentSource(
+        GetCurrentSourceChannelNumber(
+            GetLradcChannel()));
+
     NumberOfChannels = channel_config.Mux.size();
 }
 

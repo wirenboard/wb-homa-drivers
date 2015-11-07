@@ -1,3 +1,9 @@
+wb-homa-gpio (1.13.1) stable; urgency=medium
+
+  * invert polarity for WB5
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 07 Nov 2015 18:10:09 +0300
+
 wb-homa-gpio (1.13) stable; urgency=medium
 
   * add confed schema
