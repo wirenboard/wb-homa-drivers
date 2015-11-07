@@ -318,9 +318,11 @@ float TSysfsAdcChannelRes::GetValue()
     }
     d->Owner->SelectMuxChannel(d->Index);
     
-    if (!SourceAlwaysOn) SetUpCurrentSource(); 
-        
-    this_thread::sleep_for(chrono::milliseconds(DELAY));
+    if (!SourceAlwaysOn) {
+        SetUpCurrentSource(); 
+        this_thread::sleep_for(chrono::milliseconds(DELAY));
+    }
+    
     int value = GetAverageValue(); 
     float result = std::nan("");
     if (value < ADC_VALUE_MAX) {
