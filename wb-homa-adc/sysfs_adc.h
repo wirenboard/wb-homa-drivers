@@ -59,11 +59,13 @@ public:
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
     double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
-    virtual void SetMuxABC(int n); // switch mux channels 
-    bool CheckVoltage(int value); // check if voltage is bigger than ADC_MAX_VOLTAGE
+    bool CheckVoltage(int value); // check if voltage on LRADC pin is bigger than ADC_MAX_VOLTAGE
     int GetLradcChannel() { return ChannelConfig.ChannelNumber; }; // return LRADC channel number
+
+    virtual void SelectMuxChannel(int index) = 0;
+    
+    
 protected:
-    virtual int GetRawValue(int index) = 0;
     int AveragingWindow;
     bool Debug;
     bool Initialized;
@@ -81,9 +83,10 @@ class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
 {
     public : 
         TSysfsAdcMux(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
-        void SetMuxABC(int n);
+	protected:
+        void SelectMuxChannel(int index);
     private:
-        int GetRawValue(int index);
+        void SetMuxABC(int n);
         void InitMux();
         void InitGPIO(int gpio);
         void SetGPIOValue(int gpio, int value);
@@ -101,8 +104,8 @@ class TSysfsAdcPhys: public TSysfsAdc
 {
     public :
         TSysfsAdcPhys(const std::string& sysfs_dir = "/sys/", bool debug = false, const TChannel& channel_config = TChannel ());
-    private : 
-    int GetRawValue(int index);
+    protected : 
+		void SelectMuxChannel(int index);
 };
  
 struct TSysfsAdcChannelPrivate 
@@ -140,7 +143,8 @@ class TSysfsAdcChannel
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance
 {
     public : 
-         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, int current, int resistance1, int resistance2);
+         TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, 
+							 int discharge_channel, int current, int resistance1, int resistance2, bool source_always_on);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();
@@ -151,4 +155,5 @@ class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resis
         int Resistance2;
         std::string Type;
         int CurrentSourceChannel;
+        bool SourceAlwaysOn;
 };

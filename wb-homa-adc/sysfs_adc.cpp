@@ -84,9 +84,23 @@ TSysfsAdc::~TSysfsAdc()
 std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
 {
     std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
+    
+    // Check whether all Mux channels are OHM_METERs
+    bool resistance_channels_only = true;
+    for (const auto & mux_ch : ChannelConfig.Mux) {
+        if (mux_ch.Type != OHM_METER) {
+            resistance_channels_only = false;
+        }
+    }    
+        
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Current, ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2));
+        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, 
+                                           ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, 
+                                           ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Current, 
+                                           ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2,
+                                           /* current_source_always_on = */ resistance_channels_only
+                                           ));
     else
         ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Multiplier));
     return ptr;
@@ -109,10 +123,6 @@ bool TSysfsAdc::CheckVoltage(int value)
     return true;
 }
 
-void TSysfsAdc::SetMuxABC(int n)
-{
-    return;
-}
 
 TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChannel& channel_config)
     : TSysfsAdc(sysfs_dir, debug, channel_config)
@@ -125,10 +135,9 @@ TSysfsAdcMux::TSysfsAdcMux(const std::string& sysfs_dir, bool debug, const TChan
 }
 
 
-int TSysfsAdcMux::GetRawValue(int index)
+void TSysfsAdcMux::SelectMuxChannel(int index)
 {
     SetMuxABC(index);
-    return ReadValue(); 
 }
 
 void TSysfsAdcMux::InitMux()
@@ -214,9 +223,8 @@ TSysfsAdcPhys::TSysfsAdcPhys(const std::string& sysfs_dir, bool debug, const TCh
 {
 }
 
-int TSysfsAdcPhys::GetRawValue(int index)
+void TSysfsAdcPhys::SelectMuxChannel(int index)
 {
-   return ReadValue();
 }
 
 
@@ -243,14 +251,17 @@ int TSysfsAdcChannel::GetAverageValue()
 {
     if (!d->Ready) {
         for (int i = 0; i < d->ChannelAveragingWindow; ++i) {
-            int v = d->Owner->GetRawValue(d->Index);
+            d->Owner->SelectMuxChannel(d->Index);
+            int v = d->Owner->ReadValue();
+
             d->Buffer[i] = v;
             d->Sum += v;
         }
         d->Ready = true;
     } else {
         for (int i = 0; i < d->ReadingsNumber; i++) {
-            int v = d->Owner->GetRawValue(d->Index);
+            d->Owner->SelectMuxChannel(d->Index);
+            int v = d->Owner->ReadValue();
             d->Sum -= d->Buffer[d->Pos];
             d->Sum += v;
             d->Buffer[d->Pos++] = v;
@@ -284,24 +295,31 @@ std::string TSysfsAdcChannel::GetType()
     return "voltage";
 }
 
-TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel, int current, int resistance1, int resistance2)
+TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name,
+                                         int readings_number, int decimal_places, int discharge_channel, 
+                                         int current, int resistance1, int resistance2, bool source_always_on)
     : TSysfsAdcChannel(owner, index, name, readings_number, decimal_places, discharge_channel)
+    , Current(current)
+    , Resistance1(resistance1)
+    , Resistance2(resistance2)
+    , Type(OHM_METER)
+    , SourceAlwaysOn(source_always_on)
 {
-    Current = current;
-    Resistance1 = resistance1;
-    Resistance2 = resistance2;
-    Type = OHM_METER;
     CurrentSourceChannel =  GetCurrentSourceChannelNumber(owner->GetLradcChannel());
+
+    if (SourceAlwaysOn) SetUpCurrentSource(); 
 }
 
 
 float TSysfsAdcChannelRes::GetValue()
 {
     if (d->DischargeChannel != -1) {
-        d->Owner->SetMuxABC(d->DischargeChannel);
+        d->Owner->SelectMuxChannel(d->DischargeChannel);
     }
-    d->Owner->SetMuxABC(d->Index);
-    SetUpCurrentSource(); 
+    d->Owner->SelectMuxChannel(d->Index);
+    
+    if (!SourceAlwaysOn) SetUpCurrentSource(); 
+        
     this_thread::sleep_for(chrono::milliseconds(DELAY));
     int value = GetAverageValue(); 
     float result = std::nan("");
@@ -315,7 +333,8 @@ float TSysfsAdcChannelRes::GetValue()
             result = round(result);
         }
     }
-    SwitchOffCurrentSource();
+    
+    if (!SourceAlwaysOn) SwitchOffCurrentSource();
     return result;
 }
 

@@ -54,41 +54,26 @@
         },
 
         {
-                "type" : "mux",
+				"id" : "R1",
+                "channel_number" : 6,
+				"type" : "ohm_meter",
                 "averaging_window": 1,
-                "min_switch_interval_ms": 200,
-                "gpios" : [8, 9, 10],
-                "channels" : [
-                        {
-                            "id" : "R1",
-                            "mux_channel_number" : 7,
-                            "decimal_places" : 0,
-                            "resistance1" : "1000kOhm",
-                            "resistance2" : "3150Ohm",
-                            "type" : "ohm_meter",
-                            "current" : 80
-                        }
-				],
-                "channel_number" : 6
+				"decimal_places" : 0,
+				"resistance1" : "1000kOhm",
+				"resistance2" : "3150Ohm",
+				"current" : 80
 
 		},
         {
-                "type" : "mux",
+				"id" : "R2",
+                "channel_number" : 0,
+				"type" : "ohm_meter",
                 "averaging_window": 1,
-                "min_switch_interval_ms": 200,
-                "gpios" : [8, 9, 10],
-                "channels" : [
-                        {
-                            "id" : "R2",
-                            "mux_channel_number" : 7,
-                            "decimal_places" : 0,
-                            "resistance1" : "1000kOhm",
-                            "resistance2" : "3150Ohm",
-                            "type" : "ohm_meter",
-                            "current" : 80
-                        }
-				],
-                "channel_number" : 0
+				"mux_channel_number" : 7,
+				"decimal_places" : 0,
+				"resistance1" : "1000kOhm",
+				"resistance2" : "3150Ohm",
+				"current" : 80
 		}
     ]
 }
