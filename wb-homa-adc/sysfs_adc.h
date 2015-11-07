@@ -22,6 +22,7 @@ struct TMUXChannel // config for mux channel
     int ReadingsNumber = 10;// number of reading value during one selection
     int DecimalPlaces = 3;// number of figures after point 
     int DischargeChannel = -1;// discharge channel ADC should switch to, before switching to current mux channel
+    float CurrentCalibrationFactor = 1.0; //Calibration factor for current source  (usually 1.0 +/- 5%)
 };
 struct TChannel
 {
@@ -144,7 +145,8 @@ class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resis
 {
     public : 
          TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, 
-							 int discharge_channel, int current, int resistance1, int resistance2, bool source_always_on);
+							 int discharge_channel, int current, int resistance1, int resistance2, bool source_always_on,
+							 float current_calibration_factor);
          float GetValue();
          std::string GetType();
          void SetUpCurrentSource();
@@ -156,4 +158,5 @@ class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resis
         std::string Type;
         int CurrentSourceChannel;
         bool SourceAlwaysOn;
+        float CurrentCalibrationFactor;
 };

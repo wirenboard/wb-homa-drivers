@@ -64,7 +64,9 @@ namespace {
 			int resistance = ReadResistance(item["resistance2"].asString());
 			mux_channel.Resistance2 = resistance;
 		}
-
+		
+		mux_channel.CurrentCalibrationFactor = item.get("current_calibration_factor", 1).asFloat();
+	
 	}
 	
     void LoadConfig(const std::string& file_name, THandlerConfig& config)

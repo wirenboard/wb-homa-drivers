@@ -99,7 +99,8 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
                                            ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, 
                                            ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Current, 
                                            ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2,
-                                           /* current_source_always_on = */ resistance_channels_only
+                                           /* current_source_always_on = */ resistance_channels_only,
+                                           ChannelConfig.Mux[i].CurrentCalibrationFactor
                                            ));
     else
         ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Multiplier));
@@ -297,13 +298,15 @@ std::string TSysfsAdcChannel::GetType()
 
 TSysfsAdcChannelRes::TSysfsAdcChannelRes(TSysfsAdc* owner, int index, const std::string& name,
                                          int readings_number, int decimal_places, int discharge_channel, 
-                                         int current, int resistance1, int resistance2, bool source_always_on)
+                                         int current, int resistance1, int resistance2, 
+                                         bool source_always_on, float current_calibration_factor)
     : TSysfsAdcChannel(owner, index, name, readings_number, decimal_places, discharge_channel)
     , Current(current)
     , Resistance1(resistance1)
     , Resistance2(resistance2)
     , Type(OHM_METER)
     , SourceAlwaysOn(source_always_on)
+    , CurrentCalibrationFactor(current_calibration_factor)
 {
     CurrentSourceChannel =  GetCurrentSourceChannelNumber(owner->GetLradcChannel());
 
@@ -328,7 +331,7 @@ float TSysfsAdcChannelRes::GetValue()
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
             float voltage = d->Owner->ScaleFactor * value / 1000;// get voltage in V (from mV)
-            result = 1.0/ ((Current / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
+            result = 1.0/ ((Current * CurrentCalibrationFactor / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
             if (result < 0) {
                 result = 0;
             }
