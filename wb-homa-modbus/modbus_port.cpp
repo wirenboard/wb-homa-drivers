@@ -19,6 +19,7 @@ TModbusPort::TModbusPort(PMQTTClientBase mqtt_client, PPortConfig port_config, P
             DeleteErrorMessages(reg);
             });
     for (auto device_config: Config->DeviceConfigs) {
+        ModbusClient->AddDevice(device_config->SlaveId, device_config->Protocol);
         for (auto channel: device_config->ModbusChannels) {
             for (auto reg: channel->Registers) {
                 RegisterToChannelMap[reg] = channel;
@@ -180,9 +181,9 @@ void TModbusPort::PublishError(std::shared_ptr<TModbusRegister> reg)
         std::cerr << "warning: unexpected register from modbus" << std::endl;
         return;
     }
-    if (!it->second->PrintedErrorMessage) {
+    if (!it->second->MayHaveError) {
         MQTTClient->Publish(NULL, GetChannelTopic(*it->second) + "/meta/error", to_string(error), 0, true);
-        it->second->PrintedErrorMessage = true;
+        it->second->MayHaveError = true;
     }
 }
 
@@ -193,9 +194,9 @@ void TModbusPort::DeleteErrorMessages(std::shared_ptr<TModbusRegister> reg)
         std::cerr << "warning: unexpected register from modbus" << std::endl;
         return;
     }
-    if (it->second->PrintedErrorMessage == true) {
+    if (it->second->MayHaveError) {
         MQTTClient->Publish(NULL, GetChannelTopic(*it->second) + "/meta/error", "", 0, true);
-        it->second->PrintedErrorMessage = false;
+        it->second->MayHaveError = false;
     }
 }
 

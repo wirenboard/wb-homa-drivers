@@ -33,7 +33,7 @@ MODBUS_SRCS=modbus_client.c \
   modbus_config.c modbus_port.c \
   modbus_observer.c \
   serial_protocol.c \
-  serial_context.c \
+  serial_connector.c \
   uniel_protocol.c \
   crc16.c \
   em_protocol.c \
@@ -43,8 +43,7 @@ MODBUS_OBJS=$(MODBUS_SRCS:.c=.o)
 TEST_SRCS= \
   $(TEST_DIR)/testlog.o \
   $(TEST_DIR)/modbus_test.o \
-  $(TEST_DIR)/milur_test.o \
-  $(TEST_DIR)/mercury230_test.o \
+  $(TEST_DIR)/em_test.o \
   $(TEST_DIR)/fake_modbus.o \
   $(TEST_DIR)/fake_mqtt.o \
   $(TEST_DIR)/fake_serial_port.o \
@@ -88,6 +87,7 @@ clean :
 
 install: all
 	mkdir -p $(DESTDIR)/etc/wb-mqtt-confed/schemas
+	mkdir -p $(DESTDIR)/etc/wb-configs.d
 	install -d $(DESTDIR)
 	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
@@ -96,6 +96,8 @@ install: all
 
 	install -m 0644  config.json $(DESTDIR)/etc/wb-homa-modbus.conf.sample
 	install -m 0644  config.default.json $(DESTDIR)/etc/wb-homa-modbus.conf
+	install -m 0644  wb-homa-modbus.wbconfigs $(DESTDIR)/etc/wb-configs.d/11wb-homa-modbus
+	
 	install -m 0644  wb-homa-modbus.schema.json $(DESTDIR)/etc/wb-mqtt-confed/schemas/wb-homa-modbus.schema.json
 	install -m 0755  $(MODBUS_BIN) $(DESTDIR)/usr/bin/$(MODBUS_BIN)
 	cp -r  wb-homa-modbus-templates $(DESTDIR)/usr/share/wb-homa-modbus/templates
