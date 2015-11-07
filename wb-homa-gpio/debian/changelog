@@ -1,3 +1,10 @@
+wb-homa-gpio (1.13.1) stable; urgency=medium
+
+  * add wb-configs.d
+  * fix WB5 gpio config
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 07 Nov 2015 01:24:24 +0300
+
 wb-homa-gpio (1.13) stable; urgency=medium
 
   * add confed schema
