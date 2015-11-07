@@ -62,7 +62,7 @@
                         {
                             "id" : "R1",
                             "mux_channel_number" : 7,
-                            "decimal_places" : 2,
+                            "decimal_places" : 0,
                             "resistance1" : "1000kOhm",
                             "resistance2" : "3150Ohm",
                             "type" : "ohm_meter",
@@ -81,7 +81,7 @@
                         {
                             "id" : "R2",
                             "mux_channel_number" : 7,
-                            "decimal_places" : 2,
+                            "decimal_places" : 0,
                             "resistance1" : "1000kOhm",
                             "resistance2" : "3150Ohm",
                             "type" : "ohm_meter",
