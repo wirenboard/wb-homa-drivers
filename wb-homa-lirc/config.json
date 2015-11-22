@@ -1,0 +1,6 @@
+{
+	"device_name" : "IR Remote Control",
+	"debug" : false,
+	"release_time": 100,
+	"repeat_time": 100
+}

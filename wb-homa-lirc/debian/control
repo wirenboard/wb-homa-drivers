@@ -1,0 +1,11 @@
+Source: wb-homa-lirc
+Maintainer: Alexey Ignatov <lexszero@gmail.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9), liblircclient-dev, libwbmqtt-dev
+
+Package: wb-homa-lirc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: WB LIRC driver for infrared remote control
