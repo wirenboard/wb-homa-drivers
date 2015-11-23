@@ -1,4 +1,4 @@
-BIN = wb-homa-lirc
+BIN = wb-mqtt-lirc
 
 CXXFLAGS += -Wall -Wextra -std=c++0x #-ggdb -O0
 LDFLAGS += -lm -lmosquittopp -ljsoncpp -lwbmqtt -pthread -llirc_client

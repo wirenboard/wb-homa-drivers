@@ -4,8 +4,8 @@
   "description": "IR remote control configuration",
 
   "configFile": {
-    "path": "/etc/wb-homa-lirc.conf",
-    "service": "wb-homa-lirc"
+    "path": "/etc/wb-mqtt-lirc.conf",
+    "service": "wb-mqtt-lirc"
   },
 
   "properties": {

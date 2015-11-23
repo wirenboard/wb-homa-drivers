@@ -1,6 +1,6 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          wb-homa-lirc
+# Provides:          wb-mqtt-lirc
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Required-Start: $remote_fs, mosquitto, lirc
@@ -19,7 +19,7 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="WB LIRC driver"
-NAME=wb-homa-lirc
+NAME=wb-mqtt-lirc
 DAEMON=/usr/bin/$NAME
 DAEMON_ARGS="-c /etc/${NAME}.conf"
 PIDFILE=/var/run/$NAME.pid
