@@ -57,4 +57,6 @@ install: all
 	install -m 0755  $(DB_BIN) $(DESTDIR)/usr/bin/$(DB_BIN)
 	install -m 0755  config.json $(DESTDIR)/etc/wb-mqtt-db.conf
 
+	install -m 0644  wb-mqtt-db.wbconfigs $(DESTDIR)/etc/wb-configs.d/16wb-mqtt-db
+	install -m 0644  wb-mqtt-db.schema.json $(DESTDIR)/etc/wb-mqtt-confed/schemas/wb-mqtt-db.schema.json
 
