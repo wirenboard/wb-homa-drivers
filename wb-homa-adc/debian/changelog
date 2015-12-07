@@ -1,3 +1,9 @@
+wb-homa-adc (1.10.3) stable; urgency=medium
+
+  * update default current correction for WB5
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 20 Nov 2015 20:42:22 +0300
+
 wb-homa-adc (1.10.2) stable; urgency=medium
 
   * proper handling for floating resistive channels
