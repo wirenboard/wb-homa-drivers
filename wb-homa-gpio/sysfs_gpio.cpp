@@ -121,7 +121,7 @@ int TSysfsGpio::Unexport()
     return 0;
 }
 
-int TSysfsGpio::SetDirection(bool input)
+int TSysfsGpio::SetDirection(bool input, bool output_state)
 {
     cerr << "DEBUG:: gpio=" << Gpio << " SetDirection() input= " << input << endl;
 
@@ -140,7 +140,8 @@ int TSysfsGpio::SetDirection(bool input)
         setdirgpio << "in";
         In=true;
     } else {
-        setdirgpio << "out";
+        setdirgpio << (output_state ? "high" : "low");
+            
         In=false;
     }
 

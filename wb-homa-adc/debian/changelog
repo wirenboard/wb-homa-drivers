@@ -1,6 +1,6 @@
 wb-homa-adc (1.10.3) stable; urgency=medium
 
-  * update default current correction for WB5
+  * set current source correction factor to 1.06
 
  -- Evgeny Boger <boger@contactless.ru>  Fri, 20 Nov 2015 20:42:22 +0300
 

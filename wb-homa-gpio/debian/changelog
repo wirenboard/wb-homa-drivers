@@ -1,8 +1,14 @@
-wb-homa-gpio (1.13.2) stable; urgency=medium
+wb-homa-gpio (1.13.3) stable; urgency=medium
 
   * add gpios on extension module (WB5)
 
  -- Evgeny Boger <boger@contactless.ru>  Mon, 07 Dec 2015 05:10:19 +0300
+
+wb-homa-gpio (1.13.2) stable; urgency=medium
+
+  * add initial state property
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 09 Nov 2015 17:11:09 +0300
 
 wb-homa-gpio (1.13.1) stable; urgency=medium
 

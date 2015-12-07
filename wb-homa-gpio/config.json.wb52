@@ -77,6 +77,12 @@
             "direction": "input"
         },
         {
+            "gpio" : 78,
+            "name" : "5V_OUT",
+            "direction": "output",
+            "initial_state" : true
+		},
+		{
             "name": "MOD1_SDA",
             "gpio": 85,
             "direction": "input"
@@ -106,5 +112,7 @@
             "gpio": 83,
             "direction": "input"
         }
+        
+
     ]
 }

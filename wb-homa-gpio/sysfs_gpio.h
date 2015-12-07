@@ -26,9 +26,9 @@ public:
     ~TSysfsGpio();
     int Export();
     int Unexport();
-    int SetDirection(bool input = true); // Set GPIO Direction
+    int SetDirection(bool input = true, bool output_state = false); // Set GPIO Direction
     inline int SetInput() { return SetDirection(true); };
-    inline int SetOutput() { return SetDirection(false); };
+    inline int SetOutput(bool state = false) { return SetDirection(false, state); };
 
     int SetValue(int val);
     // returns GPIO value (0 or 1), or negative number in case of error

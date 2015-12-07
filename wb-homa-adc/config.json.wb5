@@ -62,7 +62,8 @@
 				"resistance1" : "1000kOhm",
 				"resistance2" : "3150Ohm",
 				"current" : 80,
-				"multiplier" : 0.4518
+				"multiplier" : 0.4518,
+				"current_calibration_factor" : 1.06
 
 		},
         {
@@ -75,7 +76,8 @@
 				"resistance1" : "1000kOhm",
 				"resistance2" : "3150Ohm",
 				"current" : 80,
-				"multiplier" : 0.4518
+				"multiplier" : 0.4518,
+				"current_calibration_factor" : 1.06
 		}
     ]
 }
