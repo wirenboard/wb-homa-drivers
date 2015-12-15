@@ -1,3 +1,9 @@
+wb-homa-gpio (1.13.2) stable; urgency=medium
+
+  * add gpios on extension module (WB5)
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 07 Dec 2015 05:10:19 +0300
+
 wb-homa-gpio (1.13.1) stable; urgency=medium
 
   * add wb-configs.d

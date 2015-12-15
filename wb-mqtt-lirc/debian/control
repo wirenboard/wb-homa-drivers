@@ -1,0 +1,11 @@
+Source: wb-mqtt-lirc
+Maintainer: Alexey Ignatov <lexszero@gmail.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9), liblircclient-dev (>= 0.9.2), libwbmqtt-dev
+
+Package: wb-mqtt-lirc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, liblircclient0 (>= 0.9.2)
+Description: WB LIRC driver for infrared remote control

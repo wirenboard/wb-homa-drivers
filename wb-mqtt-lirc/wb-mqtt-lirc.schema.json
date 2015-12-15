@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "title": "LIRC driver configuration",
+  "description": "IR remote control configuration",
+
+  "configFile": {
+    "path": "/etc/wb-mqtt-lirc.conf",
+    "service": "wb-mqtt-lirc"
+  },
+
+  "properties": {
+  "device_name": {
+    "type": "string",
+    "title": "MQTT device name",
+    "default": "IR Remote Control",
+    "propertyOrder": 1
+  },
+  "release_time": {
+    "type": "integer",
+    "title": "Key release detection time (ms)",
+    "default": 100,
+    "propertyOrder": 2
+  },
+  "repeat_time": {
+    "type": "integer",
+    "title": "Key repeat period (ms)",
+    "default": 100,
+    "propertyOrder": 3
+  }
+  },
+  "required": ["device_name"]
+}
+
