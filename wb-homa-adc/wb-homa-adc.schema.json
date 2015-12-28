@@ -9,11 +9,9 @@
   },
 
   "definitions": {
-  
     "adc_channel": {
       "type": "object",
-      "title": "Logical ADC channel",
-      
+     
       "properties": {
         "id": {
           "type": "string",
@@ -51,8 +49,8 @@
           "type" : "string",
           "title" : "Channel type",
           "propertyOrder": 5,
-          "default" : "",
-          "enum" : ["ohm_meter"]
+          "default" : "voltage",
+          "enum" : ["ohm_meter", "voltage"]
         },
         "resistance1" : {
           "type" : "string",
@@ -84,60 +82,107 @@
         }        
       }
     },
+
+    "iio_channel_base": {
+      "type": "object",
+      "options" : {
+           "disable_edit_json" : true,
+           "disable_collapse" : true
+      },
+      "properties": {
+        "channel_number": {
+          "type": "integer",
+          "title": "SoC channel number",
+          "enum": [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15],
+          "propertyOrder": 2,
+          "default": 1
+        },
+        "min_switch_interval_ms" : {
+          "type" : "integer",
+          "title" : "Mux switch interval",
+          "description" : "Time to wait after mux switch (ms) for multiplexed channels",
+          "propertyOrder": 7
+        }
+        
+      },
+
+      "defaultProperties": ["channel_number", "multiplier", "id", "type"]
+    },      
+
   
     "iio_channel": {
-      "allOf" : [
-        { "$ref" : "#/definitions/adc_channel" },
+      "headerTemplate": "ADC channel {{ |self.channel_number|}} {{(|self.id|)}}",
+      "oneOf" : [
         {
-          "type": "object",
-          "title": "SoC ADC channel",
-          "headerTemplate": "ADC channel {{ |self.channel_number|}} {{(|self.id|)}}",
-          "properties": {
-            "channel_number": {
-              "type": "integer",
-              "title": "SoC channel number",
-              "enum": [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15],
-              "propertyOrder": 2,
-              "default": 1
-            },
 
-            "channels": {
-              "type": "array",
-              "title": "List of multiplexed channels",
-              "items": { "$ref": "#/definitions/mux_channel" },
-              "_format": "tabs",
-              "propertyOrder": 4
-            },
-            
-            "gpios" : {
-              "type" : "array",
-              "title" : "MUX control gpios",
-              "_format" : "tabs",
-              "propertyOrder" : 5,
-              "items" : {
-                "type" : "integer",
-                "title" : "GPIO"
-              }
-            },
-            "type" :  {
-              "type" : "string",
-              "title" : "Channel type",
-              "propertyOrder": 6,
-              "default" : "",
-              "enum" : ["", "mux", "ohm_meter"]
-            },
-            "min_switch_interval_ms" : {
-              "type" : "integer",
-              "title" : "Mux switch interval",
-              "description" : "Time to wait after mux switch (ms) for multiplexed channels",
-              "propertyOrder": 7
+         "allOf" : [
+            { "$ref" : "#/definitions/iio_channel_base"},
+            {
+              "title": "SoC ADC channel with MUX",
+              "type": "object",
+              "headerTemplate": "Multiplexed ADC channel {{ |self.channel_number|}} {{(|self.id|)}}",
+              "options" : {
+                   "disable_edit_json" : true,
+                   "disable_collapse" : true
+              },
+              "properties" : {
+                "type" : {
+                  "type" : "string",
+                  "title" : "Channel type",
+                  "enum" : ["mux"]
+                },
+                "channels": {
+                  "type": "array",
+                  "title": "List of multiplexed channels",
+                  "items": { "$ref": "#/definitions/mux_channel" },
+                  "_format": "tabs",
+                  "propertyOrder": 4
+                },
+                
+                "gpios" : {
+                  "type" : "array",
+                  "title" : "MUX control gpios",
+                  "_format" : "tabs",
+                  "propertyOrder" : 5,
+                  "items" : {
+                    "type" : "integer",
+                    "title" : "GPIO"
+                  }
+                },
+                "averaging_window": {
+                  "type": "integer",
+                  "title": "Averaging window",
+                  "description" : "Number of samples to use while calculating moving average",
+                  "propertyOrder": 6
+                },
+                "readings_number" : {
+                  "type": "integer",
+                  "title": "Number of ADC reading per sample",
+                  "propertyOrder": 7
+                }
+              },
+              "required" : ["type"]
             }
-            
-          },
-    
-          "defaultProperties": ["channel_number", "multiplier", "id"]
+          ]
+        },
+        {
+          "allOf" : [
+            { "$ref" : "#/definitions/iio_channel_base"},
+            { "$ref" : "#/definitions/adc_channel" },
+            {
+              "title": "SoC ADC channel",
+              "properties" : {
+                "type" : {
+                  "type" : "string",
+                  "enum" : ["voltage", "ohm_meter", ""]
+                }
+              }
+            }
+          ]
         }
-      ]      
+      ]
+
+   
     },
     
     "mux_channel": {
@@ -188,7 +233,10 @@
       "items": { "$ref": "#/definitions/iio_channel" },
       "minItems": 1,
       "_format": "tabs",
-      "propertyOrder":3
+      "propertyOrder":3,
+      "options" : {
+          "disable_collapse" : true
+      }
     }
   },
   "required": ["device_name", "iio_channels"]

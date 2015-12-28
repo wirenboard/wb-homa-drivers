@@ -6,7 +6,6 @@
          {
                 "id" : "Vin",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 0,
                 "multiplier" : 5.873,
                 "decimal_places" : 2

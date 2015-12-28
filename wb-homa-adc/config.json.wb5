@@ -6,7 +6,6 @@
          {
                 "id" : "A1",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 1,
                 "multiplier" :3.800,
                 "decimal_places" : 2
@@ -14,7 +13,6 @@
         {
                 "id" : "A2",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 2,
                 "multiplier" : 3.800,
                 "decimal_places" : 2
@@ -22,7 +20,6 @@
         {
                 "id" : "A3",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 3,
                 "multiplier" : 3.800,
                 "decimal_places" : 2
@@ -30,7 +27,6 @@
         {
                 "id" : "A4",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 4,
                 "multiplier" : 3.800,
                 "decimal_places" : 2
@@ -38,7 +34,6 @@
         {
                 "id" : "Vin",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 5,
                 "multiplier" : 3.80,
                 "decimal_places" : 2
@@ -46,7 +41,6 @@
         {
                 "id" : "BAT",
                 "averaging_window": 1,
-                "poll_interval" : 0,
                 "channel_number" : 7,
                 "multiplier" : 0.45175,
                 "decimal_places" : 3,
