@@ -10,6 +10,8 @@
 #include <utility>
 #include <sstream>
 
+#include <wbmqtt/utils.h>
+
 TModbusConnector::~TModbusConnector() {}
 
 TModbusContext::~TModbusContext() {}
@@ -300,6 +302,29 @@ TModbusClient::TErrorState TRegisterHandler::Flush(PModbusContext ctx)
     return TModbusClient::ErrorStateUnchanged;
 }
 
+template<>
+std::string TRegisterHandler::ToScaledTextValue(float val) const
+{
+    return StringFormat("%.7g", reg->Scale * val);
+}
+
+template<>
+std::string TRegisterHandler::ToScaledTextValue(double val) const
+{
+    return StringFormat("%.15g", reg->Scale * val);
+}
+
+template<typename A>
+std::string TRegisterHandler::ToScaledTextValue(A val) const
+{
+    if (reg->Scale == 1) {
+        return std::to_string(val);
+    } else {
+        return StringFormat("%.15g", reg->Scale * val);
+    }
+}
+
+
 std::string TRegisterHandler::TextValue() const
 {
     if (!value.size())
@@ -380,15 +405,7 @@ std::string TRegisterHandler::TextValue() const
 
 }
 
-template<typename A>
-std::string TRegisterHandler::ToScaledTextValue(A val) const
-{
-	if (reg->Scale == 1) {
-		return std::to_string(val);
-	} else {
-		return std::to_string(reg->Scale * val);
-	}
-}
+
 
 
 
