@@ -70,7 +70,15 @@
                     "default" : 2,
                     "min" : 0,
                     "propertyOrder": 8
+                },
+                "initial_state": {
+                    "type": "boolean",
+                    "title": "Initial state for output GPIO",
+                    "default": false,
+                    "_format": "checkbox",
+                    "propertyOrder": 9
                 }
+
             },
             "defaultProperties": [
                 "name",

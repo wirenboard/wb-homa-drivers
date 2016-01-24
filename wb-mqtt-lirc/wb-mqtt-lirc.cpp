@@ -43,6 +43,11 @@ public:
 	{
 		return message.c_str();
 	}
+	void fatal () const
+	{
+		cerr << "FATAL: " << what() << endl;
+		exit(1);
+	}
 private:
 	string message;
 };
@@ -118,10 +123,11 @@ public:
 
 	bool Learn = false;
 
+	thread KeyThread;
+
+	void ConnectToLirc();
 	void NextCode();
-	thread KeyThread() {
-		return thread(&TMQTTLircHandler::key_thread, this);
-	}
+
 private:
 	THandlerConfig Config;
 	int fd;
@@ -138,18 +144,14 @@ TMQTTLircHandler::TMQTTLircHandler(const TMQTTLircHandler::TConfig& mqtt_config,
 	: TMQTTWrapper(mqtt_config),
 	Config(handler_config)
 {
-	if (lirc_init("wb-lirc", Config.Debug ? 5 : 0) == -1)
-		throw TLircException("Couldn't initialize LIRC: " + string(strerror(errno)));
-
-	fd = lirc_get_local_socket(NULL, Config.Debug ? 0 : 1);
-	if (fd < 0)
-		throw TLircException("Couldn't get LIRC socket: " + string(strerror(-fd)));
-
+	mosqpp::lib_init();
+	KeyThread = thread(&TMQTTLircHandler::key_thread, this);
 	Connect();
 }
 
 TMQTTLircHandler::~TMQTTLircHandler() {
 	lirc_deinit();
+	mosqpp::lib_cleanup();
 }
 
 void TMQTTLircHandler::OnConnect(int rc)
@@ -209,6 +211,21 @@ void TMQTTLircHandler::OnSubscribe(int, int, const int *)
 {
 	if (Config.Debug)
 		cerr << "Subscription succeeded." << endl;
+}
+
+void TMQTTLircHandler::ConnectToLirc()
+{
+	if (Config.Debug)
+		cerr << "Connecting to LIRC daemon" << endl;
+
+	lirc_deinit();
+
+	if (lirc_init("wb-lirc", Config.Debug ? 5 : 0) == -1)
+		throw TLircException("Couldn't initialize LIRC: " + string(strerror(errno)));
+
+	fd = lirc_get_local_socket(NULL, Config.Debug ? 0 : 1);
+	if (fd < 0)
+		throw TLircException("Couldn't get LIRC socket: " + string(strerror(-fd)));
 }
 
 void TMQTTLircHandler::NextCode()
@@ -323,7 +340,6 @@ int main(int argc, char **argv)
 			printf ("?? getopt returned character code 0%o ??\n", c);
 		}
 	}
-	mosqpp::lib_init();
 
 	try {
 		THandlerConfig config;
@@ -334,23 +350,34 @@ int main(int argc, char **argv)
 		mqtt_config.Id = "wb-lirc";
 
 		shared_ptr<TMQTTLircHandler> mqtt_handler( new TMQTTLircHandler(mqtt_config, config));
-		mqtt_handler->Init();
-		thread thr = mqtt_handler->KeyThread();
-		int ret = mqtt_handler->loop_start();
-		if (ret != 0)
-			throw TLircException("Couldn't start mosquitto_loop_start: " + to_string(ret));
 
-		while(1) {
-			if (!mqtt_handler->Learn)
-				mqtt_handler->NextCode();
+		try {
+			mqtt_handler->Init();
+			int ret = mqtt_handler->loop_start();
+			if (ret != 0)
+				throw TLircException("Couldn't start mosquitto_loop_start: " + to_string(ret));
+
+			while (1) {
+				try {
+					mqtt_handler->ConnectToLirc();
+					while(1) {
+						if (!mqtt_handler->Learn)
+							mqtt_handler->NextCode();
+					}
+				} catch (const TLircException& e) {
+					if (config.Debug)
+						cerr << "EXCEPTION: " << e.what() << endl;
+					this_thread::sleep_for(milliseconds(1000));
+				}
+			}
+		} catch (const TLircException& e) {
+			e.fatal();
 		}
-		thr.join();
-	} catch (const TLircException& e) {
-		cerr << "FATAL: " << e.what() << endl;
-		return 1;
-	}
 
-	mosqpp::lib_cleanup();
+		mqtt_handler->KeyThread.join();
+	} catch (const TLircException& e) {
+		e.fatal();
+	}
 
 	return 0;
 }

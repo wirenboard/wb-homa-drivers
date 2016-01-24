@@ -41,6 +41,7 @@ struct TGpioDesc
     int Order;
     int DecimalPlacesTotal = -1;
     int DecimalPlacesCurrent = -1;
+    bool InitialState = false;
 };
 
 
@@ -97,19 +98,24 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
     // init gpios
     for (const TGpioDesc& gpio_desc : handler_config.Gpios) {
         std::shared_ptr<TSysfsGpio> gpio_handler(nullptr);
-        if (gpio_desc.Type == "")
-                gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
-        else
+        if (gpio_desc.Type.empty()) {
+            gpio_handler.reset( new TSysfsGpio(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge));
+        } else {
             gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier, gpio_desc.DecimalPlacesTotal, gpio_desc.DecimalPlacesCurrent));
+        }
+        
         gpio_handler->Export();
+        
         if (gpio_handler->IsExported()) {
-            if (gpio_desc.Direction == TGpioDirection::Input)
+            if (gpio_desc.Direction == TGpioDirection::Input) {
                 gpio_handler->SetInput();
-            else
-                gpio_handler->SetOutput();
+            } else {
+                gpio_handler->SetOutput(gpio_desc.InitialState);
+            }
+                
             Channels.emplace_back(gpio_desc, gpio_handler);
             } else {
-                    cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
+                cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
             }
     }
     sort(Channels.begin(), Channels.end(), FuncComp);
@@ -412,6 +418,9 @@ int main(int argc, char *argv[])
             if (item.isMember("decimal_points_total")) {
                 gpio_desc.DecimalPlacesTotal = item["decimal_points_total"].asInt();
             }
+            
+            gpio_desc.InitialState = item.get("initial_state", false).asBool();
+            
             gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
