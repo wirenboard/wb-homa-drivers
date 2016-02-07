@@ -38,10 +38,10 @@ struct THandlerConfig
 class TLircException: public exception 
 {
 public:
-	TLircException(string _message): message(_message) {}
+	TLircException(string _message): message("LIRC error: " + _message) {}
 	const char* what () const throw ()
 	{
-		return ("LIRC error: " + message).c_str();
+		return message.c_str();
 	}
 	void fatal () const
 	{

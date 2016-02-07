@@ -1,0 +1,152 @@
+wb-mqtt-serial (1.14.1) stable; urgency=medium
+
+  * renamed to wb-mqtt-serial
+  * write scheduling improvements
+  * misc fixes
+
+ -- Ivan Shvedunov <ivan4th@gmail.com>  Thu, 04 Feb 2016 06:36:43 +0300
+
+wb-homa-modbus (1.14.1) stable; urgency=medium
+
+  * renamed to wb-mqtt-serial
+
+ -- Ivan Shvedunov <ivan4th@gmail.com>  Thu, 04 Feb 2016 06:36:43 +0300
+
+wb-homa-modbus (1.14.0) stable; urgency=medium
+
+  * support modbus and non-modbus devices on the same port
+  * configurable frame timeout
+
+ -- Ivan Shvedunov <ivan4th@gmail.com>  Wed, 27 Jan 2016 01:22:12 +0300
+
+wb-homa-modbus (1.13.2) stable; urgency=medium
+
+  * various EM meters impovements and bug fixes
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 28 Dec 2015 12:01:28 +0300
+
+wb-homa-modbus (1.13.1) stable; urgency=medium
+
+  * fixes handling IVTM devices with device_id > 9
+
+ -- Evgeny Boger <boger@contactless.ru>  Thu, 26 Nov 2015 00:12:11 +0300
+
+wb-homa-modbus (1.13.0) stable; urgency=medium
+
+  * Concurrent port access
+  * adds support for IVTM protocol and IVTM-7M-3 device
+  * adds support for Milur and Mercury electricity meter protocols
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 13 Nov 2015 02:07:11 +0300
+
+wb-homa-modbus (1.12.10) stable; urgency=medium
+
+  * adds support for WB-MR14
+  * removes trailing zeroes in reported values
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 19 Jan 2016 18:51:30 +0300
+
+wb-homa-modbus (1.12.9) stable; urgency=medium
+
+  * adds support for WB-MS-THLS
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 08 Dec 2015 18:17:54 +0300
+
+wb-homa-modbus (1.12.8) stable; urgency=medium
+
+  * Add config to wb-configs.d
+  * proper string-to-int conversion for string literals in
+  slave_id and address properties
+  * Add WB-MR11 template
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 17 Oct 2015 18:07:35 +0300
+
+wb-homa-modbus (1.12.7) stable; urgency=medium
+
+  * fix erroneous behaviour when no devices are specified
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 16 Oct 2015 19:29:48 +0300
+
+wb-homa-modbus (1.12.6) stable; urgency=medium
+
+  * change default poll interval to 20ms
+  * ship with default config
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 05 Oct 2015 20:21:37 +0300
+
+wb-homa-modbus (1.12.5) stable; urgency=medium
+
+  * support on_value for writing
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 04 Oct 2015 21:40:50 +0300
+
+wb-homa-modbus (1.12.4) UNRELEASED; urgency=medium
+
+  * Use WriteSingleRegister when possible
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 03 Oct 2015 01:47:17 +0300
+
+wb-homa-modbus (1.12.3) stable; urgency=medium
+
+  * add confed schema
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 20 Sep 2015 22:28:46 +0300
+
+wb-homa-modbus (1.12.2) stable; urgency=medium
+
+  * support for SDM220 electricity meter (http://www.aliexpress.com/item/SDM220Modbus-Single-Phase-DIN-Rail-Kwh-meter-with-Pulse-Output-and-RS485-Modbus-Communication-MID-approved/32346363823.html)
+  * fix crash on receiving mailformed /on payload
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 18 Aug 2015 14:27:06 +0300
+
+wb-homa-modbus (1.12.1) stable; urgency=medium
+
+  *  support for http://siqi.cc/en/product/57.html meter
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 12 Jul 2015 21:39:33 +0300
+
+wb-homa-modbus (1.12) stable; urgency=medium
+
+  * add support for float and double IEEE types
+  * add support for signed 64-bit integer
+
+ -- Evgeny Boger <boger@contactless.ru>  Wed, 08 Jul 2015 19:40:53 +0300
+
+wb-homa-modbus (1.11) stable; urgency=medium
+
+  * Add support for 2- and 4- words wide "registers"
+  * Supported formats are: S64, U32, S32
+  * Add template for WB-MCM16
+
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 23:05:23 +0300
+
+wb-homa-modbus (1.10.1) stable; urgency=medium
+
+  * add kvadro RS485 <- 1-wire DS18B20 converter
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 15:14:07 +0300
+
+wb-homa-modbus (1.10) stable; urgency=medium
+
+  * libwbmqtt 1.3
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 03 Jul 2015 00:34:17 +0300
+
+wb-homa-modbus (1.9.2) stable; urgency=medium
+
+  * build with new mosquitto
+
+ -- Evgeny Boger <boger@contactless.ru>  Thu, 02 Jul 2015 20:13:32 +0300
+
+wb-homa-modbus (1.9.1) stable; urgency=medium
+
+  * fix for parity setting
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 16 Jun 2015 22:22:45 +0300
+
+wb-homa-modbus (1.9) stable; urgency=medium
+
+  * report errors via controls/<control>/meta/error
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 15 May 2015 10:52:29 +0000

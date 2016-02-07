@@ -42,10 +42,10 @@ class TSysfsAdcChannel;
 class TAdcException: public std::exception 
 {
 public:
-    TAdcException(std::string _message): message(_message) {}
+    TAdcException(std::string _message): message("Adc error: " + _message) {}
     const char* what () const throw ()
     {
-        return ("Adc error: " + message).c_str();
+        return message.c_str();
     }
 private:
     std::string message;
