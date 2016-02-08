@@ -65,13 +65,13 @@
 
 
         {
-            "gpio" : 102,
+            "gpio" : 62,
             "name" : "BATTERY_PRESENT",
             "inverted" : true,
             "direction": "input"
         },
         {
-            "gpio" : 62,
+            "gpio" : 102,
             "name" : "BATTERY_CHARGING",
             "inverted" : true,
             "direction": "input"
@@ -81,38 +81,6 @@
             "name" : "5V_OUT",
             "direction": "output",
             "initial_state" : true
-		},
-		{
-            "name": "MOD1_SDA",
-            "gpio": 85,
-            "direction": "input"
-        },
-        {
-            "name": "MOD1_SCL",
-            "gpio": 76,
-            "direction": "input"
-        },
-        {
-            "name": "MOD1_CS",
-            "gpio": 91,
-            "direction": "input"
-        },
-        {
-            "name": "MOD2_SDA",
-            "gpio": 22,
-            "direction": "input"
-        },
-        {
-            "name": "MOD2_SCL",
-            "gpio": 23,
-            "direction": "input"
-        },
-        {
-            "name": "MOD2_CS",
-            "gpio": 83,
-            "direction": "input"
-        }
-        
-
+		}    
     ]
 }
