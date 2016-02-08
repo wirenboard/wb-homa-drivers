@@ -129,7 +129,7 @@ int TSysfsGpio::SetDirection(bool input, bool output_state)
     setdir_str += to_string(Gpio) + "/direction";
 
     ofstream setdirgpio(setdir_str.c_str()); // open direction file for gpio
-    if (setdirgpio < 0) {
+    if (!setdirgpio.is_open()) {
         cerr << " OPERATION FAILED: Unable to set direction of GPIO"<< Gpio <<" ."<< endl;
         setdirgpio.close();
         return -1;
