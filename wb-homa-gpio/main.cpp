@@ -104,6 +104,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig& mqtt_config,
             gpio_handler.reset( new TSysfsGpioBaseCounter(gpio_desc.Gpio, gpio_desc.Inverted, gpio_desc.InterruptEdge,  gpio_desc.Type, gpio_desc.Multiplier, gpio_desc.DecimalPlacesTotal, gpio_desc.DecimalPlacesCurrent));
         }
         
+        gpio_handler->Unexport();
         gpio_handler->Export();
         
         if (gpio_handler->IsExported()) {
