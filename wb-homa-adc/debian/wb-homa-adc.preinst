@@ -1,5 +1,5 @@
 #!/bin/bash
-rm -f /etc/wb-mqtt-confed/schemas/wb-homa-gpio.schema.json
+rm -f /etc/wb-mqtt-confed/schemas/wb-homa-adc.schema.json
 if [ -d /etc/wb-mqtt-confed ]; then
    if [ -d /etc/wb-mqtt-confed/schemas ]; then
       rmdir --ignore-fail-on-non-empty /etc/wb-mqtt-confed/schemas

@@ -22,11 +22,12 @@ $(BIN): $(BIN).cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@
 
 install: $(BIN) config.json
+	install -d $(DESTDIR)/etc
 	install -d $(DESTDIR)/usr/bin
-	install -d $(DESTDIR)/etc/wb-mqtt-confed/schemas
+	install -d $(DESTDIR)/usr/share/wb-mqtt-confed/schemas
 	install -m 0755 $(BIN) $(DESTDIR)/usr/bin/
 	install -m 0644 config.json $(DESTDIR)/etc/$(BIN).conf
-	install -m 0644 $(BIN).schema.json $(DESTDIR)/etc/wb-mqtt-confed/schemas/$(BIN).schema.json
+	install -m 0644 $(BIN).schema.json $(DESTDIR)/usr/share/wb-mqtt-confed/schemas/$(BIN).schema.json
 
 clean:
 	rm -f $(BIN)

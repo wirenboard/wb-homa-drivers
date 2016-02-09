@@ -54,8 +54,8 @@ clean :
 install: all
 	install -d $(DESTDIR)
 	install -d $(DESTDIR)/etc
-	install -d $(DESTDIR)/etc/wb-mqtt-confed
-	install -d $(DESTDIR)/etc/wb-mqtt-confed/schemas
+	install -d $(DESTDIR)/usr/share/wb-mqtt-confed
+	install -d $(DESTDIR)/usr/share/wb-mqtt-confed/schemas
 	install -d $(DESTDIR)/usr/bin
 	install -d $(DESTDIR)/usr/lib
 	install -d $(DESTDIR)/usr/share/wb-homa-adc
@@ -71,4 +71,4 @@ install: all
 
 	install -m 0644  wb-homa-adc.wbconfigs $(DESTDIR)/etc/wb-configs.d/12wb-homa-adc
 
-	install -m 0644  wb-homa-adc.schema.json $(DESTDIR)/etc/wb-mqtt-confed/schemas/wb-homa-adc.schema.json
+	install -m 0644  wb-homa-adc.schema.json $(DESTDIR)/usr/share/wb-mqtt-confed/schemas/wb-homa-adc.schema.json
