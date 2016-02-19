@@ -1,3 +1,9 @@
+wb-homa-gpio (1.14) stable; urgency=medium
+
+  * adds support for WB5.5
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 19 Feb 2016 19:58:22 +0300
+
 wb-homa-gpio (1.13.6) stable; urgency=medium
 
   * Moved schema files to /usr/share/wb-mqtt-confed/schemas

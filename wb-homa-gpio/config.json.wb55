@@ -1,0 +1,75 @@
+// Configuration options
+{
+    "device_name" : "On-Board Discrete I/O",
+
+    "channels" : [
+        {
+            "gpio" : 26,
+            "name" : "A1_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 16,
+            "name" : "A2_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 24,
+            "name" : "A3_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 20,
+            "name" : "A4_OUT",
+            "inverted" : false
+        },
+        {
+            "gpio" : 6,
+            "name" : "A1_IN",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 7,
+            "name" : "A2_IN",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 28,
+            "name" : "A3_IN",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 27,
+            "name" : "A4_IN",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" :  5,
+            "name" : "R1_IN",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 62,
+            "name" : "BATTERY_PRESENT",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 102,
+            "name" : "BATTERY_CHARGING",
+            "inverted" : true,
+            "direction": "input"
+        },
+        {
+            "gpio" : 78,
+            "name" : "5V_OUT",
+            "direction": "output",
+            "initial_state" : true
+		}    
+    ]
+}
