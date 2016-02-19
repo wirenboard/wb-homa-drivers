@@ -65,6 +65,7 @@ install: all
 	install -m 0644  config.json $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.default
 	install -m 0644  config.json.wb4 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb4
 	install -m 0644  config.json.wb5 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb5
+	install -m 0644  config.json.wb55 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb55
 	install -m 0644  config.json.wb2.8 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb2.8
 	install -m 0644  config.json.wb3.5 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.wb3.5
 	install -m 0644  config.json.netmon1 $(DESTDIR)/usr/share/wb-homa-adc/wb-homa-adc.conf.netmon1

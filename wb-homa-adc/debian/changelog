@@ -1,3 +1,9 @@
+wb-homa-adc (1.11) stable; urgency=medium
+
+  * adds support for WB5.5
+
+ -- Evgeny Boger <boger@contactless.ru>  Fri, 19 Feb 2016 19:55:44 +0300
+
 wb-homa-adc (1.10.5) stable; urgency=medium
 
   * Moved schema files to /usr/share/wb-mqtt-confed/schemas
