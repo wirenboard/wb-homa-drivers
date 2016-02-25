@@ -8,4 +8,5 @@ Build-Depends: debhelper (>= 9), liblircclient-dev (>= 0.9.2), libwbmqtt-dev
 Package: wb-mqtt-lirc
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, liblircclient0 (>= 0.9.2)
+Breaks: wb-mqtt-confed (<< 1.0.2)
 Description: WB LIRC driver for infrared remote control
