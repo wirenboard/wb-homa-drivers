@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 rm -f /etc/wb-mqtt-confed/schemas/wb-mqtt-db.schema.json
 if [ -d /etc/wb-mqtt-confed ]; then
    if [ -d /etc/wb-mqtt-confed/schemas ]; then
