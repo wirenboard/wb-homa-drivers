@@ -1,6 +1,6 @@
 // Configuration options
 {
-    "device_name" : "On-Board Discrete I/O",
+    "device_name" : "Discrete I/O",
 
     "channels" : [
         {
