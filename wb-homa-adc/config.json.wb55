@@ -1,13 +1,13 @@
 // Configuration options
 {
-    "device_name" : "ADCs",
+    "device_name" : "Analog Inputs",
     "debug" : false,
     "iio_channels" : [
          {
                 "id" : "A1",
                 "averaging_window": 1,
                 "channel_number" : 1,
-                "multiplier" :3.800,
+                "multiplier" : 3.800,
                 "decimal_places" : 2
         },
         {
@@ -32,6 +32,18 @@
                 "decimal_places" : 2
         },
         {
+                "id" : "R1",
+                "channel_number" : 6,
+                "type" : "ohm_meter",
+                "averaging_window": 1,
+                "decimal_places" : 0,
+                "resistance1" : "1000kOhm",
+                "resistance2" : "3150Ohm",
+                "current" : 80,
+                "multiplier" : 0.4518,
+                "current_calibration_factor" : 1.06
+        },      
+        {
                 "id" : "Vin",
                 "averaging_window": 1,
                 "channel_number" : 5,
@@ -52,19 +64,7 @@
                 "channel_number" : 0,
                 "multiplier" : 1.694,
                 "decimal_places" : 2
-        },
-        {
-				"id" : "R1",
-                "channel_number" : 6,
-				"type" : "ohm_meter",
-                "averaging_window": 1,
-				"decimal_places" : 0,
-				"resistance1" : "1000kOhm",
-				"resistance2" : "3150Ohm",
-				"current" : 80,
-				"multiplier" : 0.4518,
-				"current_calibration_factor" : 1.06
-		}
+        }
     ]
 }
 
