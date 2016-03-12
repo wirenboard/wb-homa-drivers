@@ -1,0 +1,11 @@
+wb-homa-zway (1.0.1) stable; urgency=medium
+
+  * Add config file, fix init script
+
+ -- Alexey Ignatov <lexszero@gmail.com>  Mon, 03 Aug 2015 14:53:01 +0000
+
+wb-homa-zway (1.0.0) stable; urgency=medium
+
+  * Initial release. (Package was separated from wb-homa-drivers)
+
+ -- Alexey Ignatov <lexszero@gmail.com>  Sat, 01 July 2015 20:06:41 +0000

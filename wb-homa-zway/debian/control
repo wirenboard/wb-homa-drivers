@@ -1,0 +1,11 @@
+Source: wb-homa-zway
+Maintainer: Alexey Ignatov <lexszero@gmail.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9), pkg-config, g++, libjsoncpp-dev, libmosquittopp-dev, libmosquitto-dev, libwbmqtt-dev (>= 1.3.1)
+
+Package: wb-homa-zway
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjsoncpp0, libmosquittopp1, libmosquitto1, libwbmqtt (>= 1.3.1), z-way-server
+Description: Wiren Board Smart Home MQTT bridge for Z-Way stack compatible with HomA conventions
