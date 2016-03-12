@@ -1,3 +1,10 @@
+wb-mqtt-db (1.4) stable; urgency=medium
+
+  * significant query performance improvement
+  * retained messages are ignored
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 12 Mar 2016 23:56:29 +0300
+
 wb-mqtt-db (1.3.4) stable; urgency=medium
 
   * fix deps
