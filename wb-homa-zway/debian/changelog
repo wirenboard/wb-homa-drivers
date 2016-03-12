@@ -1,3 +1,15 @@
+wb-mqtt-zway (1.0.2) stable; urgency=medium
+
+  * rename to wb-mqtt-zway
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 13 Mar 2016 00:51:36 +0300
+
+wb-homa-zway (1.0.2) stable; urgency=medium
+
+  * rename to wb-mqtt-zway
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 13 Mar 2016 00:51:36 +0300
+
 wb-homa-zway (1.0.1) stable; urgency=medium
 
   * Add config file, fix init script

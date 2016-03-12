@@ -16,7 +16,7 @@ endif
 CFLAGS=-Wall -std=c++0x -Os -I.
 LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt
 
-ZWAY_BIN=wb-homa-zway
+ZWAY_BIN=wb-mqtt-zway
 
 .PHONY: all clean
 
@@ -42,4 +42,4 @@ install: all
 	install -d $(DESTDIR)/usr/bin
 
 	install -m 0755  $(ZWAY_BIN) $(DESTDIR)/usr/bin/$(ZWAY_BIN)
-	install -m 0644  config.json $(DESTDIR)/etc/wb-homa-zway.conf
+	install -m 0644  config.json $(DESTDIR)/etc/wb-mqtt-zway.conf
