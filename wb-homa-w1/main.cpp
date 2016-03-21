@@ -173,7 +173,7 @@ void TMQTTOnewireHandler::UpdateChannelValues() {
     for (const TSysfsOnewireDevice& device: Channels) {
         auto result = device.ReadTemperature();
         if (result.Defined()) {
-            Publish(NULL, GetChannelTopic(device), to_string(*result), 0, true); // Publish current value (make retained)
+            Publish(NULL, GetChannelTopic(device), StringFormat("%g",*result), 0, true); // Publish current value (make retained)
         }
 
     }

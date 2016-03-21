@@ -145,6 +145,8 @@ void TMQTTDBLogger::CreateTables()
 
 
     DB->exec("CREATE INDEX IF NOT EXISTS data_topic ON data (channel)");
+
+    // NOTE: the following index is a "low quality" one according to sqlite documentation. However, reversing the order of columns results in factor of two decrease in SELECT performance. So we leave it here as it is. 
     DB->exec("CREATE INDEX IF NOT EXISTS data_topic_timestamp ON data (channel, timestamp)");
 
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid ON data (group_id)");
@@ -303,6 +305,12 @@ void TMQTTDBLogger::InitDB()
 
 	std::cerr << "Getting and assigning group ids" << std::endl;
 	InitGroupIds();
+
+    std::cerr << "Analyzing data table" << std::endl;
+    DB->exec("ANALYZE data");
+    DB->exec("ANALYZE sqlite_master");
+
+    std::cerr << "DB initialization is done" << std::endl;
 }
 
 int TMQTTDBLogger::GetOrCreateChannelId(const TChannel & channel)
@@ -362,6 +370,10 @@ void TMQTTDBLogger::OnSubscribe(int mid, int qos_count, const int *granted_qos)
 void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
 {
     if (!message->payload)
+        return;
+
+    // retained messages received on startup are ignored
+    if (message->retain)
         return;
 
     high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
@@ -526,13 +538,21 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     result["values"] = Json::Value(Json::arrayValue);
 
-    string get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data WHERE (0  ";
+    // version 3.7 can't always figure out to use the proper index
+    string get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
 
-    for (size_t i = 0; i < params["channels"].size(); ++i) {
-        get_values_query_str += " OR channel = ? ";
+    if (!params["channels"].empty()) {
+        get_values_query_str += "channel IN ( ";
+        for (size_t i = 0; i < params["channels"].size(); ++i) {
+            if (i > 0) 
+                get_values_query_str += ", ";
+
+            get_values_query_str += "?";
+        }
+        get_values_query_str += ") AND ";
     }
 
-    get_values_query_str += " ) AND timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ";
+    get_values_query_str += "timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ";
 
 
 	if (min_interval_ms > 0) {

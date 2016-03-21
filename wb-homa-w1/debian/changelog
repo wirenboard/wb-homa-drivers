@@ -1,3 +1,9 @@
+wb-homa-w1 (1.9.1) stable; urgency=medium
+
+  * omit trailing zeroes in values
+
+ -- Evgeny Boger <boger@contactless.ru>  Sat, 16 Jan 2016 16:46:15 +0300
+
 wb-homa-w1 (1.9) stable; urgency=medium
 
   * libwbmqtt 1.3
