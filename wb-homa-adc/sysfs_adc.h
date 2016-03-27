@@ -28,7 +28,8 @@ struct TChannel
 {
     int AveragingWindow = 10;
     int PollInterval;
-    int ChannelNumber = 1;//SoC channel
+    string MatchIIO = "";
+    int ChannelNumber = 1;//IIO channel
     int MinSwitchIntervalMs = 0;
     string Type = "";
     float MaxVoltage = ADC_DEFAULT_MAX_VOLTAGE;
@@ -71,6 +72,7 @@ protected:
     bool Debug;
     bool Initialized;
     std::string SysfsDir;
+    std::string SysfsIIODir;
     ifstream AdcValStream;
     friend class TSysfsAdcChannel;
     TChannel ChannelConfig;

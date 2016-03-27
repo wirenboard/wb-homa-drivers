@@ -8,6 +8,9 @@
 #include <chrono>
 #include <thread>
 #include <math.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <string.h>
 
 #include "sysfs_adc.h"
 #include "lradc_isrc.h"
@@ -17,7 +20,7 @@ namespace {
 
 void TSysfsAdc::SelectMaxScale()
 {
-    string scale_prefix = "/sys/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_scale";
+    string scale_prefix = SysfsIIODir + "/in_voltage" + to_string(GetLradcChannel()) + "_scale";
     ifstream scale_file(scale_prefix + "_available");
     if (scale_file.is_open()) {
         vector<string> scales;
@@ -63,7 +66,43 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
-    string path_to_value = SysfsDir + "/bus/iio/devices/iio:device0/in_voltage" + to_string(GetLradcChannel()) + "_raw";
+
+    string iio_dev_dir = SysfsDir + "/bus/iio/devices";
+    string iio_dev_name = "";
+    if (!channel_config.MatchIIO.empty()) {
+        DIR *dir;
+        struct dirent *ent;
+        if ((dir = opendir(iio_dev_dir.c_str())) != NULL) {
+            while ((ent = readdir (dir)) != NULL) {
+                if (!strstr(ent->d_name, "iio:device"))
+                    continue;
+                string d = iio_dev_dir + "/" + string(ent->d_name);
+                char buf[512];
+                int len;
+                if ((len = readlink(d.c_str(), buf, 512)) < 0)
+                    continue;
+                buf[len] = 0;
+                if (strstr(buf, channel_config.MatchIIO.c_str())) {
+                    iio_dev_name = string(ent->d_name);
+                    break;
+                }
+            }
+            closedir(dir);
+            if (iio_dev_name.empty()) {
+                throw TAdcException("couldn't match sysfs IIO " + channel_config.MatchIIO);
+            }
+        }
+        else {
+            /* could not open directory */
+            throw TAdcException("error opening sysfs IIO directory");
+        }
+    }
+    else {
+        iio_dev_name = "iio:device0";
+    }
+    SysfsIIODir = iio_dev_dir + "/" + iio_dev_name;
+
+    string path_to_value = SysfsIIODir + "/in_voltage" + to_string(GetLradcChannel()) + "_raw";
     AdcValStream.open(path_to_value);
     if (AdcValStream < 0) {
         throw TAdcException("error opening sysfs Adc file");
