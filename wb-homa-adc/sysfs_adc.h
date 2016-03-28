@@ -5,7 +5,7 @@
 #include <vector>
 #define OHM_METER "ohm_meter"
 #define DELAY 10
-#define ADC_DEFAULT_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
+#define MXS_LRADC_DEFAULT_SCALE_FACTOR 0.451660156 // default scale for file "in_voltageNUMBER_scale"
 #define ADC_VALUE_MAX 4095
 #define ADC_DEFAULT_MAX_VOLTAGE 3100 // voltage in mV
 using namespace std;
@@ -13,7 +13,7 @@ using namespace std;
 struct TMUXChannel // config for mux channel
 {
     std::string Id;
-    float Multiplier = 1.0;
+    float Multiplier = 1;
     std::string Type = "";
     int Current = 40;// current in uA
     int Resistance1 = 1000;// resistance in Ohm
@@ -33,6 +33,7 @@ struct TChannel
     int MinSwitchIntervalMs = 0;
     string Type = "";
     float MaxVoltage = ADC_DEFAULT_MAX_VOLTAGE;
+    float Scale = 0;
     vector<int> Gpios;
     vector<TMUXChannel> Mux;
 };
@@ -60,7 +61,7 @@ public:
     std::shared_ptr<TSysfsAdcChannel> GetChannel(int i);
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
-    double ScaleFactor;// Factor that comes from calculating ratio of ADC_NEW_SCALE to  ADC_OLD_SCALE, ADC_NEW_SCALE is the maximum scale from file "in_voltageNUMBER_scale_available"  
+    double IIOScale; // Result = raw reading * IIOScale
     bool CheckVoltage(int value); // check if voltage on LRADC pin is bigger than ADC_MAX_VOLTAGE
     int GetLradcChannel() { return ChannelConfig.ChannelNumber; }; // return LRADC channel number
 
@@ -79,7 +80,7 @@ protected:
     int NumberOfChannels;
     float MaxVoltage;
 private:
-	void SelectMaxScale();
+	void SelectScale();
 };
 
 class TSysfsAdcMux : public TSysfsAdc // class, that handles mux channels
@@ -134,13 +135,15 @@ class TSysfsAdcChannel
         const std::string& GetName() const;
         virtual std::string GetType();
         TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number, int decimal_places, int discharge_channel);
-        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places, int discharge_channel, float multiplier);
+        TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::string& name, int readings_number,int decimal_places,
+                         int discharge_channel, float multiplier);
         int DecimalPlaces;
     protected:
         std::shared_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
     private:
         float Multiplier;
+        float Scale;
 };
 
 class TSysfsAdcChannelRes : public TSysfsAdcChannel// class, that measures resistance

@@ -1,3 +1,10 @@
+wb-homa-adc (1.13) stable; urgency=medium
+
+  * Add option to explicitly set the input divider (in hw-independent way) 
+  * Add option to specify the desired adc scale to use
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 28 Mar 2016 11:53:17 +0300
+
 wb-homa-adc (1.12) stable; urgency=medium
 
   * matching iio device by /sys/bus/iio/iio:device* symlink

@@ -20,7 +20,7 @@ ESOCId GetSocId()
 
 	socFd.open("/sys/devices/soc0/soc_id");
 	
-    if (socFd < 0) {
+    if (!socFd.is_open()) {
         throw TAdcException("error opening soc id file");
     }
     socFd >> socName;

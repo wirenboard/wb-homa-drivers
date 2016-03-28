@@ -18,42 +18,54 @@ namespace {
         extern "C" void usleep(int value);
 };
 
-void TSysfsAdc::SelectMaxScale()
+void TSysfsAdc::SelectScale()
 {
     string scale_prefix = SysfsIIODir + "/in_voltage" + to_string(GetLradcChannel()) + "_scale";
     ifstream scale_file(scale_prefix + "_available");
     if (scale_file.is_open()) {
-        vector<string> scales;
+        string best_scale_str;
+        double best_scale = 0;
+
+
         char c;
         string buf = "";
         while(scale_file.get(c)) {
             if (c == ' ') {
-                scales.push_back(buf);
+                double val = stod(buf);
+                // best scale is either maximum scale or the one closest to user request
+
+                if (((ChannelConfig.Scale > 0) && (fabs(val - ChannelConfig.Scale) <= fabs(best_scale - ChannelConfig.Scale)))      // user request
+                    ||
+                    ((ChannelConfig.Scale <= 0) && (val >= best_scale))      // maximum scale
+                    )
+                {
+                        best_scale = val;
+                        best_scale_str = buf;
+                }
+
                 buf = "";
             } else {
                 buf += c;
             }
         }
-        double max = ADC_DEFAULT_SCALE_FACTOR;
-        int i = 0;
-        int position = 0; 
-        for (const auto& element : scales) {
-            double val = stod(element);
-            if (val > max) {
-                max = val;
-                position = i;
-            }
-            i++;
-        }
         scale_file.close();
+        IIOScale = best_scale;
+
         ofstream write_scale(scale_prefix);
         if (!write_scale.is_open()) {
             throw TAdcException("error opening sysfs Adc scale file");
         }
-        ScaleFactor = max;
-        write_scale << scales[position]; 
+        write_scale << best_scale_str;
         write_scale.close();
-    }    
+    } else {
+        // scale_available file is not present
+        // read the current scale from sysfs
+        ifstream cur_scale(scale_prefix);
+        if (cur_scale.is_open()) {
+            cur_scale >> IIOScale;
+            cur_scale.close();
+        }
+    }
 }
 
 
@@ -62,7 +74,7 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     ChannelConfig(channel_config),
     MaxVoltage(ChannelConfig.MaxVoltage)
 {
-    ScaleFactor = ADC_DEFAULT_SCALE_FACTOR;
+    IIOScale = MXS_LRADC_DEFAULT_SCALE_FACTOR;
     AveragingWindow = ChannelConfig.AveragingWindow;
     Debug = debug;
     Initialized = false;
@@ -104,11 +116,11 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
 
     string path_to_value = SysfsIIODir + "/in_voltage" + to_string(GetLradcChannel()) + "_raw";
     AdcValStream.open(path_to_value);
-    if (AdcValStream < 0) {
+    if (!AdcValStream.is_open()) {
         throw TAdcException("error opening sysfs Adc file");
     }
     
-    SelectMaxScale();
+    SelectScale();
 
      ::SwitchOffCurrentSource(
         GetCurrentSourceChannelNumber(
@@ -146,7 +158,10 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
                                            ChannelConfig.Mux[i].CurrentCalibrationFactor
                                            ));
     else
-        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Multiplier));
+        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber,
+                                       ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber,
+                                       ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel,
+                                       ChannelConfig.Mux[i].Multiplier));
     return ptr;
 }
 
@@ -160,7 +175,7 @@ int TSysfsAdc::ReadValue()
 
 bool TSysfsAdc::CheckVoltage(int value)
 {
-    float voltage = ScaleFactor * value;
+    float voltage = IIOScale * value;
     if (voltage > MaxVoltage) {
         return false;
     }
@@ -328,7 +343,7 @@ float TSysfsAdcChannel::GetValue()
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
             result = (float) value * Multiplier / 1000; // set voltage to V from mV
-            result *= d->Owner->ScaleFactor / ADC_DEFAULT_SCALE_FACTOR;
+            result *= d->Owner->IIOScale;
         }
     }
 
@@ -373,7 +388,7 @@ float TSysfsAdcChannelRes::GetValue()
     float result = std::nan("");
     if (value < ADC_VALUE_MAX) {
         if (d->Owner->CheckVoltage(value)) {
-            float voltage = d->Owner->ScaleFactor * value / 1000;// get voltage in V (from mV)
+            float voltage = d->Owner->IIOScale * value / 1000;// get voltage in V (from mV)
             result = 1.0/ ((Current * CurrentCalibrationFactor / 1000000.0) / voltage - 1.0/Resistance1) - Resistance2;
             if (result < 0) {
                 result = 0;

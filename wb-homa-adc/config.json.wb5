@@ -44,7 +44,8 @@
                 "channel_number" : 7,
                 "multiplier" : 0.45175,
                 "decimal_places" : 3,
-                "max_voltage" : 7
+                "max_voltage" : 7,
+                "scale" : 1.80664062
         },
 
         {

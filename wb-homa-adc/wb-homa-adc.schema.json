@@ -20,8 +20,22 @@
         },
         "multiplier": {
           "type": "number",
-          "title": "Multiplier",
+          "title": "Multiplier (deprecated)",
           "description" : "Calculated as 1.85V * [resistor divider value] / 4095.",
+          "propertyOrder": 20
+        },
+        "scale": {
+          "type": "number",
+          "title": "Internal ADC scale",
+          "default" : 0,
+          "description" : "The ADC scale to use. This setting asks hardware to use the specified scale. The closest supported scale (from _scale_available list) will be used. This doesn't affect the final value, but, instead would affect the accuracy and the measurement range. If left 0, the maximum available scale is used.",
+          "propertyOrder": 10
+        },
+        "voltage_multiplier": {
+          "type": "number",
+          "title": "Scale factor",
+          "default" : 1,
+          "description" : "The ADC voltage is multiplied to this factor to get the resulting value",
           "propertyOrder": 3
         },
         "averaging_window": {
@@ -106,7 +120,7 @@
         
       },
 
-      "defaultProperties": ["channel_number", "multiplier", "id", "type"]
+      "defaultProperties": ["channel_number", "divider", "id", "type"]
     },      
 
   

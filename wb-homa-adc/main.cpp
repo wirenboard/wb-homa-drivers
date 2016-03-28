@@ -31,8 +31,11 @@ namespace {
 		if (item.isMember("id"))
 			mux_channel.Id = item["id"].asString();
 
-		if (item.isMember("multiplier"))
-			mux_channel.Multiplier = item["multiplier"].asFloat();
+        if (item.isMember("multiplier"))
+            mux_channel.Multiplier = item["multiplier"].asFloat() / MXS_LRADC_DEFAULT_SCALE_FACTOR;
+
+        if (item.isMember("voltage_multiplier"))
+            mux_channel.Multiplier = item["voltage_multiplier"].asFloat();
 
 		if (item.isMember("readings_number")) {
 			mux_channel.ReadingsNumber = item["readings_number"].asInt();
@@ -44,7 +47,7 @@ namespace {
 
 		if (item.isMember("discharge_channel")) {
 			mux_channel.DischargeChannel = item["discharge_channel"].asInt();
-		}		
+		}
 
 		if (item.isMember("type"))
 			mux_channel.Type = item["type"].asString();
@@ -64,11 +67,10 @@ namespace {
 			int resistance = ReadResistance(item["resistance2"].asString());
 			mux_channel.Resistance2 = resistance;
 		}
-		
+
 		mux_channel.CurrentCalibrationFactor = item.get("current_calibration_factor", 1).asFloat();
-	
 	}
-	
+
     void LoadConfig(const std::string& file_name, THandlerConfig& config)
     {
         ifstream config_file (file_name);
@@ -108,6 +110,10 @@ namespace {
             if (item.isMember("id")) {
                 TMUXChannel buf_channel;
                 PopulateMuxChannel(buf_channel, item);
+
+                if (item.isMember("scale"))
+                    new_channel.Scale = item["scale"].asFloat();
+
                 new_channel.Mux.push_back(buf_channel);
             }
 

@@ -42,7 +42,7 @@
                 "current" : 80,
                 "multiplier" : 0.4518,
                 "current_calibration_factor" : 1.06
-        },      
+        },
         {
                 "id" : "Vin",
                 "averaging_window": 1,
@@ -56,14 +56,16 @@
                 "channel_number" : 7,
                 "multiplier" : 0.45175,
                 "decimal_places" : 3,
-                "max_voltage" : 7
+                "max_voltage" : 7,
+                "scale" : 1.80664062
         },
         {
                 "id" : "5Vout",
                 "averaging_window": 1,
                 "channel_number" : 0,
                 "multiplier" : 1.694,
-                "decimal_places" : 2
+                "decimal_places" : 2,
+                "scale" : 0.4
         }
     ]
 }
