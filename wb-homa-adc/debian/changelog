@@ -1,3 +1,9 @@
+wb-homa-adc (1.12) stable; urgency=medium
+
+  * matching iio device by /sys/bus/iio/iio:device* symlink
+
+ -- Alexey Ignatov <lexszero@gmail.com>  Mon, 28 Mar 2016 00:03:47 +0000
+
 wb-homa-adc (1.11.1) stable; urgency=medium
 
   * fix deps
