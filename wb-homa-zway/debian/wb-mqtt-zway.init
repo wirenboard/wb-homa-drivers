@@ -1,6 +1,6 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          wb-homa-zway
+# Provides:          wb-mqtt-zway
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Required-Start: $remote_fs
@@ -18,10 +18,10 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Z-Way to MQTT bridge for WB-HomA"
-NAME=wb-homa-zway
+DESC="Z-Way to MQTT bridge for WB"
+NAME=wb-mqtt-zway
 DAEMON=/usr/bin/$NAME
-DAEMON_ARGS="-c /etc/wb-homa-zway.conf"
+DAEMON_ARGS="-c /etc/wb-mqtt-zway.conf"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
