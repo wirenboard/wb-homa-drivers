@@ -11,7 +11,7 @@
   "definitions": {
     "adc_channel": {
       "type": "object",
-     
+
       "properties": {
         "id": {
           "type": "string",
@@ -70,13 +70,13 @@
           "type" : "string",
           "title" : "r1 constant",
           "description" : "r1 constant for ohm_meter channels. Format: number followed by suffix (kOhm or Ohm), i.e. 100kOhm",
-          "propertyOrder": 6         
+          "propertyOrder": 6
         },
         "resistance2" : {
           "type" : "string",
           "title" : "r2 constant",
           "description" : "r2 constant for ohm_meter channels. Format: number followed by suffix (kOhm or Ohm), i.e. 100kOhm",
-          "propertyOrder": 7         
+          "propertyOrder": 7
         },
         "current" : {
           "type" : "integer",
@@ -90,10 +90,10 @@
           "title": "Calibration factor for current source",
           "type": "number",
           "minimum" : 0.8,
-          "maximum" : 1.2,          
+          "maximum" : 1.2,
           "default" : 1,
           "propertyOrder": 9
-        }        
+        }
       }
     },
 
@@ -117,13 +117,13 @@
           "description" : "Time to wait after mux switch (ms) for multiplexed channels",
           "propertyOrder": 7
         }
-        
+
       },
 
       "defaultProperties": ["channel_number", "divider", "id", "type"]
-    },      
+    },
 
-  
+
     "iio_channel": {
       "headerTemplate": "ADC channel {{ |self.channel_number|}} {{(|self.id|)}}",
       "oneOf" : [
@@ -152,7 +152,7 @@
                   "_format": "tabs",
                   "propertyOrder": 4
                 },
-                
+
                 "gpios" : {
                   "type" : "array",
                   "title" : "MUX control gpios",
@@ -195,10 +195,7 @@
           ]
         }
       ]
-
-   
     },
-    
     "mux_channel": {
       "allOf" : [
         { "$ref" : "#/definitions/adc_channel" },
@@ -224,9 +221,8 @@
           }
         }
       ]
-    }    
+    }
   },
-  
   "properties": {
   "device_name": {
     "type": "string",
