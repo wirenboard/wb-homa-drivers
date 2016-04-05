@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <exception>
+#include <stdexcept>
+
 #include <memory>
 #include <vector>
 #define OHM_METER "ohm_meter"
@@ -37,28 +39,21 @@ struct TChannel
     vector<int> Gpios;
     vector<TMUXChannel> Mux;
 };
- 
+
 
 class TSysfsAdcChannel;
 
-class TAdcException: public std::exception 
+class TAdcException: public runtime_error
 {
 public:
-    TAdcException(std::string _message): message("Adc error: " + _message) {}
-    const char* what () const throw ()
-    {
-        return message.c_str();
-    }
-private:
-    std::string message;
+  TAdcException(const string  msg) : runtime_error("Adc error " + msg) {};
 };
 
 class TSysfsAdc
 {
 public:
     TSysfsAdc(const std::string& sysfs_dir = "/sys", bool debug = false, const TChannel& channel_config = TChannel ());
-    ~TSysfsAdc();
-    std::shared_ptr<TSysfsAdcChannel> GetChannel(int i);
+    std::unique_ptr<TSysfsAdcChannel> GetChannel(int i);
     int ReadValue();
     inline int GetNumberOfChannels() { return NumberOfChannels; };
     double IIOScale; // Result = raw reading * IIOScale
@@ -66,8 +61,8 @@ public:
     int GetLradcChannel() { return ChannelConfig.ChannelNumber; }; // return LRADC channel number
 
     virtual void SelectMuxChannel(int index) = 0;
-    
-    
+
+
 protected:
     int AveragingWindow;
     bool Debug;
@@ -114,11 +109,10 @@ class TSysfsAdcPhys: public TSysfsAdc
  
 struct TSysfsAdcChannelPrivate 
 {
-    ~TSysfsAdcChannelPrivate() { if (Buffer) delete[] Buffer; }
-    std::shared_ptr<TSysfsAdc> Owner;
+    TSysfsAdc* Owner;
     int Index;
     std::string Name;
-    int* Buffer = 0;
+    vector<int> Buffer;
     double Sum = 0;
     bool Ready = false;
     int Pos = 0;
@@ -139,7 +133,7 @@ class TSysfsAdcChannel
                          int discharge_channel, float multiplier);
         int DecimalPlaces;
     protected:
-        std::shared_ptr<TSysfsAdcChannelPrivate> d;
+        std::unique_ptr<TSysfsAdcChannelPrivate> d;
         friend class TSysfsAdc;
     private:
         float Multiplier;

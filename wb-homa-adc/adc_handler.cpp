@@ -23,25 +23,17 @@ TMQTTAdcHandler::TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, TH
     Config(handler_config)
 {
     for (auto& channel_config : Config.Channels){
-        std::shared_ptr<TSysfsAdc> adc_handler(nullptr); 
         if (channel_config.Type == "mux") {
-            adc_handler.reset(new TSysfsAdcMux(GetSysfsPrefix(), Config.Debug, channel_config));
+            AdcHandlers.emplace_back(new TSysfsAdcMux(GetSysfsPrefix(), Config.Debug, channel_config));
 		} else {
-            adc_handler.reset(new TSysfsAdcPhys(GetSysfsPrefix(), Config.Debug, channel_config));
+            AdcHandlers.emplace_back(new TSysfsAdcPhys(GetSysfsPrefix(), Config.Debug, channel_config));
         }
-        for (int i = 0; i < adc_handler->GetNumberOfChannels(); ++i) {
-			Channels.push_back(adc_handler->GetChannel(i));
+        for (int i = 0; i < AdcHandlers.back()->GetNumberOfChannels(); ++i) {
+			Channels.push_back(AdcHandlers.back()->GetChannel(i));
 		}
-        AdcHandlers.push_back(adc_handler);
 
     }
 	Connect();
-}
-
-TMQTTAdcHandler::~TMQTTAdcHandler()
-{
-    Channels.clear();
-    AdcHandlers.clear();
 }
 
 void TMQTTAdcHandler::OnConnect(int rc)

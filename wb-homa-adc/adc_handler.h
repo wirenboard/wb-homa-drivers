@@ -16,8 +16,7 @@ struct THandlerConfig
 class TMQTTAdcHandler : public TMQTTWrapper
 {
 public:
-    TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, const THandlerConfig handler_config) ;
-    ~TMQTTAdcHandler();
+    explicit TMQTTAdcHandler(const TMQTTAdcHandler::TConfig& mqtt_config, const THandlerConfig handler_config) ;
 
     void OnConnect(int rc) ;
     void OnMessage(const struct mosquitto_message *message);
@@ -28,8 +27,7 @@ public:
     virtual void UpdateValue() ;
 private:
     THandlerConfig Config;
-    vector<std::shared_ptr<TSysfsAdc>> AdcHandlers;
-
+    vector<std::unique_ptr<TSysfsAdc>> AdcHandlers;
     vector<std::shared_ptr<TSysfsAdcChannel>> Channels;
 };
 

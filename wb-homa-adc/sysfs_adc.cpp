@@ -129,16 +129,8 @@ TSysfsAdc::TSysfsAdc(const std::string& sysfs_dir, bool debug, const TChannel& c
     NumberOfChannels = channel_config.Mux.size();
 }
 
-TSysfsAdc::~TSysfsAdc()
+std::unique_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
 {
-    if (AdcValStream.is_open()){
-        AdcValStream.close();
-    }
-}
-
-std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
-{
-    std::shared_ptr<TSysfsAdcChannel> ptr(nullptr);
     
     // Check whether all Mux channels are OHM_METERs
     bool resistance_channels_only = true;
@@ -150,7 +142,7 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
         
     // TBD: should pass chain_alias also (to be used instead of Name for the channel)
     if (ChannelConfig.Mux[i].Type == OHM_METER)
-        ptr.reset (new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, 
+        return std::unique_ptr<TSysfsAdcChannelRes>(new TSysfsAdcChannelRes(this, ChannelConfig.Mux[i].MuxChannelNumber, ChannelConfig.Mux[i].Id, 
                                            ChannelConfig.Mux[i].ReadingsNumber, ChannelConfig.Mux[i].DecimalPlaces, 
                                            ChannelConfig.Mux[i].DischargeChannel, ChannelConfig.Mux[i].Current, 
                                            ChannelConfig.Mux[i].Resistance1, ChannelConfig.Mux[i].Resistance2,
@@ -158,11 +150,11 @@ std::shared_ptr<TSysfsAdcChannel> TSysfsAdc::GetChannel(int i)
                                            ChannelConfig.Mux[i].CurrentCalibrationFactor
                                            ));
     else
-        ptr.reset(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber,
+        return  std::unique_ptr<TSysfsAdcChannel>(new TSysfsAdcChannel(this, ChannelConfig.Mux[i].MuxChannelNumber,
                                        ChannelConfig.Mux[i].Id, ChannelConfig.Mux[i].ReadingsNumber,
                                        ChannelConfig.Mux[i].DecimalPlaces, ChannelConfig.Mux[i].DischargeChannel,
                                        ChannelConfig.Mux[i].Multiplier));
-    return ptr;
+    return std::unique_ptr<TSysfsAdcChannel>(nullptr);
 }
 
 int TSysfsAdc::ReadValue()
@@ -291,12 +283,12 @@ TSysfsAdcChannel::TSysfsAdcChannel(TSysfsAdc* owner, int index, const std::strin
     : DecimalPlaces(decimal_places)
     , d(new TSysfsAdcChannelPrivate())
 {
-    d->Owner.reset(owner);
+    d->Owner = owner;
     d->Index = index;
     d->Name = name;
     d->ReadingsNumber = readings_number;
     d->ChannelAveragingWindow = readings_number * d->Owner->AveragingWindow;
-    d->Buffer = new int[d->ChannelAveragingWindow](); // () initializes with zeros
+    d->Buffer.resize(d->ChannelAveragingWindow); // initializes with zeros
     d->DischargeChannel = discharge_channel;
 }
 

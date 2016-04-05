@@ -1,3 +1,9 @@
+wb-homa-adc (1.13.1) stable; urgency=medium
+
+  * fix memory memory issues on exceptions
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 04 Apr 2016 20:20:22 +0300
+
 wb-homa-adc (1.13) stable; urgency=medium
 
   * Add option to explicitly set the input divider (in hw-independent way) 

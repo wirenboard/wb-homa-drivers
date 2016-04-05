@@ -225,7 +225,7 @@ int main(int argc, char **argv)
                 cout << "GPIO IS " << j << endl;
             }
         }*/
-        std::shared_ptr<TMQTTAdcHandler> mqtt_handler( new TMQTTAdcHandler(mqtt_config, config));
+        auto mqtt_handler = make_shared<TMQTTAdcHandler>(mqtt_config, config);
         mqtt_handler->Init();
         while(1){
                 rc = mqtt_handler->loop();
