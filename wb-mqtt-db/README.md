@@ -1,6 +1,11 @@
 wb-mqtt-db
 ====================
 
+Сервис для сохранения данных в БД sqlite.
+Соглашения о наименованиях в MQTT: https://github.com/contactless/homeui/blob/contactless/conventions.md
+Протокол для получения данных из БД: https://github.com/contactless/mqtt-rpc
+
+
 Конфигурация демона сохранения
 
 В примере демон сохраняет данные от устройств “kvadro-1wire_69" и "wb-w1" (драйвера встроенных портов 1-wire). 
