@@ -110,7 +110,10 @@ void TMQTTOnewireHandler::RescanBus()
         while ((ent = readdir (dir)) != NULL) {
             printf ("%s\n", ent->d_name);
             entry_name = ent->d_name;
-            if (StringStartsWith(entry_name, "28-") or StringStartsWith(entry_name, "10-")) {
+            if (StringStartsWith(entry_name, "28-") ||
+                StringStartsWith(entry_name, "10-") ||
+                StringStartsWith(entry_name, "22-") )
+            {
                     current_channels.emplace_back(entry_name);
             }
         }
