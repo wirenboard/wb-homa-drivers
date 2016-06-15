@@ -2,12 +2,20 @@
 #include "fake_serial_port.h"
 #include "ivtm_device.h"
 
+/* vim: set ts=4 sw=4 */
+
 namespace {
     PSlaveEntry Slave1 = TSlaveEntry::Intern("ivtm", 1);
     PSlaveEntry SlaveA = TSlaveEntry::Intern("ivtm", 0x0a);
+    
+    // IVTM7MQuery
     PRegister Dev1Temp = TRegister::Intern(Slave1, 0, 0, Float);
     PRegister Dev1Humidity = TRegister::Intern(Slave1, 0, 4, Float);
     PRegister Dev2Temp = TRegister::Intern(SlaveA, 0, 0, Float);
+    
+    // IVTMRM1Query
+    PRegister ErrorReg = TRegister::Intern(Slave1, 0, 0, U8);
+    PRegister DevCountReg = TRegister::Intern(Slave1, 0, 1, U8);
 };
 
 class TIVTMDeviceTest: public TSerialDeviceTest
@@ -92,5 +100,40 @@ TEST_F(TIVTMDeviceTest, IVTM7MQuery)
         });
 
     ASSERT_EQ(0x41C7855E, Dev->ReadRegister(Dev2Temp)); //big-endian
+    SerialPort->Close();
+}
+
+TEST_F(TIVTMDeviceTest, IVTMRM1Query)
+{
+    // >> 24 30 30 30 31 52 52 30 30 30 30 30 32 41 42 0d
+    // << 21 30 30 30 31 52 52 30 30 30 32 34 38 0d
+    // error == 0
+    // number_of_devices == 2
+    
+    SerialPort->Expect(
+        {
+            // request
+            '$',                        // start of frame
+            '0', '0', '0', '1',         // slave address
+            'R', 'R',                   // read command
+            '0', '0', '0', '0',         // start address
+            '0', '2',                   // number of bytes
+            'A', 'B',                   // CRC
+            0x0d                        // end of frame
+        },
+        {
+            // reply
+            '!',                        // start of frame
+            '0', '0', '0', '1',         // slave address
+            'R', 'R',                   // read command
+            '0', '0',                   // payload: error
+            '0', '2',                   // payload: number of devices
+            '4', '8',                   // CRC
+            0x0d                        // end of frame
+        });
+
+    ASSERT_EQ(0x00, Dev->ReadRegister(ErrorReg));
+    ASSERT_EQ(0x02, Dev->ReadRegister(DevCountReg));
+
     SerialPort->Close();
 }
