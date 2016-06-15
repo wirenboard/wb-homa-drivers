@@ -105,10 +105,9 @@ TEST_F(TIVTMDeviceTest, IVTM7MQuery)
 
 TEST_F(TIVTMDeviceTest, IVTMRM1Query)
 {
-    // >> 24 30 30 30 31 52 52 30 30 30 30 30 32 41 42 0d
-    // << 21 30 30 30 31 52 52 30 30 30 32 34 38 0d
+    // >> 24 30 30 30 31 52 52 30 30 30 30 30 31 41 41 0d
+    // << 21 30 30 30 31 52 52 30 30 45 36 0d
     // error == 0
-    // number_of_devices == 2
     
     SerialPort->Expect(
         {
@@ -117,8 +116,8 @@ TEST_F(TIVTMDeviceTest, IVTMRM1Query)
             '0', '0', '0', '1',         // slave address
             'R', 'R',                   // read command
             '0', '0', '0', '0',         // start address
-            '0', '2',                   // number of bytes
-            'A', 'B',                   // CRC
+            '0', '1',                   // number of bytes
+            'A', 'A',                   // CRC
             0x0d                        // end of frame
         },
         {
@@ -127,12 +126,38 @@ TEST_F(TIVTMDeviceTest, IVTMRM1Query)
             '0', '0', '0', '1',         // slave address
             'R', 'R',                   // read command
             '0', '0',                   // payload: error
-            '0', '2',                   // payload: number of devices
-            '4', '8',                   // CRC
+            'E', '6',                   // CRC
             0x0d                        // end of frame
         });
 
     ASSERT_EQ(0x00, Dev->ReadRegister(ErrorReg));
+
+    Dev->EndPollCycle();
+
+    // >> 24 30 30 30 31 52 52 30 30 30 31 30 31 41 42 0d
+    // << 21 30 30 30 31 52 52 30 32 45 38 0d
+    // number_of_devices == 2
+    SerialPort->Expect(
+        {
+            // request
+            '$',                        // start of frame
+            '0', '0', '0', '1',         // slave address
+            'R', 'R',                   // read command
+            '0', '0', '0', '1',         // start address
+            '0', '1',                   // number of bytes
+            'A', 'B',                   // CRC
+            0x0d                        // end of frame
+        },
+        {
+            // reply
+            '!',                        // start of frame
+            '0', '0', '0', '1',         // slave address
+            'R', 'R',                   // read command
+            '0', '2',                   // payload: number_of_devices
+            'E', '8',                   // CRC
+            0x0d                        // end of frame
+        });
+
     ASSERT_EQ(0x02, Dev->ReadRegister(DevCountReg));
 
     SerialPort->Close();
