@@ -114,8 +114,11 @@ struct TRegister
             case S24:
             case BCD24:
                 return 3;
-            default:
+            case U16:
+            case S16:
                 return 2;
+            default:
+                return 1;
         }
     }
 

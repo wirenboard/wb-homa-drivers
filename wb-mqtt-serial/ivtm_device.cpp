@@ -15,6 +15,8 @@
 
 #include "ivtm_device.h"
 
+/* vim: set ts=4 sw=4 */
+
 namespace {
     const int DefaultTimeoutMs = 1000;
     const int FrameTimeoutMs = 50;
@@ -136,10 +138,20 @@ uint64_t TIVTMDevice::ReadRegister(PRegister reg)
 
     // the response is little-endian. We inverse the byte order here to make it big-endian.
 
-    return (p[3] << 24) | 
-           (p[2] << 16) | 
-           (p[1] << 8) |
-           p[0];
+    uint64_t ret = p[0];
+
+    switch (reg->ByteWidth()) {
+    case 4:
+        ret |= p[3] << 24;
+    case 3:
+        ret |= p[2] << 16;
+    case 2:
+        ret |= p[1] << 8;
+    default:
+        break;
+    }
+
+    return ret;
 }
 
 void TIVTMDevice::WriteRegister(PRegister, uint64_t)
