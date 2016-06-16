@@ -19,7 +19,7 @@
 
 namespace {
     const int DefaultTimeoutMs = 1000;
-    const int FrameTimeoutMs = 50;
+    const int FrameTimeoutMs = 300;
 };
 
 REGISTER_PROTOCOL("ivtm", TIVTMDevice, TRegisterTypes({{ 0, "default", "value", Float, true }}));
