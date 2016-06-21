@@ -513,7 +513,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     int limit = -1;
     double timestamp_gt = 0;
     int64_t uid_gt = -1;
-    double timestamp_lt = 10675199167;
+    double timestamp_lt = 10675199167; // magic?
 	int req_ver = 0;
 	int min_interval_ms = 0;
 
@@ -557,7 +557,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     result["values"] = Json::Value(Json::arrayValue);
 
     // version 3.7 can't always figure out to use the proper index
-    string get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
+    string get_values_query_str = "SELECT uid, device, channel, AVG(value),  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
 
     if (!params["channels"].empty()) {
         get_values_query_str += "channel IN ( ";
