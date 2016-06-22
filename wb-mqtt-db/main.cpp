@@ -643,9 +643,16 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 {
     Json::Value result;
+    
+    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
 
     // get channels list first
-    string channels_list_query_str = "SELECT int_id, device, control FROM channels";
+    string channels_list_query_str = "SELECT channels.device, control, \
+                                      COUNT(uid), MAX(timestamp) \
+                                      FROM data \
+                                      INNER JOIN channels \
+                                      ON data.channel = channels.int_id \
+                                      GROUP BY channel";
 
     SQLite::Statement channels_list_query(*DB, channels_list_query_str);
     channels_list_query.reset();
@@ -655,27 +662,24 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 
         /* generate header string */
         string device_name = "/";
-        device_name += static_cast<const char *>(channels_list_query.getColumn(1));
+        device_name += static_cast<const char *>(channels_list_query.getColumn(0));
         device_name += "/";
-        device_name += static_cast<const char *>(channels_list_query.getColumn(2));
+        device_name += static_cast<const char *>(channels_list_query.getColumn(1));
 
-        int channel_id = static_cast<int>(channels_list_query.getColumn(0));
-
-        /* get value for specific channel */
-        string channel_count_query_str = "SELECT COUNT(uid) FROM data WHERE channel = ?";
-
-        SQLite::Statement channel_count_query(*DB, channel_count_query_str);
-        channel_count_query.reset();
-        channel_count_query.bind(1, channel_id);
-
-        if (!channel_count_query.executeStep())
-            throw TBaseException("get channel count failed");
+        Json::Value values;
+        values["items"] = static_cast<int>(channels_list_query.getColumn(2));
+        values["last_ts"] = static_cast<double>(channels_list_query.getColumn(3));
 
         /* set value */
-        row[device_name] = static_cast<int>(channel_count_query.getColumn(0));
+        row[device_name] = values;
 
         result["channels"].append(row);
     }
+
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+
+    cout << "RPC request took " << duration << "ms" << endl;
 
     return result;
 }
