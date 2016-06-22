@@ -65,6 +65,7 @@ class TMQTTDBLogger: public TMQTTWrapper
         void Init2();
 
         Json::Value GetValues(const Json::Value& input);
+        Json::Value GetChannels(const Json::Value& input);
 
     private:
         void InitDB();
@@ -484,6 +485,7 @@ void TMQTTDBLogger::Init2()
 {
     RPCServer = make_shared<TMQTTRPCServer>(shared_from_this(), "db_logger");
     RPCServer->RegisterMethod("history", "get_values", std::bind(&TMQTTDBLogger::GetValues, this, placeholders::_1));
+    RPCServer->RegisterMethod("history", "get_channels", std::bind(&TMQTTDBLogger::GetChannels, this, placeholders::_1));
     RPCServer->Init();
 }
 
@@ -629,6 +631,45 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     return result;
 }
 
+Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
+{
+    Json::Value result;
+
+    // get channels list first
+    string channels_list_query_str = "SELECT int_id, device, control FROM channels";
+
+    SQLite::Statement channels_list_query(*DB, channels_list_query_str);
+    channels_list_query.reset();
+
+    while (channels_list_query.executeStep()) {
+        Json::Value row;
+
+        /* generate header string */
+        string device_name = "/";
+        device_name += static_cast<const char *>(channels_list_query.getColumn(1));
+        device_name += "/";
+        device_name += static_cast<const char *>(channels_list_query.getColumn(2));
+
+        int channel_id = static_cast<int>(channels_list_query.getColumn(0));
+
+        /* get value for specific channel */
+        string channel_count_query_str = "SELECT COUNT(uid) FROM data WHERE channel = ?";
+
+        SQLite::Statement channel_count_query(*DB, channel_count_query_str);
+        channel_count_query.reset();
+        channel_count_query.bind(1, channel_id);
+
+        if (!channel_count_query.executeStep())
+            throw TBaseException("get channel count failed");
+
+        /* set value */
+        row[device_name] = static_cast<int>(channel_count_query.getColumn(0));
+
+        result["channels"].append(row);
+    }
+
+    return result;
+}
 
 int main (int argc, char *argv[])
 {
