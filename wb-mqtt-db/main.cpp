@@ -7,10 +7,19 @@
 #include <ctime>
 #include <unistd.h>
 #include <fstream>
+#include <signal.h>
 
 #include "jsoncpp/json/json.h"
 
 #include  "SQLiteCpp/SQLiteCpp.h"
+
+sig_atomic_t running = 1;
+
+/* it handles only SIGTERM and SIGINT to exit gracefully */
+void sig_handler(int signal)
+{
+    running = 0;
+}
 
 using namespace std;
 using namespace std::chrono;
@@ -797,13 +806,22 @@ int main (int argc, char *argv[])
     mqtt_db_logger->Init();
     mqtt_db_logger->Init2();
 
+    /* init SIGINT and SIGTERM handler to exit gracefully */
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
 
-    while(1) {
+    while (running) {
+
         rc = mqtt_db_logger->loop();
+
         if (rc != 0) {
             mqtt_db_logger->reconnect();
         }
+
     }
+
+    mqtt_db_logger->disconnect();
+
     return 0;
 }
 
