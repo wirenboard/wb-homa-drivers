@@ -654,8 +654,8 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
                                       ON data.channel = channels.int_id \
                                       GROUP BY channel";
     */
-    string channels_list_query_str = "SELECT device, control, num, ts FROM \
-        (SELECT channel, COUNT(uid) AS num, MAX(timestamp)  AS ts \
+    string channels_list_query_str = "SELECT device, control, ts FROM \
+        (SELECT channel, MAX(timestamp)  AS ts \
          FROM data GROUP BY channel) \
         INNER JOIN channels \
         ON channel = channels.int_id";
@@ -673,8 +673,8 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
         device_name += static_cast<const char *>(channels_list_query.getColumn(1));
 
         Json::Value values;
-        values["items"] = static_cast<int>(channels_list_query.getColumn(2));
-        values["last_ts"] = static_cast<double>(channels_list_query.getColumn(3));
+        // values["items"] = static_cast<int>(channels_list_query.getColumn(2));
+        values["last_ts"] = static_cast<double>(channels_list_query.getColumn(2));
 
         /* set value */
         row[device_name] = values;
