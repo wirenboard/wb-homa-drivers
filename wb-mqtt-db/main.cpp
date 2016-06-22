@@ -655,7 +655,7 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
                                       GROUP BY channel";
     */
     string channels_list_query_str = "SELECT device, control, ts FROM \
-        (SELECT channel, MAX(timestamp)  AS ts \
+        (SELECT channel, timestamp  AS ts \
          FROM data GROUP BY channel) \
         INNER JOIN channels \
         ON channel = channels.int_id";
