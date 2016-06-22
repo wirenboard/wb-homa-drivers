@@ -647,12 +647,18 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
     high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
 
     // get channels list first
-    string channels_list_query_str = "SELECT channels.device, control, \
-                                      COUNT(uid), MAX(timestamp) \
+    /*string channels_list_query_str = "SELECT channels.device, control, \
+                                      MAX(timestamp) \
                                       FROM data \
                                       INNER JOIN channels \
                                       ON data.channel = channels.int_id \
                                       GROUP BY channel";
+    */
+    string channels_list_query_str = "SELECT device, control, num, ts FROM \
+        (SELECT channel, COUNT(uid) AS num, MAX(timestamp)  AS ts \
+         FROM data GROUP BY channel) \
+        INNER JOIN channels \
+        ON channel = channels.int_id";
 
     SQLite::Statement channels_list_query(*DB, channels_list_query_str);
     channels_list_query.reset();
