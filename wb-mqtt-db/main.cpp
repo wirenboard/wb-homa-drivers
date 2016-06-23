@@ -182,6 +182,13 @@ void TMQTTDBLogger::InitCounterCaches()
     while (count_channel_query.executeStep()) {
         ChannelRowNumberCache[count_channel_query.getColumn(1)] = count_channel_query.getColumn(0);
     }
+
+    SQLite::Statement last_ts_query(*DB, "SELECT (MAX(timestamp) - 2440587.5) * 86400.0 AS ts, channel FROM data GROUP BY channel ");
+    while (last_ts_query.executeStep()) {
+        auto d = milliseconds(static_cast<long long>(last_ts_query.getColumn(0)) * 1000);
+        auto current_tp = steady_clock::time_point(d);
+        LastSavedTimestamps[last_ts_query.getColumn(1)] = current_tp;
+    }
 }
 
 
@@ -642,41 +649,29 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
 Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 {
+
     Json::Value result;
     
     high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
 
-    // get channels list first
-    /*string channels_list_query_str = "SELECT channels.device, control, \
-                                      MAX(timestamp) \
-                                      FROM data \
-                                      INNER JOIN channels \
-                                      ON data.channel = channels.int_id \
-                                      GROUP BY channel";
-    */
-    string channels_list_query_str = "SELECT device, control, ts FROM \
-        (SELECT channel, timestamp  AS ts \
-         FROM data GROUP BY channel) \
-        INNER JOIN channels \
-        ON channel = channels.int_id";
-
+    // get channel names list
+    string channels_list_query_str = "SELECT int_id, device, control FROM channels";
     SQLite::Statement channels_list_query(*DB, channels_list_query_str);
-    channels_list_query.reset();
 
     while (channels_list_query.executeStep()) {
         Json::Value row;
 
         /* generate header string */
         string device_name = "/";
-        device_name += static_cast<const char *>(channels_list_query.getColumn(0));
-        device_name += "/";
         device_name += static_cast<const char *>(channels_list_query.getColumn(1));
+        device_name += "/";
+        device_name += static_cast<const char *>(channels_list_query.getColumn(2));
+
+        int channel_id = channels_list_query.getColumn(0);
 
         Json::Value values;
-        // values["items"] = static_cast<int>(channels_list_query.getColumn(2));
-        values["last_ts"] = static_cast<double>(channels_list_query.getColumn(2));
-
-        /* set value */
+        values["items"] = ChannelRowNumberCache[channel_id];
+        values["last_ts"] = duration_cast<seconds>(LastSavedTimestamps[channel_id].time_since_epoch()).count();
         row[device_name] = values;
 
         result["channels"].append(row);
