@@ -13,6 +13,8 @@
 
 #include  "SQLiteCpp/SQLiteCpp.h"
 
+/* vim: set ts=4 sw=4: */
+
 sig_atomic_t running = 1;
 
 /* it handles only SIGTERM and SIGINT to exit gracefully */
@@ -101,7 +103,7 @@ class TMQTTDBLogger: public TMQTTWrapper
         map<int, string> ChannelValueCache;
 
 
-        const int DBVersion = 1;
+        const int DBVersion = 2;
 
 };
 
@@ -144,7 +146,9 @@ void TMQTTDBLogger::CreateTables()
 			 "channel INTEGER,"
 			 "value VARCHAR(255),"
 			 "timestamp REAL DEFAULT(julianday('now')),"
-			 "group_id INTEGER"
+			 "group_id INTEGER,"
+             "max VARCHAR(255),"
+             "min VARCHAR(255)"
 			 ")"
 			);
 
@@ -251,9 +255,11 @@ int TMQTTDBLogger::ReadDBVersion()
 
 void TMQTTDBLogger::UpdateDB(int prev_version)
 {
-	if (prev_version == 0) {
+	SQLite::Transaction transaction(*DB);
+
+    switch (prev_version) {
+    case 0:
 	    // Begin transaction
-	    SQLite::Transaction transaction(*DB);
 
 	    DB->exec("ALTER TABLE data RENAME TO tmp");
 
@@ -285,7 +291,22 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
 		// defragment database
 		DB->exec("VACUUM");
 
-	} else {
+    case 1:
+        // In versions >= 2, there is a difference in 'data' table:
+        // add data.max, data.min columns
+
+        DB->exec("ALTER TABLE data ADD COLUMN max VARCHAR(255)");
+        DB->exec("ALTER TABLE data ADD COLUMN min VARCHAR(255)");
+
+        DB->exec("UPDATE data SET max = value");
+        DB->exec("UPDATE data SET min = value");
+
+        transaction.commit();
+
+        DB->exec("VACUUM");
+        break;
+
+    default:
 		throw TBaseException("Unsupported DB version. Please consider deleting DB file.");
 	}
 }
