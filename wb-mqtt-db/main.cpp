@@ -26,6 +26,29 @@ using namespace std;
 using namespace std::chrono;
 
 const float RingBufferClearThreshold = 0.02; // ring buffer will be cleared on limit * (1 + RingBufferClearThreshold) entries
+        
+static string ChannelNameToTopic(const string &channel_name)
+{
+    string result = "/devices/";
+    
+    int stage = 0;
+    for (auto c : channel_name) {
+        if (c == '/') {
+            stage++;
+
+            if (stage == 2)
+                result += "/controls/";
+            else if (stage >= 3)
+                break;
+
+            continue;
+        }
+
+        result += c;
+    }
+
+    return result;
+}
 
 struct TLoggingChannel
 {
@@ -425,6 +448,7 @@ bool TMQTTDBLogger::UpdateAccumulator(int channel_id, const string &payload)
     
     return true;
 }
+
 
 void TMQTTDBLogger::OnConnect(int rc){
     for (const auto& group : LoggerConfig.Groups) {
@@ -865,7 +889,8 @@ int main (int argc, char *argv[])
             }
 
             for (const auto & channel_item : group_item["channels"]) {
-                TLoggingChannel channel = {channel_item.asString()};
+                // convert channel format from /d/c to /devices/d/controls/c
+                TLoggingChannel channel = {ChannelNameToTopic(channel_item.asString())};
                 group.Channels.push_back(channel);
             }
 
