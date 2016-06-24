@@ -1,3 +1,9 @@
+wb-mqtt-db (1.5+beta2) stable; urgency=medium
+
+  * change get_channel output format from array to map
+
+ -- Nikita Maslov <n.maslov@contactless.ru>  Fri, 24 Jun 2016 08:48:44 +0000
+
 wb-mqtt-db (1.5+beta1) stable; urgency=medium
 
   * add get_channel RPC function
