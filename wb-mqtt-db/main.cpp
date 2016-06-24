@@ -659,8 +659,7 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
     SQLite::Statement channels_list_query(*DB, channels_list_query_str);
 
     while (channels_list_query.executeStep()) {
-        Json::Value row;
-
+        
         /* generate header string */
         string device_name = "/";
         device_name += static_cast<const char *>(channels_list_query.getColumn(1));
@@ -672,9 +671,8 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
         Json::Value values;
         values["items"] = ChannelRowNumberCache[channel_id];
         values["last_ts"] = duration_cast<seconds>(LastSavedTimestamps[channel_id].time_since_epoch()).count();
-        row[device_name] = values;
 
-        result["channels"].append(row);
+        result["channels"][device_name] = values;
     }
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
