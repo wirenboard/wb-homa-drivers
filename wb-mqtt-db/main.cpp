@@ -848,11 +848,17 @@ int main (int argc, char *argv[])
         config.DBFile = root["database"].asString();
 
 
-        for(auto group_it = root["groups"].begin(); group_it !=root["groups"].end(); ++group_it) {
-            const auto & group_item = *group_it;
+        // for(auto group_it = root["groups"].begin(); group_it !=root["groups"].end(); ++group_it) {
+            // const auto & group_item = *group_it;
+        
+        for (const auto& group_item : root["groups"]) {
 
             TLoggingGroup group;
-            group.Id = group_it.key().asString();
+
+            if (! group_item.isMember("name")) {
+                throw TBaseException("no name specified for group");
+            }
+            group.Id = group_item["name"].asString();
 
             if (! group_item.isMember("channels")) {
                 throw TBaseException("no channels specified for group");
@@ -886,8 +892,6 @@ int main (int argc, char *argv[])
                     throw TBaseException("'min_unchanged_interval' must be positive or zero");
                 group.MinUnchangedInterval = group_item["min_unchanged_interval"].asInt();
             }
-
-
 
             config.Groups.push_back(group);
         }
