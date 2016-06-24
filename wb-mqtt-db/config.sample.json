@@ -1,18 +1,29 @@
 {
-    "groups": {
-        "1-wire" : {
-            "channels" : ["/devices/wb-w1/controls/+"],
-            "values" : 5,
-            "values_total" : 10,
-            "min_interval" : 2,
-            "min_unchanged_interval" : 10
+    "groups": [
+        {
+            "name" : "everything else",
+            "channels" : ["+/+"],
+            "values" : 10000,
+            "values_total" : 100000,
+            "min_interval" : 120,
+            "min_unchanged_interval" : 1200
         },
-        "all": {
-            "channels" : ["/devices/+/controls/+"],
-            "values" : 5,
-            "values_total" : 20
-
-        }
-    },
-    "database": "/tmp/data.db"
+        {
+            "name" : "more specific",
+            "channels" : ["wb-adc/+", "wb-gpio/+"],
+            "values" : 1000,
+            "values_total" : 100000,
+            "min_interval" : 1200,
+            "min_unchanged_interval" : 12000
+        },
+        {
+            "name" : "most specific",
+            "channels" : ["wb-adc/A1"],
+            "values" : 1000,
+            "values_total" : 100000,
+            "min_interval" : 1200,
+            "min_unchanged_interval" : 12000
+        },
+    ],
+    "database" : "/var/lib/wirenboard/db/data.db"
 }
