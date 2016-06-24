@@ -508,6 +508,7 @@ void TMQTTDBLogger::Init2()
 Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 {
     cout << "run method " << endl;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     Json::Value result;
     int limit = -1;
@@ -557,7 +558,12 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     result["values"] = Json::Value(Json::arrayValue);
 
     // version 3.7 can't always figure out to use the proper index
-    string get_values_query_str = "SELECT uid, device, channel, AVG(value),  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
+    string get_values_query_str;
+
+    if (min_interval_ms > 0)
+        get_values_query_str = "SELECT uid, device, channel, AVG(value),  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
+    else
+        get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
 
     if (!params["channels"].empty()) {
         get_values_query_str += "channel IN ( ";
@@ -644,6 +650,12 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         result["has_more"] = true;
     }
 
+    
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+
+    cout << "get_values() took " << duration << "ms" << endl;
+    
     return result;
 }
 
