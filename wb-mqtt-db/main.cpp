@@ -13,7 +13,6 @@
 
 #include  "SQLiteCpp/SQLiteCpp.h"
 
-/* vim: set ts=4 sw=4: */
 
 sig_atomic_t running = 1;
 
@@ -525,8 +524,6 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                 num_values = 0;
             } else {
                 insert_row_query.bind(3, payload); // avg == value
-                insert_row_query.bind(5, payload); // min
-                insert_row_query.bind(6, payload); // max
             }
 
 
@@ -637,9 +634,9 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     string get_values_query_str;
 
     if (min_interval_ms > 0)
-        get_values_query_str = "SELECT uid, device, channel, AVG(value),  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
+        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, min, max  FROM data INDEXED BY data_topic_timestamp WHERE ";
     else
-        get_values_query_str = "SELECT uid, device, channel, value,  (timestamp - 2440587.5)*86400.0  FROM data INDEXED BY data_topic_timestamp WHERE ";
+        get_values_query_str = "SELECT uid, device, channel, value, (timestamp - 2440587.5)*86400.0, min, max  FROM data INDEXED BY data_topic_timestamp WHERE ";
 
     if (!params["channels"].empty()) {
         get_values_query_str += "channel IN ( ";
@@ -714,8 +711,16 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 			row["c"] = query_channel_ids[get_values_query.getColumn(2)];
 		}
 
+        
+        // if there are min and max values, send'em too
+        if (get_values_query.getColumn(5).getType() != SQLITE_NULL && req_ver != 1) {
+            row["value"] = static_cast<double>(get_values_query.getColumn(3));
+            row["min"] = static_cast<double>(get_values_query.getColumn(5));
+            row["max"] = static_cast<double>(get_values_query.getColumn(6));
+        } else {
+            row[(req_ver == 1) ? "v" : "value"] = get_values_query.getColumn(3).getText();
+        }
 
-        row[(req_ver == 1) ? "v" : "value"] = get_values_query.getColumn(3).getText();
         row[(req_ver == 1) ? "t" : "timestamp"] = static_cast<double>(get_values_query.getColumn(4));
         result["values"].append(row);
         row_count += 1;
@@ -916,3 +921,4 @@ int main (int argc, char *argv[])
 }
 
 
+/* vim: set ts=4 sw=4: */
