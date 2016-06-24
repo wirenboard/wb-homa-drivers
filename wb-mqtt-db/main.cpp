@@ -89,6 +89,7 @@ class TMQTTDBLogger: public TMQTTWrapper
         void InitCounterCaches();
         int ReadDBVersion();
         void UpdateDB(int prev_version);
+        bool UpdateAccumulator(int channel_id, const string &payload);
 
         string Mask;
         std::unique_ptr<SQLite::Database> DB;
@@ -102,6 +103,8 @@ class TMQTTDBLogger: public TMQTTWrapper
         map<int, int> GroupRowNumberCache;
         map<int, string> ChannelValueCache;
 
+        // number of values, sum, min, max
+        map<int, tuple<int, double, double, double>> ChannelAccumulator;
 
         const int DBVersion = 2;
 
@@ -392,6 +395,37 @@ int TMQTTDBLogger::GetOrCreateDeviceId(const string& device)
 	}
 }
 
+bool TMQTTDBLogger::UpdateAccumulator(int channel_id, const string &payload)
+{
+    double value = 0.0;
+
+    // try to cast value to double and run stats
+    try {
+        value = stod(payload);
+    } catch (...) {
+        return false; // no processing for uncastable values
+    }
+
+    auto& accum = ChannelAccumulator[channel_id];
+    int& num_values = get<0>(accum);
+    double& sum = get<1>(accum);
+    double& min = get<2>(accum);
+    double& max = get<3>(accum);
+
+    num_values++;
+
+    if (num_values == 1) {
+        min = max = sum = value;
+    } else {
+        if (min > value)
+            min = value;
+        if (max < value)
+            max = value;
+        sum += value;
+    }
+    
+    return true;
+}
 
 void TMQTTDBLogger::OnConnect(int rc){
     for (const auto& group : LoggerConfig.Groups) {
@@ -437,6 +471,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             int channel_int_id = GetOrCreateChannelId({tokens[2], tokens[4]});
             int device_int_id = GetOrCreateDeviceId(tokens[2]);
 
+            // FIXME: need to fix it when global data types definitions will be ready
+            bool accumulated = UpdateAccumulator(channel_int_id, payload);
 
             if ((group.MinInterval > 0) || (group.MinUnchangedInterval > 0)) {
                 auto  last_saved = LastSavedTimestamps[channel_int_id];
@@ -458,7 +494,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
                             return;
                         }
                     }
-
+                    
                     ChannelValueCache[channel_int_id] = payload;
                 }
 
@@ -466,14 +502,33 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             }
 
 
-
-            static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id) VALUES (?, ?, ?, ?)");
+            static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id, min, max) VALUES (?, ?, ?, ?, ?, ?)");
 
             insert_row_query.reset();
             insert_row_query.bind(1, device_int_id);
             insert_row_query.bind(2, channel_int_id);
-            insert_row_query.bind(3, payload);
             insert_row_query.bind(4, group.IntId);
+            
+            // min, max and average
+            if (accumulated) {
+                auto& accum = ChannelAccumulator[channel_int_id];
+                int& num_values = get<0>(accum);
+                double& sum = get<1>(accum);
+                double& min = get<2>(accum);
+                double& max = get<3>(accum);
+
+                insert_row_query.bind(3, num_values > 0 ? sum / num_values : 0.0); // avg
+
+                insert_row_query.bind(5, min); // min
+                insert_row_query.bind(6, max); // max
+
+                num_values = 0;
+            } else {
+                insert_row_query.bind(3, payload); // avg == value
+                insert_row_query.bind(5, payload); // min
+                insert_row_query.bind(6, payload); // max
+            }
+
 
             insert_row_query.exec();
             cout << insert_row_query.getQuery() << endl;
