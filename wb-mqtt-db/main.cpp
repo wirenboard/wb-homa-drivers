@@ -27,29 +27,6 @@ using namespace std::chrono;
 
 const float RingBufferClearThreshold = 0.02; // ring buffer will be cleared on limit * (1 + RingBufferClearThreshold) entries
         
-static string ChannelNameToTopic(const string &channel_name)
-{
-    string result = "/devices/";
-    
-    int stage = 0;
-    for (auto c : channel_name) {
-        if (c == '/') {
-            stage++;
-
-            if (stage == 1)
-                result += "/controls/";
-            else if (stage >= 2)
-                break;
-
-            continue;
-        }
-
-        result += c;
-    }
-
-    return result;
-}
-
 struct TLoggingChannel
 {
     string Pattern;
@@ -910,7 +887,8 @@ int main (int argc, char *argv[])
 
             for (const auto & channel_item : group_item["channels"]) {
                 // convert channel format from d/c to /devices/d/controls/c
-                TLoggingChannel channel = {ChannelNameToTopic(channel_item.asString())};
+                auto name_split = StringSplit(channel_item.asString(), '/');
+                TLoggingChannel channel = { "/devices/" + name_split[0] + "/controls/" + name_split[1] };
                 group.Channels.push_back(channel);
             }
 
