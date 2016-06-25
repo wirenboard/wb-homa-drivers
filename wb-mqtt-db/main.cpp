@@ -36,9 +36,9 @@ static string ChannelNameToTopic(const string &channel_name)
         if (c == '/') {
             stage++;
 
-            if (stage == 2)
+            if (stage == 1)
                 result += "/controls/";
-            else if (stage >= 3)
+            else if (stage >= 2)
                 break;
 
             continue;
@@ -799,6 +799,26 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
     return result;
 }
 
+/* For debugging reasons */
+ostream& operator<<(ostream &str, const TLoggingGroup &group)
+{
+    str << "> Group " << group.Id << " (" << group.IntId << ")" << endl;
+    str << ">\tChannels: ";
+
+    for (const TLoggingChannel &ch: group.Channels) {
+        str << ch.Pattern << " ";
+    }
+
+    str << endl;
+
+    str << ">\tValues: " << group.Values << endl;
+    str << ">\tValues total: " << group.ValuesTotal << endl;
+    str << ">\tMinInterval: " << group.MinInterval << endl;
+    str << ">\tMinUnchangedInterval: " << group.MinUnchangedInterval << endl;
+
+    return str;
+}
+
 int main (int argc, char *argv[])
 {
     int rc;
@@ -808,7 +828,7 @@ int main (int argc, char *argv[])
     string config_fname;
     int c;
 
-    while ((c = getopt(argc, argv, "hp:H:c:")) != -1) {
+    while ((c = getopt(argc, argv, "hp:H:c:T:")) != -1) {
         switch(c) {
             case 'p' :
                 printf ("Option p with value '%s'\n", optarg);
@@ -889,7 +909,7 @@ int main (int argc, char *argv[])
             }
 
             for (const auto & channel_item : group_item["channels"]) {
-                // convert channel format from /d/c to /devices/d/controls/c
+                // convert channel format from d/c to /devices/d/controls/c
                 TLoggingChannel channel = {ChannelNameToTopic(channel_item.asString())};
                 group.Channels.push_back(channel);
             }
@@ -919,6 +939,8 @@ int main (int argc, char *argv[])
             }
 
             config.Groups.push_back(group);
+
+            cout << group;
         }
     }
 
