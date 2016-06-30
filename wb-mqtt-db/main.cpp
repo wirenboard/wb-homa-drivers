@@ -661,8 +661,7 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
     while (channels_list_query.executeStep()) {
         
         /* generate header string */
-        string device_name = "/";
-        device_name += static_cast<const char *>(channels_list_query.getColumn(1));
+        string device_name = static_cast<const char *>(channels_list_query.getColumn(1));
         device_name += "/";
         device_name += static_cast<const char *>(channels_list_query.getColumn(2));
 
