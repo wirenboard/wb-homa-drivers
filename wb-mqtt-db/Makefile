@@ -25,26 +25,22 @@ DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp
 SQLITECPP_OBJ := $(patsubst %.cpp,%.o,$(wildcard $(SQLITECPP_DIR)/*.cpp))
 
+OBJ=main.o dbinit.o dbmqtt.o db_rpc.o
 
 .PHONY: all clean
 
 all : $(DB_BIN)
 
 
-$(DB_BIN): main.o $(SQLITECPP_OBJ)
+$(DB_BIN): $(OBJ) $(SQLITECPP_OBJ)
 	${CXX} $^ ${LDFLAGS} -o $@
 
-main.o: main.cpp
+%.o: %.cpp
 	${CXX} -c $< -o $@ ${CFLAGS};
-
-
-
 
 clean :
 	-rm -f *.o $(DB_BIN)
 	-rm -f $(SQLITECPP_DIR)/*.o
-
-
 
 install: all
 	install -d $(DESTDIR)
