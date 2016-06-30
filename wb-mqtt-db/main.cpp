@@ -7,10 +7,19 @@
 #include <ctime>
 #include <unistd.h>
 #include <fstream>
+#include <signal.h>
 
 #include "jsoncpp/json/json.h"
 
 #include  "SQLiteCpp/SQLiteCpp.h"
+
+sig_atomic_t running = 1;
+
+/* it handles only SIGTERM and SIGINT to exit gracefully */
+void sig_handler(int signal)
+{
+    running = 0;
+}
 
 using namespace std;
 using namespace std::chrono;
@@ -65,6 +74,7 @@ class TMQTTDBLogger: public TMQTTWrapper
         void Init2();
 
         Json::Value GetValues(const Json::Value& input);
+        Json::Value GetChannels(const Json::Value& input);
 
     private:
         void InitDB();
@@ -171,6 +181,13 @@ void TMQTTDBLogger::InitCounterCaches()
     SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, channel FROM data GROUP BY channel ");
     while (count_channel_query.executeStep()) {
         ChannelRowNumberCache[count_channel_query.getColumn(1)] = count_channel_query.getColumn(0);
+    }
+
+    SQLite::Statement last_ts_query(*DB, "SELECT (MAX(timestamp) - 2440587.5) * 86400.0 AS ts, channel FROM data GROUP BY channel ");
+    while (last_ts_query.executeStep()) {
+        auto d = milliseconds(static_cast<long long>(last_ts_query.getColumn(0)) * 1000);
+        auto current_tp = steady_clock::time_point(d);
+        LastSavedTimestamps[last_ts_query.getColumn(1)] = current_tp;
     }
 }
 
@@ -484,6 +501,7 @@ void TMQTTDBLogger::Init2()
 {
     RPCServer = make_shared<TMQTTRPCServer>(shared_from_this(), "db_logger");
     RPCServer->RegisterMethod("history", "get_values", std::bind(&TMQTTDBLogger::GetValues, this, placeholders::_1));
+    RPCServer->RegisterMethod("history", "get_channels", std::bind(&TMQTTDBLogger::GetChannels, this, placeholders::_1));
     RPCServer->Init();
 }
 
@@ -629,6 +647,40 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     return result;
 }
 
+Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
+{
+
+    Json::Value result;
+    
+    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
+
+    // get channel names list
+    string channels_list_query_str = "SELECT int_id, device, control FROM channels";
+    SQLite::Statement channels_list_query(*DB, channels_list_query_str);
+
+    while (channels_list_query.executeStep()) {
+        
+        /* generate header string */
+        string device_name = static_cast<const char *>(channels_list_query.getColumn(1));
+        device_name += "/";
+        device_name += static_cast<const char *>(channels_list_query.getColumn(2));
+
+        int channel_id = channels_list_query.getColumn(0);
+
+        Json::Value values;
+        values["items"] = ChannelRowNumberCache[channel_id];
+        values["last_ts"] = duration_cast<seconds>(LastSavedTimestamps[channel_id].time_since_epoch()).count();
+
+        result["channels"][device_name] = values;
+    }
+
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+
+    cout << "RPC request took " << duration << "ms" << endl;
+
+    return result;
+}
 
 int main (int argc, char *argv[])
 {
@@ -756,13 +808,22 @@ int main (int argc, char *argv[])
     mqtt_db_logger->Init();
     mqtt_db_logger->Init2();
 
+    /* init SIGINT and SIGTERM handler to exit gracefully */
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
 
-    while(1) {
+    while (running) {
+
         rc = mqtt_db_logger->loop();
+
         if (rc != 0) {
             mqtt_db_logger->reconnect();
         }
+
     }
+
+    mqtt_db_logger->disconnect();
+
     return 0;
 }
 

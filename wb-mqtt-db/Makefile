@@ -17,9 +17,9 @@ ifneq ($(CC_PATH),)
 endif
 
 #CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
-CFLAGS=-Wall -std=c++0x -Os -I.
+CFLAGS=-Wall -std=c++0x -Os -I. -pg
 CPPFLAGS=$(CFLAGS)
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -pg
 
 DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp

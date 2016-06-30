@@ -1,3 +1,12 @@
+wb-mqtt-db (1.5) stable; urgency=medium
+
+  * change get_channel output format from array to map
+  * add get_channel RPC function
+  * add SIGTERM/SIGINT handler for graceful exit
+
+ -- Nikita Maslov <n.maslov@contactless.ru>  Thu, 30 Jun 2016 12:06:27 +0300
+
+
 wb-mqtt-db (1.4) stable; urgency=medium
 
   * significant query performance improvement
