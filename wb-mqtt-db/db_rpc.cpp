@@ -3,7 +3,7 @@
 using namespace std;
 using namespace std::chrono;
 
-int TMQTTDBLogger::GetOrCreateChannelId(const TChannel & channel)
+int TMQTTDBLogger::GetOrCreateChannelId(const TChannelName & channel)
 {
     auto it = ChannelIds.find(channel);
     if (it != ChannelIds.end()) {
@@ -44,37 +44,6 @@ int TMQTTDBLogger::GetOrCreateDeviceId(const string& device)
     }
 }
 
-bool TMQTTDBLogger::UpdateAccumulator(int channel_id, const string &payload)
-{
-    double value = 0.0;
-
-    // try to cast value to double and run stats
-    try {
-        value = stod(payload);
-    } catch (...) {
-        return false; // no processing for uncastable values
-    }
-
-    auto& accum = ChannelAccumulator[channel_id];
-    int& num_values = get<0>(accum);
-    double& sum = get<1>(accum);
-    double& min = get<2>(accum);
-    double& max = get<3>(accum);
-
-    num_values++;
-
-    if (num_values == 1) {
-        min = max = sum = value;
-    } else {
-        if (min > value)
-            min = value;
-        if (max < value)
-            max = value;
-        sum += value;
-    }
-    
-    return true;
-}
 
 void TMQTTDBLogger::Init2()
 {
@@ -169,13 +138,13 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     int param_num = 0;
     std::map<int,int> query_channel_ids; // map channel ids to they serial number in the request
-    std::map<int, TChannel> channel_names; // map channel ids to the their names  ((device, control) pairs)
+    std::map<int, TChannelName> channel_names; // map channel ids to the their names  ((device, control) pairs)
     size_t i = 0;
     for (const auto& channel_item : params["channels"]) {
         if (!(channel_item.isArray() && (channel_item.size() == 2)))
             throw TBaseException("'channels' items must be an arrays of size two ");
 
-        const TChannel channel = {channel_item[0u].asString(), channel_item[1u].asString()};
+        const TChannelName channel = {channel_item[0u].asString(), channel_item[1u].asString()};
 
         int channel_int_id = GetOrCreateChannelId(channel);
 
@@ -210,7 +179,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         row[(req_ver == 1) ? "i" : "uid"] = static_cast<int>(get_values_query.getColumn(0));
 
         if (req_ver == 0) {
-            const TChannel& channel = channel_names[get_values_query.getColumn(2)];
+            const TChannelName& channel = channel_names[get_values_query.getColumn(2)];
             row["device"] = channel.Device;
             row["control"] = channel.Control;
         } else if (req_ver == 1) {
@@ -267,8 +236,8 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
         int channel_id = channels_list_query.getColumn(0);
 
         Json::Value values;
-        values["items"] = ChannelRowNumberCache[channel_id];
-        values["last_ts"] = duration_cast<seconds>(LastSavedTimestamps[channel_id].time_since_epoch()).count();
+        values["items"] = ChannelDataCache[channel_id].RowCount;
+        values["last_ts"] = duration_cast<seconds>(ChannelDataCache[channel_id].LastProcessed.time_since_epoch()).count();
 
         result["channels"][device_name] = values;
     }

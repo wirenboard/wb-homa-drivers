@@ -7,9 +7,10 @@
 #include <fstream>
 #include <signal.h>
 
-#include <glog/logging.h>
+// #include <glog/logging.h>
 
 using namespace std;
+using namespace std::chrono;
 
 static sig_atomic_t running = 1;
 
@@ -48,7 +49,7 @@ int main (int argc, char *argv[])
     string config_fname;
     int c;
 
-    google::InitGoogleLogging(argv[0]);
+    // google::InitGoogleLogging(argv[0]);
 
     while ((c = getopt(argc, argv, "hp:H:c:T:")) != -1) {
         switch (c) {
@@ -110,6 +111,8 @@ int main (int argc, char *argv[])
 
     config.DBFile = root["database"].asString();
 
+    auto now = steady_clock::now();
+
     for (const auto& group_item : root["groups"]) {
 
         TLoggingGroup group;
@@ -153,7 +156,7 @@ int main (int argc, char *argv[])
                 throw TBaseException("'min_unchanged_interval' must be positive or zero");
             group.MinUnchangedInterval = group_item["min_unchanged_interval"].asInt();
         }
-
+        
         config.Groups.push_back(group);
 
         cout << group;
@@ -168,12 +171,18 @@ int main (int argc, char *argv[])
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
 
-    while (running) {
-        rc = mqtt_db_logger->loop();
+    steady_clock::time_point next_call = steady_clock::now();
 
-        if (rc != 0) {
+    while (running) {
+        /* process MQTT events */
+        // TODO: dynamic timeout according to next write operation
+        rc = mqtt_db_logger->loop(duration_cast<milliseconds>(next_call - steady_clock::now()).count());
+
+        if (rc != 0) 
             mqtt_db_logger->reconnect();
-        }
+
+        /* process timer events */
+        next_call = mqtt_db_logger->ProcessTimer(next_call);
     }
 
     cout << "Exit signal received, stopping..." << endl;

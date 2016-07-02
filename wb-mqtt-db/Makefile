@@ -16,8 +16,8 @@ ifneq ($(CC_PATH),)
 	CC=$(CROSS_COMPILE)gcc-4.7
 endif
 
-#CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
-CFLAGS=-Wall -std=c++0x -Os -I. -pg
+CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
+#CFLAGS=-Wall -std=c++0x s -I. -pg
 CPPFLAGS=$(CFLAGS)
 LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -pg
 
@@ -25,7 +25,7 @@ DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp
 SQLITECPP_OBJ := $(patsubst %.cpp,%.o,$(wildcard $(SQLITECPP_DIR)/*.cpp))
 
-OBJ=main.o dbinit.o dbmqtt.o db_rpc.o
+OBJ=main.o dbinit.o dbmqtt.o db_rpc.o dbtimer.o
 
 .PHONY: all clean
 

@@ -1,0 +1,157 @@
+#include "dblogger.h"
+
+#include <chrono>
+#include <algorithm>
+
+using namespace std;
+using namespace std::chrono;
+
+std::ostream& operator<<(std::ostream& out, const struct TChannelName &name){
+    out << name.Device << "/" << name.Control;
+    return out;
+}
+
+steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point next_call)
+{
+    auto now = steady_clock::now();
+    bool start_process = false;
+
+    if (next_call > now) {
+        return next_call; // there is some time to wait
+    }
+
+    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
+
+    SQLite::Transaction transaction(*DB);
+
+    // for each group - check processing time according to its configuration
+    
+    for (auto& group : LoggerConfig.Groups) {
+    
+        bool process_changed = true;
+
+        for (auto channel_id : group.ChannelIds) {
+
+            auto& channel_data = ChannelDataCache[channel_id];
+
+            // check if current group is ready to process changed values
+            // or ready to process unchanged values
+            if ((now >= group.LastSaved + milliseconds(group.MinInterval) && channel_data.Changed) || 
+                (now >= group.LastUSaved + milliseconds(group.MinUnchangedInterval) &&
+                 !channel_data.Changed && channel_data.LastProcessed >= group.LastUSaved)) {
+                
+                if (!start_process) {
+                    start_process = true;
+                    next_call = now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval));
+
+                    // FIXME: logging
+                    cout << "Start bulk processing..." << endl;
+                }
+
+                WriteChannel(channel_data, group);
+
+                process_changed = channel_data.Changed;
+                
+                cout << "> Processing channel " << channel_data.Name << " from group " << group.Id << endl;
+            }
+
+        }
+
+        if (process_changed) {
+            group.LastSaved = now;
+        } else {
+            group.LastUSaved = now;
+        }
+
+        // select minimal next call time
+        if (next_call > now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval))) {
+            next_call = now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval));
+        }
+
+    }
+
+    if (start_process)
+        transaction.commit();
+    
+    //FIXME: debug
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+
+    if (start_process)
+        cout << "Bulk processing took " << duration << "ms" << endl;
+
+    return next_call;
+}
+
+void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
+{
+    int channel_int_id, device_int_id;
+
+    tie(channel_int_id, device_int_id) = GetOrCreateIds(channel_data.Name);
+
+    static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id, min, max) VALUES (?, ?, ?, ?, ?, ?)");
+
+    insert_row_query.reset();
+    insert_row_query.bind(1, device_int_id);
+    insert_row_query.bind(2, channel_int_id);
+    insert_row_query.bind(4, group.IntId);
+    
+    // min, max and average
+    if (channel_data.Accumulated) {
+        auto& accum = channel_data.Accumulator;
+        int& num_values = get<0>(accum);
+        double& sum = get<1>(accum);
+        double& min = get<2>(accum);
+        double& max = get<3>(accum);
+
+        insert_row_query.bind(3, num_values > 0 ? sum / num_values : 0.0); // avg
+
+        insert_row_query.bind(5, min); // min
+        insert_row_query.bind(6, max); // max
+
+        num_values = 0;
+    } else {
+        insert_row_query.bind(3, channel_data.LastValue); // avg == value
+    }
+
+    insert_row_query.exec();
+    
+    // reset accumulators etc.
+    if (channel_data.Accumulated)
+        channel_data.Accumulator = make_tuple(0, 0.0, 0.0, 0.0);
+
+    channel_data.Changed = false;
+
+    // TODO: logging
+    // cout << channel_data.Name << ": " << insert_row_query.getQuery() << endl;
+
+    // local cache is needed here since SELECT COUNT are extremely slow in sqlite
+    // so we only ask DB at startup. This applies to two if blocks below.
+
+    if (group.Values > 0) {
+        if ((++channel_data.RowCount) > group.Values * (1 + RingBufferClearThreshold) ) {
+            static SQLite::Statement clean_channel_query(*DB, "DELETE FROM data WHERE channel = ? ORDER BY rowid ASC LIMIT ?");
+            clean_channel_query.reset();
+            clean_channel_query.bind(1, channel_int_id);
+            clean_channel_query.bind(2, ChannelDataCache[channel_int_id].RowCount - group.Values);
+
+            clean_channel_query.exec();
+            // TODO: logging
+            cout << clean_channel_query.getQuery() << endl;
+            channel_data.RowCount = group.Values;
+        }
+    }
+
+    if (group.ValuesTotal > 0) {
+        if ((++GroupRowNumberCache[group.IntId]) > group.ValuesTotal * (1 + RingBufferClearThreshold)) {
+            static SQLite::Statement clean_group_query(*DB, "DELETE FROM data WHERE group_id = ? ORDER BY rowid ASC LIMIT ?");
+            clean_group_query.reset();
+            clean_group_query.bind(1, group.IntId);
+            clean_group_query.bind(2, GroupRowNumberCache[group.IntId] - group.ValuesTotal);
+            clean_group_query.exec();
+            // TODO: logging
+            cout << clean_group_query.getQuery() << endl;
+            GroupRowNumberCache[group.IntId] = group.ValuesTotal;
+        }
+    }
+}

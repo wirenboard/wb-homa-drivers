@@ -1,6 +1,6 @@
 #include "dblogger.h"
 
-#include <glog/logging.h>
+// #include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -71,23 +71,36 @@ void TMQTTDBLogger::CreateTables()
 
 }
 
-void TMQTTDBLogger::InitCounterCaches()
+void TMQTTDBLogger::InitCaches()
 {
+    // init group counter cache
     SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) as cnt, group_id FROM data GROUP BY group_id ");
     while (count_group_query.executeStep()) {
         GroupRowNumberCache[count_group_query.getColumn(1)] = count_group_query.getColumn(0);
     }
 
+    // init channel counter cache
     SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, channel FROM data GROUP BY channel ");
     while (count_channel_query.executeStep()) {
-        ChannelRowNumberCache[count_channel_query.getColumn(1)] = count_channel_query.getColumn(0);
+        ChannelDataCache[count_channel_query.getColumn(1)].RowCount = count_channel_query.getColumn(0);
     }
 
-    SQLite::Statement last_ts_query(*DB, "SELECT (MAX(timestamp) - 2440587.5) * 86400.0 AS ts, channel FROM data GROUP BY channel ");
-    while (last_ts_query.executeStep()) {
-        auto d = milliseconds(static_cast<long long>(last_ts_query.getColumn(0)) * 1000);
+    // init channel last state values
+    SQLite::Statement last_value_query(*DB, "SELECT (MAX(timestamp) - 2440587.5) * 86400.0 AS ts, channel, value \
+            FROM data GROUP BY channel ORDER BY timestamp DESC");
+
+    while (last_value_query.executeStep()) {
+        auto d = milliseconds(static_cast<long long>(last_value_query.getColumn(0)) * 1000);
         auto current_tp = steady_clock::time_point(d);
-        LastSavedTimestamps[last_ts_query.getColumn(1)] = current_tp;
+        
+        auto& channel_data = ChannelDataCache[last_value_query.getColumn(1)];
+
+        channel_data.LastProcessed = current_tp;
+        channel_data.LastValue = static_cast<const char *>(last_value_query.getColumn(2));
+
+        channel_data.Accumulator = make_tuple(0, 0.0, 0.0, 0.0);
+        channel_data.Accumulated = false;
+        channel_data.Changed = false;
     }
 }
 
@@ -95,8 +108,11 @@ void TMQTTDBLogger::InitChannelIds()
 {
     SQLite::Statement query(*DB, "SELECT int_id, device, control FROM channels");
     while (query.executeStep()) {
-        ChannelIds[{query.getColumn(1).getText(),
-                    query.getColumn(2).getText()}] = query.getColumn(0);
+        int channel_id = query.getColumn(0);
+        TChannelName name = { query.getColumn(1), query.getColumn(2) };
+
+        ChannelIds[name] = channel_id;
+        ChannelDataCache[channel_id].Name = name;
     }
 }
 
@@ -118,6 +134,8 @@ void TMQTTDBLogger::InitGroupIds()
         }
     }
 
+    auto now = steady_clock::now();
+
     for (auto& group : LoggerConfig.Groups) {
         auto it = stored_group_ids.find(group.Id);
         if (it != stored_group_ids.end()) {
@@ -131,6 +149,9 @@ void TMQTTDBLogger::InitGroupIds()
             query.exec();
             group.IntId = DB->getLastInsertRowid();
         }
+
+        group.LastSaved = now;
+        group.LastUSaved = now;
     }
 }
 
@@ -212,23 +233,23 @@ void TMQTTDBLogger::InitDB()
 
     if (!DB->tableExists("data")) {
         // new DB file created
-        LOG(INFO) << "Creating tables";
+        // LOG(INFO) << "Creating tables";
         CreateTables();
     } else {
         int file_db_version = ReadDBVersion();
         if (file_db_version > DBVersion) {
             throw TBaseException("Database file is created by newer version of wb-mqtt-db");
         } else if (file_db_version < DBVersion) {
-            LOG(WARNING) << "Old database format found, trying to update...";
+            // LOG(WARNING) << "Old database format found, trying to update...";
             UpdateDB(file_db_version);
         } else {
-            LOG(INFO) << "Creating tables if necessary";
+            // LOG(INFO) << "Creating tables if necessary";
             CreateTables();
         }
     }
 
-    LOG(INFO) << "Initializing counter caches";
-    InitCounterCaches();
+    // LOG(INFO) << "Initializing counter caches";
+    InitCaches();
 
     std::cerr << "Getting internal ids for devices and channels" << std::endl;
     InitDeviceIds();
