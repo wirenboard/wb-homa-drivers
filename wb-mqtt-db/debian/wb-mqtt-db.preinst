@@ -7,4 +7,14 @@ if [ -d /etc/wb-mqtt-confed ]; then
    rmdir --ignore-fail-on-non-empty /etc/wb-mqtt-confed
 fi
 
+if [ -f /etc/wb-mqtt-db.conf ]; then
+    case "$1" in
+    install|upgrade)
+        if dpkg --compare-versions "$2" le "1.5"; then
+            echo "Saving old configuration file to /etc/wb-mqtt-db.conf.old..."
+            cp /etc/wb-mqtt-db.conf /etc/wb-mqtt-db.conf.old
+        fi
+    esac
+fi
+
 #DEBHELPER#
