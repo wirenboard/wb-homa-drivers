@@ -1,5 +1,7 @@
 #include "dblogger.h"
 
+#include <glog/logging.h>
+
 using namespace std;
 using namespace std::chrono;
 
@@ -55,8 +57,11 @@ void TMQTTDBLogger::Init2()
 
 Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 {
-    cout << "run method " << endl;
+    VLOG(0) << "Run RPC get_values()";
+
+#ifndef NDEBUG
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
+#endif
 
     Json::Value result;
     int limit = -1;
@@ -206,11 +211,13 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         result["has_more"] = true;
     }
 
-    
+#ifndef NDEBUG   
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+    
+    DVLOG(0) << "get_values() took " << duration << "ms" << endl;
+#endif
 
-    cout << "get_values() took " << duration << "ms" << endl;
     
     return result;
 }
@@ -220,7 +227,10 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 
     Json::Value result;
     
-    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
+    VLOG(0) << "Run RPC get_channels()";
+#ifndef NDEBUG
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+#endif
 
     // get channel names list
     string channels_list_query_str = "SELECT int_id, device, control FROM channels";
@@ -242,10 +252,12 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
         result["channels"][device_name] = values;
     }
 
+#ifndef NDEBUG
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 
-    cout << "RPC request took " << duration << "ms" << endl;
+    DVLOG(0) << "RPC request took " << duration << "ms" << endl;
+#endif
 
     return result;
 }

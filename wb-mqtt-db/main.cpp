@@ -7,7 +7,7 @@
 #include <fstream>
 #include <signal.h>
 
-// #include <glog/logging.h>
+#include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -48,39 +48,54 @@ int main (int argc, char *argv[])
     mqtt_config.Port = 1883;
     string config_fname;
     int c;
+    int verbose_level = -1;
 
-    // google::InitGoogleLogging(argv[0]);
 
-    while ((c = getopt(argc, argv, "hp:H:c:T:")) != -1) {
+    while ((c = getopt(argc, argv, "hp:H:c:T:v")) != -1) {
         switch (c) {
         case 'p' :
-            printf ("Option p with value '%s'\n", optarg);
+            VLOG(2) << "Option p with value " << optarg;
             mqtt_config.Port = stoi(optarg);
             break;
         case 'H' :
-            printf ("Option H with value '%s'\n", optarg);
+            VLOG(2) << "Option H with value " << optarg;
             mqtt_config.Host = optarg;
             break;
 
         case 'c':
-            printf ("option c with value '%s'\n", optarg);
+            VLOG(2) << "Option c with value " << optarg;
             config_fname = optarg;
             break;
 
+        case 'v':
+            VLOG(2) << "Option v" << optarg;
+            verbose_level++;
+            break;
+
         case '?':
-            printf ("?? Getopt returned character code 0%o ??\n",c);
+            LOG(WARNING) << "?? Getopt returned character code 0%o ??" << static_cast<char>(c);
         case 'h':
-            printf ( "help menu\n");
+            printf("help menu\n");
         default:
             printf("Usage:\n wb-mqtt-db [options] [mask]\n");
             printf("Options:\n");
             printf("\t-p PORT   \t\t\t set to what port wb-mqtt-db should connect (default: 1883)\n");
             printf("\t-H IP     \t\t\t set to what IP wb-mqtt-db should connect (default: localhost)\n");
-            printf("\t-c config     \t\t\t config file\n");
+            printf("\t-c config \t\t\t config file\n");
+            printf("\t-v        \t\t\t verbose output to stderr (may be -v -v or -v -v -v also)\n");
 
             return 0;
         }
     }
+
+    // configure logging
+    if (verbose_level >= 0) {
+        FLAGS_logtostderr = 1;
+        FLAGS_v = verbose_level;
+    }
+
+    ::google::InitGoogleLogging(argv[0]);
+
 
     if (config_fname.empty()) {
         cerr << "Please specify config file with -c option" << endl;
@@ -99,10 +114,10 @@ int main (int argc, char *argv[])
 
     if (not parsedSuccess)
     {
-        cerr << "Failed to parse JSON" << endl
-           << reader.getFormatedErrorMessages()
-           << endl;
-        return 1;
+        LOG(FATAL) << "Failed to parse JSON" << endl
+                   << reader.getFormatedErrorMessages();
+
+        // return 1; // glog terminates program after LOG(FATAL)
     }
 
     if (!root.isMember("database")) {
@@ -157,7 +172,7 @@ int main (int argc, char *argv[])
         
         config.Groups.push_back(group);
 
-        cout << group;
+        VLOG(1) << group;
     }
 
     mosqpp::lib_init();
@@ -183,7 +198,7 @@ int main (int argc, char *argv[])
         next_call = mqtt_db_logger->ProcessTimer(next_call);
     }
 
-    cout << "Exit signal received, stopping..." << endl;
+    VLOG(0) << "Exit signal received, stopping..." << endl;
 
     mqtt_db_logger->disconnect();
 

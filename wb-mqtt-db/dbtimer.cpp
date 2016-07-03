@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -20,7 +21,9 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
         return next_call; // there is some time to wait
     }
 
-    high_resolution_clock::time_point t1 = high_resolution_clock::now(); //FIXME: debug
+#ifndef NDEBUG
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+#endif
 
     SQLite::Transaction transaction(*DB);
 
@@ -44,15 +47,14 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
                     start_process = true;
                     next_call = now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval));
 
-                    // FIXME: logging
-                    cout << "Start bulk processing..." << endl;
+                    VLOG(1) << "Start bulk transaction";
                 }
 
                 WriteChannel(channel_data, group);
 
                 process_changed = channel_data.Changed;
                 
-                cout << "> Processing channel " << channel_data.Name << " from group " << group.Id << endl;
+                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id;
             }
 
         }
@@ -73,12 +75,13 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
     if (start_process)
         transaction.commit();
     
-    //FIXME: debug
+#ifndef NDEBUG
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 
     if (start_process)
-        cout << "Bulk processing took " << duration << "ms" << endl;
+        DVLOG(1) << "Bulk processing took " << duration << "ms";
+#endif
 
     return next_call;
 }
@@ -118,8 +121,7 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
 
     channel_data.Changed = false;
 
-    // TODO: logging
-    // cout << channel_data.Name << ": " << insert_row_query.getQuery() << endl;
+    DVLOG(2) << channel_data.Name << ": " << insert_row_query.getQuery();
 
     // local cache is needed here since SELECT COUNT are extremely slow in sqlite
     // so we only ask DB at startup. This applies to two if blocks below.
@@ -132,8 +134,12 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
             clean_channel_query.bind(2, ChannelDataCache[channel_int_id].RowCount - group.Values);
 
             clean_channel_query.exec();
-            // TODO: logging
-            cout << clean_channel_query.getQuery() << endl;
+
+            LOG(WARNING) << "Channel data limit is reached: channel " << channel_data.Name 
+                    << ", row count " << channel_data.RowCount << ", limit " << group.Values;
+
+            DVLOG(2) << clean_channel_query.getQuery();
+
             channel_data.RowCount = group.Values;
         }
     }
@@ -145,8 +151,12 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
             clean_group_query.bind(1, group.IntId);
             clean_group_query.bind(2, GroupRowNumberCache[group.IntId] - group.ValuesTotal);
             clean_group_query.exec();
-            // TODO: logging
-            cout << clean_group_query.getQuery() << endl;
+
+            LOG(WARNING) << "Group data limit is reached: group " << group.Id
+                    << ", row count " << channel_data.RowCount << ", limit " << group.ValuesTotal;
+
+            DVLOG(2) << clean_group_query.getQuery();
+
             GroupRowNumberCache[group.IntId] = group.ValuesTotal;
         }
     }

@@ -1,6 +1,6 @@
 #include "dblogger.h"
 
-// #include <glog/logging.h>
+#include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -248,20 +248,20 @@ void TMQTTDBLogger::InitDB()
         }
     }
 
-    // LOG(INFO) << "Initializing counter caches";
+    VLOG(0) << "Initializing counter caches";
     InitCaches();
 
-    std::cerr << "Getting internal ids for devices and channels" << std::endl;
+    VLOG(0) << "Getting internal ids for devices and channels";
     InitDeviceIds();
     InitChannelIds();
 
-    std::cerr << "Getting and assigning group ids" << std::endl;
+    VLOG(0) << "Getting and assigning group ids";
     InitGroupIds();
 
-    std::cerr << "Analyzing data table" << std::endl;
+    VLOG(0) << "Analyzing data table" << std::endl;
     DB->exec("ANALYZE data");
     DB->exec("ANALYZE sqlite_master");
 
-    std::cerr << "DB initialization is done" << std::endl;
+    VLOG(0) << "DB initialization is done" << std::endl;
 }
 

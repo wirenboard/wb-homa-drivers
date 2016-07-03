@@ -1,6 +1,7 @@
 #include "dblogger.h"
 
 #include <tuple>
+#include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -78,6 +79,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
 
+
     bool match;
     int channel_int_id;
 
@@ -91,6 +93,9 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
         }
 
         if (match) {
+            VLOG(2) << "MQTT message from topic " << topic << ": \"" << payload 
+                    << "\", parsed as group \"" << group.Id << "\""; 
+
             tie(channel_int_id, std::ignore) = GetOrCreateIds(topic);
             auto& channel_data = ChannelDataCache[channel_int_id];
 
