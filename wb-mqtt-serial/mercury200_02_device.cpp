@@ -1,17 +1,18 @@
 #include <iostream>
-#include "mercury230_device.h"
+#include "mercury200_02_device.h"
 #include "crc16.h"
 
-REGISTER_PROTOCOL("mercury230", TMercury230Device, TRegisterTypes({
-            { TMercury230Device::REG_VALUE_ARRAY, "array", "power_consumption", U32, true },
-            { TMercury230Device::REG_PARAM, "param", "value", U24, true }
+REGISTER_PROTOCOL("mercury230", TMercury20002Device, TRegisterTypes({
+            { TMercury20002Device::REG_VALUE_ARRAY, "array", "power_consumption", U32, true },
+            { TMercury20002Device::REG_PARAM, "param", "value", U24, true }
         }));
 
-TMercury230Device::TMercury230Device(PDeviceConfig device_config, PAbstractSerialPort port)
+TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractSerialPort port)
     : TEMDevice(device_config, port) {}
 
-bool TMercury230Device::ConnectionSetup(uint8_t slave)
+bool TMercury20002Device::ConnectionSetup(uint8_t slave)
 {
+#if 0
     uint8_t setupCmd[7] = {
         uint8_t(DeviceConfig()->AccessLevel), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
     };
@@ -31,9 +32,10 @@ bool TMercury230Device::ConnectionSetup(uint8_t slave)
             // retry upon response from a wrong slave
         return false;
     }
+#endif
 }
 
-TEMDevice::ErrorType TMercury230Device::CheckForException(uint8_t* frame, int len, const char** message)
+TEMDevice::ErrorType TMercury20002Device::CheckForException(uint8_t* frame, int len, const char** message)
 {
     *message = 0;
     if (len != 4 || (frame[1] & 0x0f) == 0)
@@ -60,7 +62,7 @@ TEMDevice::ErrorType TMercury230Device::CheckForException(uint8_t* frame, int le
     return TEMDevice::OTHER_ERROR;
 }
 
-const TMercury230Device::TValueArray& TMercury230Device::ReadValueArray(uint32_t slave, uint32_t address)
+const TMercury20002Device::TValueArray& TMercury20002Device::ReadValueArray(uint32_t slave, uint32_t address)
 {
     int key = (address >> 4) | (slave << 24);
     auto it = CachedValues.find(key);
@@ -83,7 +85,7 @@ const TMercury230Device::TValueArray& TMercury230Device::ReadValueArray(uint32_t
     return CachedValues.insert(std::make_pair(key, a)).first->second;
 }
 
-uint32_t TMercury230Device::ReadParam(uint32_t slave, uint32_t address)
+uint32_t TMercury20002Device::ReadParam(uint32_t slave, uint32_t address)
 {
     uint8_t cmdBuf[2];
     cmdBuf[0] = (address >> 8) & 0xff; // param
@@ -97,7 +99,7 @@ uint32_t TMercury230Device::ReadParam(uint32_t slave, uint32_t address)
              (uint32_t)buf[1];
 }
 
-uint64_t TMercury230Device::ReadRegister(PRegister reg)
+uint64_t TMercury20002Device::ReadRegister(PRegister reg)
 {
     switch (reg->Type) {
     case REG_VALUE_ARRAY:
@@ -109,7 +111,7 @@ uint64_t TMercury230Device::ReadRegister(PRegister reg)
     }
 }
 
-void TMercury230Device::EndPollCycle()
+void TMercury20002Device::EndPollCycle()
 {
     CachedValues.clear();
 }
