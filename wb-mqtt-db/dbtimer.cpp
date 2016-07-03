@@ -28,9 +28,9 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
     SQLite::Transaction transaction(*DB);
 
     // for each group - check processing time according to its configuration
-    
+ 
     for (auto& group : LoggerConfig.Groups) {
-    
+   
         bool process_changed = true;
         bool group_processed = false;
 
@@ -43,20 +43,20 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
             if ((now >= group.LastSaved + seconds(group.MinInterval) && channel_data.Changed) || 
                 (now >= group.LastUSaved + seconds(group.MinUnchangedInterval) &&
                  !channel_data.Changed && channel_data.LastProcessed >= group.LastUSaved)) {
-                
+
                 if (!start_process) {
                     start_process = true;
                     next_call = now + seconds(min(group.MinInterval, group.MinUnchangedInterval));
 
                     LOG(INFO) << "Start bulk transaction";
                 }
-                
+
                 LOG(INFO) << "Processing channel " << channel_data.Name << " from group " << group.Id << (channel_data.Changed ? ", changed" : ", UNCHANGED");
                 DLOG(DEBUG) << "Selected channel ID is " << channel_id;
 
                 process_changed = process_changed && channel_data.Changed;
                 group_processed = true;
-                
+
                 WriteChannel(channel_data, group);
             }
 
@@ -66,8 +66,8 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
             group.LastSaved = now;
             if (!process_changed) {
                 LOG(INFO) << "Unchanged values processed!";
-            group.LastUSaved = now;
-        }
+                group.LastUSaved = now;
+            }
         }
 
         // select minimal next call time
@@ -79,7 +79,7 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
 
     if (start_process)
         transaction.commit();
-    
+ 
 #ifndef NDEBUG
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
@@ -106,7 +106,7 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
     insert_row_query.bind(1, device_int_id);
     insert_row_query.bind(2, channel_int_id);
     insert_row_query.bind(4, group.IntId);
-    
+
     // min, max and average
     if (channel_data.Accumulated && channel_data.Changed) {
         auto& accum = channel_data.Accumulator;
@@ -129,7 +129,7 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
     insert_row_query.bind(7, channel_data.Retained ? 1 : 0);
 
     insert_row_query.exec();
-    
+
 
     DLOG(DEBUG) << channel_data.Name << ": " << insert_row_query.getQuery();
 
