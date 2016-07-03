@@ -16,10 +16,10 @@ ifneq ($(CC_PATH),)
 	CC=$(CROSS_COMPILE)gcc-4.7
 endif
 
-CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
-#CFLAGS=-Wall -std=c++0x s -I. -pg
+#CFLAGS=-Wall -ggdb -std=c++0x -O0 -I.
+CFLAGS=-Wall -std=c++0x -Os -I.
 CPPFLAGS=$(CFLAGS)
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -pg
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3
 
 DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp

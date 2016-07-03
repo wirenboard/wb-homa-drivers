@@ -35,8 +35,18 @@ struct TChannel
     TChannelName Name;
 
     std::string LastValue;
-    // number of values, sum, min, max
-    std::tuple<int, double, double, double> Accumulator;
+
+    struct {
+        int ValueCount;
+        double Sum;
+        double Min;
+        double Max;
+
+        void Reset() {
+            ValueCount = 0;
+            Sum = Min = Max = 0.0;
+        }
+    } Accumulator;
 
     std::chrono::steady_clock::time_point LastProcessed;
 
@@ -113,15 +123,8 @@ private:
     std::map<TChannelName, int> ChannelIds;
     std::map<std::string, int> DeviceIds;
 
-    // std::map<int, std::chrono::steady_clock::time_point> LastSavedTimestamps;
-    // std::map<int, int> ChannelRowNumberCache;
-    // std::map<int, std::string> ChannelValueCache;
     std::map<int, TChannel> ChannelDataCache;
-
     std::map<int, int> GroupRowNumberCache;
-
-    // number of values, sum, min, max
-    // std::map<int, std::tuple<int, double, double, double>> ChannelAccumulator;
 
     const int DBVersion = WB_DB_VERSION;
 };

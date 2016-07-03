@@ -98,7 +98,7 @@ void TMQTTDBLogger::InitCaches()
         channel_data.LastProcessed = current_tp;
         channel_data.LastValue = static_cast<const char *>(last_value_query.getColumn(2));
 
-        channel_data.Accumulator = make_tuple(0, 0.0, 0.0, 0.0);
+        channel_data.Accumulator.Reset();
         channel_data.Accumulated = false;
         channel_data.Changed = false;
     }

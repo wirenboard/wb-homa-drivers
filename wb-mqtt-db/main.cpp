@@ -23,7 +23,7 @@ void sig_handler(int signal)
 /* For debugging reasons */
 ostream& operator<<(ostream &str, const TLoggingGroup &group)
 {
-    str << "> Group " << group.Id << " (" << group.IntId << ")" << endl;
+    str << "> Group " << group.Id << endl;
     str << ">\tChannels: ";
 
     for (const TLoggingChannel &ch: group.Channels) {
@@ -111,8 +111,6 @@ int main (int argc, char *argv[])
 
     config.DBFile = root["database"].asString();
 
-    auto now = steady_clock::now();
-
     for (const auto& group_item : root["groups"]) {
 
         TLoggingGroup group;
@@ -171,11 +169,11 @@ int main (int argc, char *argv[])
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
 
+
     steady_clock::time_point next_call = steady_clock::now();
 
     while (running) {
         /* process MQTT events */
-        // TODO: dynamic timeout according to next write operation
         rc = mqtt_db_logger->loop(duration_cast<milliseconds>(next_call - steady_clock::now()).count());
 
         if (rc != 0) 

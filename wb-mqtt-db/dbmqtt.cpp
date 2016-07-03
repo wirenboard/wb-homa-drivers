@@ -18,21 +18,17 @@ bool TMQTTDBLogger::UpdateAccumulator(int channel_id, const string &payload)
     
     ChannelDataCache[channel_id].Accumulated = true;
     auto& accum = ChannelDataCache[channel_id].Accumulator;
-    int& num_values = get<0>(accum);
-    double& sum = get<1>(accum);
-    double& min = get<2>(accum);
-    double& max = get<3>(accum);
 
-    num_values++;
+    accum.ValueCount++;
 
-    if (num_values == 1) {
-        min = max = sum = value;
+    if (accum.ValueCount == 1) {
+        accum.Min = accum.Max = accum.Sum = value;
     } else {
-        if (min > value)
-            min = value;
-        if (max < value)
-            max = value;
-        sum += value;
+        if (accum.Min > value)
+            accum.Min = value;
+        if (accum.Max < value)
+            accum.Max = value;
+        accum.Sum += value;
     }
     
     return true;
