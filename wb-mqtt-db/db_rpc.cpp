@@ -12,6 +12,8 @@ int TMQTTDBLogger::GetOrCreateChannelId(const TChannelName & channel)
         return it->second;
     } else {
 
+        VLOG(1) << "Creating channel " << channel;
+
         static SQLite::Statement query(*DB, "INSERT INTO channels (device, control) VALUES (?, ?) ");
 
         query.reset();
@@ -22,6 +24,9 @@ int TMQTTDBLogger::GetOrCreateChannelId(const TChannelName & channel)
 
         int channel_id = DB->getLastInsertRowid();
         ChannelIds[channel] = channel_id;
+
+        ChannelDataCache[channel_id].Name = channel;
+
         return channel_id;
     }
 }
@@ -32,6 +37,8 @@ int TMQTTDBLogger::GetOrCreateDeviceId(const string& device)
     if (it != DeviceIds.end()) {
         return it->second;
     } else {
+
+        VLOG(1) << "Creating device " << device;
 
         static SQLite::Statement query(*DB, "INSERT INTO devices (device) VALUES (?) ");
 

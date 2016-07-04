@@ -150,6 +150,7 @@ void TMQTTDBLogger::InitGroupIds()
             group.IntId = DB->getLastInsertRowid();
         }
 
+        group.ChannelIds.clear(); // FIXME
         group.LastSaved = now;
         group.LastUSaved = now;
     }
@@ -176,6 +177,8 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
     switch (prev_version) {
     case 0:
         // Begin transaction
+
+        LOG(INFO) << "Convert database from version 0";
 
         DB->exec("ALTER TABLE data RENAME TO tmp");
 
@@ -212,6 +215,8 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
     case 1:
         // In versions >= 2, there is a difference in 'data' table:
         // add data.max, data.min columns
+        
+        LOG(INFO) << "Convert database from version 1";
 
         DB->exec("ALTER TABLE data ADD COLUMN max VARCHAR(255)");
         DB->exec("ALTER TABLE data ADD COLUMN min VARCHAR(255)");
@@ -237,17 +242,17 @@ void TMQTTDBLogger::InitDB()
 
     if (!DB->tableExists("data")) {
         // new DB file created
-        // LOG(INFO) << "Creating tables";
+        LOG(INFO) << "Creating tables";
         CreateTables();
     } else {
         int file_db_version = ReadDBVersion();
         if (file_db_version > DBVersion) {
             throw TBaseException("Database file is created by newer version of wb-mqtt-db");
         } else if (file_db_version < DBVersion) {
-            // LOG(WARNING) << "Old database format found, trying to update...";
+            LOG(WARNING) << "Old database format found, trying to update...";
             UpdateDB(file_db_version);
         } else {
-            // LOG(INFO) << "Creating tables if necessary";
+            LOG(INFO) << "Creating tables if necessary";
             CreateTables();
         }
     }

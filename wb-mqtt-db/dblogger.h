@@ -30,6 +30,8 @@ struct TChannelName
 
 };
 
+std::ostream& operator<<(std::ostream& out, const struct TChannelName &name);
+
 struct TChannel
 {
     TChannelName Name;
@@ -54,6 +56,13 @@ struct TChannel
 
     bool Changed;
     bool Accumulated;
+
+    // TChannel(const TChannelName& _name)
+        // : Name(_name)
+        // , LastProcessed(std::chrono::steady_clock::now())
+        // , RowCount(0)
+        // , Changed(false)
+    // {}
 };
 
 struct TLoggingGroup

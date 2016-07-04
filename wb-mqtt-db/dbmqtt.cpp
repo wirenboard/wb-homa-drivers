@@ -99,6 +99,8 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             tie(channel_int_id, std::ignore) = GetOrCreateIds(topic);
             auto& channel_data = ChannelDataCache[channel_int_id];
 
+            DVLOG(3) << "Channel ID for topic " << topic << " is " << channel_int_id;
+
             if (payload != channel_data.LastValue) {
                 channel_data.Changed = true;
             }

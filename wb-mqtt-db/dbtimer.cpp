@@ -49,12 +49,14 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
 
                     VLOG(1) << "Start bulk transaction";
                 }
+                
+                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id;
+                DVLOG(3) << "Selected channel ID is " << channel_id;
 
                 WriteChannel(channel_data, group);
 
                 process_changed = channel_data.Changed;
                 
-                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id;
             }
 
         }
@@ -91,6 +93,8 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
     int channel_int_id, device_int_id;
 
     tie(channel_int_id, device_int_id) = GetOrCreateIds(channel_data.Name);
+
+    DVLOG(3) << "Resulting channel ID for this request is " << channel_int_id;
 
     static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id, min, max) VALUES (?, ?, ?, ?, ?, ?)");
 
