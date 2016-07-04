@@ -201,6 +201,8 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
                   "LEFT JOIN groups ON tmp.group_id = groups.group_id ");
 
         DB->exec("DROP TABLE tmp");
+        
+        DB->exec("UPDATE variables SET value=\"1\" WHERE name=\"db_version\"");
 
         transaction.commit();
 
@@ -216,6 +218,8 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
 
         DB->exec("UPDATE data SET max = value");
         DB->exec("UPDATE data SET min = value");
+
+        DB->exec("UPDATE variables SET value=\"2\" WHERE name=\"db_version\"");
 
         transaction.commit();
 
