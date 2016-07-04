@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "Postinst for $2 action $1"
-
 case "$1" in
 install|upgrade|configure)
     if dpkg --compare-versions "$2" le "1.5"; then
