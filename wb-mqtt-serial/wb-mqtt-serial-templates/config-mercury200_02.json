@@ -14,7 +14,7 @@
         "scale": 0.001
       },
       {
-        "name": "Instant Voltage",
+        "name": "U",
         "reg_type": "param",
         "address": "0x0063",
         "format": "u32",
@@ -22,7 +22,7 @@
         "scale": 0.1
       },
       {
-        "name": "Instant Current",
+        "name": "I",
         "reg_type": "param",
         "address": "0x0163",
         "format": "u32",
@@ -30,7 +30,7 @@
         "scale": 0.01
       },
       {
-        "name": "Instant Power",
+        "name": "P",
         "reg_type": "param",
         "address": "0x0263",
         "format": "u32",

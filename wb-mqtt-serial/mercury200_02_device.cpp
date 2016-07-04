@@ -2,9 +2,9 @@
 #include "mercury200_02_device.h"
 #include "crc16.h"
 
-REGISTER_PROTOCOL("mercury230", TMercury20002Device, TRegisterTypes({
+REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes({
             { TMercury20002Device::REG_VALUE_ARRAY, "array", "power_consumption", U32, true },
-            { TMercury20002Device::REG_PARAM, "param", "value", U24, true }
+            { TMercury20002Device::REG_PARAM, "param", "value", U32, true }
         }));
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractSerialPort port)
@@ -12,27 +12,8 @@ TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractS
 
 bool TMercury20002Device::ConnectionSetup(uint8_t slave)
 {
-#if 0
-    uint8_t setupCmd[7] = {
-        uint8_t(DeviceConfig()->AccessLevel), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
-    };
-
-    std::vector<uint8_t> password = DeviceConfig()->Password;
-    if (password.size()) {
-        if (password.size() != 6)
-            throw TSerialDeviceException("invalid password size (6 bytes expected)");
-        std::copy(password.begin(), password.end(), setupCmd + 1);
-    }
-
-    uint8_t buf[1];
-    WriteCommand(slave, 0x01, setupCmd, 7);
-    try {
-        return ReadResponse(slave, 0x00, buf, 0);
-    } catch (TSerialDeviceTransientErrorException&) {
-            // retry upon response from a wrong slave
-        return false;
-    }
-#endif
+    // there is nothing needed to be done in this method
+    return true;
 }
 
 TEMDevice::ErrorType TMercury20002Device::CheckForException(uint8_t* frame, int len, const char** message)
@@ -62,12 +43,12 @@ TEMDevice::ErrorType TMercury20002Device::CheckForException(uint8_t* frame, int 
     return TEMDevice::OTHER_ERROR;
 }
 
-const TMercury20002Device::TValueArray& TMercury20002Device::ReadValueArray(uint32_t slave, uint32_t address)
+const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadValueArray(uint32_t slave, uint32_t address)
 {
-    int key = (address >> 4) | (slave << 24);
-    auto it = CachedValues.find(key);
-    if (it != CachedValues.end())
+    auto it = EnergyCache.find(slave);
+    if (it != EnergyCache.end()) {
         return it->second;
+    }
 
     uint8_t cmdBuf[2];
     cmdBuf[0] = (address >> 4) & 0xff; // high nibble = array number, lower nibble = month
@@ -113,8 +94,6 @@ uint64_t TMercury20002Device::ReadRegister(PRegister reg)
 
 void TMercury20002Device::EndPollCycle()
 {
-    CachedValues.clear();
+    EnergyCache.clear();
+    ParamCache.clear();
 }
-
-// TBD: custom password?
-// TBD: settings in uniel template: 9600 8N1, timeout ms = 1000
