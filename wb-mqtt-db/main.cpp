@@ -40,6 +40,71 @@ ostream& operator<<(ostream &str, const TLoggingGroup &group)
     return str;
 }
 
+TMQTTDBLoggerConfig ParseConfigFile(Json::Value &root)
+{
+    TMQTTDBLoggerConfig config;
+
+    if (!root.isMember("database")) {
+        throw TBaseException("database location should be specified in config");
+    }
+
+    config.DBFile = root["database"].asString();
+
+    for (const auto& group_item : root["groups"]) {
+
+        TLoggingGroup group;
+
+        if (!group_item.isMember("name")) {
+            throw TBaseException("no name specified for group");
+        }
+        group.Id = group_item["name"].asString();
+
+        if (!group_item.isMember("channels")) {
+            throw TBaseException("no channels specified for group");
+        }
+
+        for (const auto & channel_item : group_item["channels"]) {
+            // convert channel format from d/c to /devices/d/controls/c
+            auto name_split = StringSplit(channel_item.asString(), '/');
+            TLoggingChannel channel = { "/devices/" + name_split[0] + "/controls/" + name_split[1] };
+            group.Channels.push_back(channel);
+        }
+
+        if (group_item.isMember("values")) {
+            if (group_item["values"].asInt() < 0) {
+                throw TBaseException("'values' must be positive or zero");
+            }
+            group.Values = group_item["values"].asInt();
+        }
+
+        if (group_item.isMember("values_total")) {
+            if (group_item["values_total"].asInt() < 0) {
+                throw TBaseException("'values_total' must be positive or zero");
+            }
+            group.ValuesTotal = group_item["values_total"].asInt();
+        }
+
+        if (group_item.isMember("min_interval")) {
+            if (group_item["min_interval"].asInt() < 0) {
+                throw TBaseException("'min_interval' must be positive or zero");
+            }
+            group.MinInterval = group_item["min_interval"].asInt();
+        }
+
+        if (group_item.isMember("min_unchanged_interval")) {
+            if (group_item["min_unchanged_interval"].asInt() < 0)
+                throw TBaseException("'min_unchanged_interval' must be positive or zero");
+            group.MinUnchangedInterval = group_item["min_unchanged_interval"].asInt();
+        }
+
+        config.Groups.push_back(group);
+
+        VLOG(1) << group;
+    }
+
+    return config;
+}
+
 int main (int argc, char *argv[])
 {
     int rc;
@@ -49,7 +114,6 @@ int main (int argc, char *argv[])
     string config_fname;
     int c;
     int verbose_level = -1;
-
 
     while ((c = getopt(argc, argv, "hp:H:c:T:v")) != -1) {
         switch (c) {
@@ -114,71 +178,32 @@ int main (int argc, char *argv[])
 
     if (not parsedSuccess)
     {
-        LOG(FATAL) << "Failed to parse JSON" << endl
+        LOG(ERROR) << "Failed to parse JSON" << endl
                    << reader.getFormatedErrorMessages();
 
-        // return 1; // glog terminates program after LOG(FATAL)
+        return 1;
     }
 
-    if (!root.isMember("database")) {
-        throw TBaseException("database location should be specified in config");
+    try {
+        config = ParseConfigFile(root);
+    } catch (TBaseException &e) {
+        LOG(ERROR) << "Failed to parse config file: " << e.what();
+
+        return 1;
     }
 
-    config.DBFile = root["database"].asString();
-
-    for (const auto& group_item : root["groups"]) {
-
-        TLoggingGroup group;
-
-        if (!group_item.isMember("name")) {
-            throw TBaseException("no name specified for group");
-        }
-        group.Id = group_item["name"].asString();
-
-        if (!group_item.isMember("channels")) {
-            throw TBaseException("no channels specified for group");
-        }
-
-        for (const auto & channel_item : group_item["channels"]) {
-            // convert channel format from d/c to /devices/d/controls/c
-            auto name_split = StringSplit(channel_item.asString(), '/');
-            TLoggingChannel channel = { "/devices/" + name_split[0] + "/controls/" + name_split[1] };
-            group.Channels.push_back(channel);
-        }
-
-        if (group_item.isMember("values")) {
-            if (group_item["values"].asInt() < 0)
-                throw TBaseException("'values' must be positive or zero");
-            group.Values = group_item["values"].asInt();
-        }
-
-        if (group_item.isMember("values_total")) {
-            if (group_item["values_total"].asInt() < 0)
-                throw TBaseException("'values_total' must be positive or zero");
-            group.ValuesTotal = group_item["values_total"].asInt();
-        }
-
-        if (group_item.isMember("min_interval")) {
-            if (group_item["min_interval"].asInt() < 0)
-                throw TBaseException("'min_interval' must be positive or zero");
-            group.MinInterval = group_item["min_interval"].asInt();
-        }
-
-        if (group_item.isMember("min_unchanged_interval")) {
-            if (group_item["min_unchanged_interval"].asInt() < 0)
-                throw TBaseException("'min_unchanged_interval' must be positive or zero");
-            group.MinUnchangedInterval = group_item["min_unchanged_interval"].asInt();
-        }
-        
-        config.Groups.push_back(group);
-
-        VLOG(1) << group;
-    }
 
     mosqpp::lib_init();
     std::shared_ptr<TMQTTDBLogger> mqtt_db_logger(new TMQTTDBLogger(mqtt_config, config));
-    mqtt_db_logger->Init();
-    mqtt_db_logger->Init2();
+
+    try {
+        mqtt_db_logger->Init();
+        mqtt_db_logger->Init2();
+    } catch (TBaseException &e) {
+        LOG(ERROR) << "Failed to init logger: " << e.what();
+
+        return 2;
+    }
 
     /* init SIGINT and SIGTERM handler to exit gracefully */
     signal(SIGINT, sig_handler);
