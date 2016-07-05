@@ -14,8 +14,8 @@ class TMercury20002Device: public TEMDevice {
 public:
     static const int DefaultTimeoutMs = 1000;
     enum RegisterType {
-        REG_VALUE_ARRAY = 0,
-        REG_PARAM = 1
+        REG_ENERGY_VALUE = 0,
+        REG_PARAM_VALUE = 1
     };
 
     TMercury20002Device(PDeviceConfig, PAbstractSerialPort port);
@@ -30,12 +30,13 @@ private:
     struct TEnergyValues {
         uint32_t values[4];
     };
-    const TEnergyValues& ReadValueArray(uint32_t slave, uint32_t address);
-    uint32_t ReadParam(uint32_t slave, uint32_t address);
+    const TEnergyValues& ReadEnergyValues(uint32_t slave, uint32_t address);
 
     struct TParamValues {
         uint32_t values[3];
     };
+    const TParamValues& ReadParamValues(uint32_t slave, uint32_t address);
+
     std::unordered_map<uint32_t, TEnergyValues> EnergyCache;
     std::unordered_map<uint32_t, TParamValues> ParamCache;
 };

@@ -6,9 +6,33 @@
     "protocol": "mercury200",
     "channels": [
       {
-        "name": "Total reactive energy",
-        "reg_type": "array",
-        "address": "0x0027",
+        "name": "RET1",
+        "reg_type": "enegry",
+        "address": "0x00",
+        "format": "u32",
+        "type": "power_consumption",
+        "scale": 0.001
+      },
+      {
+        "name": "RET2",
+        "reg_type": "enegry",
+        "address": "0x01",
+        "format": "u32",
+        "type": "power_consumption",
+        "scale": 0.001
+      },
+      {
+        "name": "RET3",
+        "reg_type": "enegry",
+        "address": "0x02",
+        "format": "u32",
+        "type": "power_consumption",
+        "scale": 0.001
+      },
+      {
+        "name": "RET4",
+        "reg_type": "enegry",
+        "address": "0x03",
         "format": "u32",
         "type": "power_consumption",
         "scale": 0.001
@@ -16,7 +40,7 @@
       {
         "name": "U",
         "reg_type": "param",
-        "address": "0x0063",
+        "address": "0x00",
         "format": "u32",
         "type": "voltage",
         "scale": 0.1
@@ -24,7 +48,7 @@
       {
         "name": "I",
         "reg_type": "param",
-        "address": "0x0163",
+        "address": "0x01",
         "format": "u32",
         "type": "value",
         "scale": 0.01
@@ -32,7 +56,7 @@
       {
         "name": "P",
         "reg_type": "param",
-        "address": "0x0263",
+        "address": "0x02",
         "format": "u32",
         "type": "power",
         "scale": 1.0

@@ -3,8 +3,8 @@
 #include "crc16.h"
 
 REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes({
-            { TMercury20002Device::REG_VALUE_ARRAY, "array", "power_consumption", U32, true },
-            { TMercury20002Device::REG_PARAM, "param", "value", U32, true }
+            { TMercury20002Device::REG_ENERGY_VALUE, "enegry", "power_consumption", U32, true },
+            { TMercury20002Device::REG_PARAM_VALUE, "param", "value", U32, true }
         }));
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractSerialPort port)
@@ -43,19 +43,23 @@ TEMDevice::ErrorType TMercury20002Device::CheckForException(uint8_t* frame, int 
     return TEMDevice::OTHER_ERROR;
 }
 
-const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadValueArray(uint32_t slave, uint32_t address)
+const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave, uint32_t address)
 {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
         return it->second;
     }
 
-    uint8_t cmdBuf[2];
-    cmdBuf[0] = (address >> 4) & 0xff; // high nibble = array number, lower nibble = month
-    cmdBuf[1] = (address >> 12) & 0x0f; // tariff
+    // durty hack
+    uint8_t cmdBuf[3] = { 0x00, 0x00, 0x00 };
+    uint8_t actualSlave = 0x00U;
+    uint8_t acutalCmd = (slave >> 16) & 0xffU;
+    cmdBuf[0] = (slave >> 8) & 0xffU;
+    cmdBuf[1] = slave & 0xffU;
+    cmdBuf[2] = 0x26U;
     uint8_t buf[MAX_LEN], *p = buf;
-    TValueArray a;
-    Talk(slave, 0x05, cmdBuf, 2, -1, buf, 16);
+    Talk(actualSlave, acutalCmd, cmdBuf, 3, -1, buf, 16);
+    TEnergyValues a;
     for (int i = 0; i < 4; i++, p += 4) {
         a.values[i] = ((uint32_t)p[1] << 24) +
                       ((uint32_t)p[0] << 16) +
@@ -63,32 +67,43 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadValueArray(ui
                        (uint32_t)p[2];
     }
 
-    return CachedValues.insert(std::make_pair(key, a)).first->second;
+    return EnergyCache.insert(std::make_pair(key, a)).first->second;
 }
 
-uint32_t TMercury20002Device::ReadParam(uint32_t slave, uint32_t address)
+const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave, uint32_t address)
 {
-    uint8_t cmdBuf[2];
-    cmdBuf[0] = (address >> 8) & 0xff; // param
-    cmdBuf[1] = address & 0xff; // subparam (BWRI)
-    uint8_t subparam = (address & 0xff) >> 4;
-    bool isPowerOrPowerCoef = subparam == 0x00 || subparam == 0x03;
-    uint8_t buf[3];
-    Talk(slave, 0x08, cmdBuf, 2, -1, buf, 3);
-    return (((uint32_t)buf[0] & (isPowerOrPowerCoef ? 0x3f : 0xff)) << 16) +
-            ((uint32_t)buf[2] << 8) +
-             (uint32_t)buf[1];
+    auto it = ParamCache.find(slave);
+    if(it != ParamCache.end()) {
+        return it->second;
+    }
+
+    // durty hack
+    uint8_t cmdBuf[3] = { 0x00, 0x00, 0x00 };
+    uint8_t actualSlave = 0x00U;
+    uint8_t acutalCmd = (slave >> 16) & 0xffU;
+    cmdBuf[0] = (slave >> 8) & 0xffU;
+    cmdBuf[1] = slave & 0xffU;
+    cmdBuf[2] = 0x63U;
+    uint8_t buf[MAX_LEN], *p = buf;
+    Talk(slave, 0x08, cmdBuf, 3, -1, buf, 7);
+    TParamValues a;
+    a.values[0] = ((uint32_t)buf[0] >> 8) + (uint32_t)buf[1];
+    a.values[1] = ((uint32_t)buf[2] >> 8) + (uint32_t)buf[3];
+    a.values[2] = ((uint32_t)p[5] << 16) +
+                  ((uint32_t)p[4] << 8 ) +
+                   (uint32_t)p[6];
+    return ParamCache.insert(std::make_pair(key, a)).first->second;
 }
 
 uint64_t TMercury20002Device::ReadRegister(PRegister reg)
 {
     switch (reg->Type) {
-    case REG_VALUE_ARRAY:
-        return ReadValueArray(reg->Slave->Id, reg->Address).values[reg->Address & 0x03];
-    case REG_PARAM:
-        return ReadParam(reg->Slave->Id, reg->Address & 0xffff);
+    case REG_ENERGY_VALUE:
+        return ReadEnergyValues(reg->Slave->Id, reg->Address).values[reg->Address & 0x03];
+    case REG_PARAM_VALUE:
+        return ReadParamValues(reg->Slave->Id, reg->Address).values[reg->Address & 0x03];
     default:
-        throw TSerialDeviceException("mercury230: invalid register type");
+        throw TSerialDeviceException("mercury200.02: invalid register type");
     }
 }
 
