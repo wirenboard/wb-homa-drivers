@@ -1,3 +1,11 @@
+wb-mqtt-db (1.6) stable; urgency=medium
+
+  * new configuration file format
+  * bulk transactions to optimize database access
+  * logging using gLog library
+
+ -- Nikita Maslov <n.maslov@contactless.ru>  Tue, 05 Jul 2016 13:21:31 +0300
+
 wb-mqtt-db (1.5) stable; urgency=medium
 
   * change get_channel output format from array to map
