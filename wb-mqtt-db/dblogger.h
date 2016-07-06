@@ -39,10 +39,10 @@ struct TChannel
     std::string LastValue;
 
     struct {
-        int ValueCount;
-        double Sum;
-        double Min;
-        double Max;
+        int ValueCount = 0;
+        double Sum = 0.0;
+        double Min = 0.0;
+        double Max = 0.0;
 
         void Reset() {
             ValueCount = 0;
@@ -54,15 +54,9 @@ struct TChannel
 
     int RowCount;
 
-    bool Changed;
-    bool Accumulated;
-
-    // TChannel(const TChannelName& _name)
-        // : Name(_name)
-        // , LastProcessed(std::chrono::steady_clock::now())
-        // , RowCount(0)
-        // , Changed(false)
-    // {}
+    bool Changed = false;
+    bool Accumulated = false;
+    bool Retained = false;
 };
 
 struct TLoggingGroup
@@ -88,6 +82,8 @@ struct TMQTTDBLoggerConfig
 {
     std::vector<TLoggingGroup> Groups;
     std::string DBFile;
+
+    bool Debug;
 };
 
 class TMQTTDBLogger: public TMQTTWrapper

@@ -49,6 +49,7 @@ TMQTTDBLoggerConfig ParseConfigFile(Json::Value &root)
     }
 
     config.DBFile = root["database"].asString();
+    config.Debug = root["debug"].asBool();
 
     for (const auto& group_item : root["groups"]) {
 
@@ -190,6 +191,11 @@ int main (int argc, char *argv[])
         LOG(ERROR) << "Failed to parse config file: " << e.what();
 
         return 1;
+    }
+
+    // Enable huge debug logging if required
+    if (config.Debug) {
+        FLAGS_v = 3;
     }
 
 

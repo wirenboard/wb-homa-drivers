@@ -121,9 +121,11 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     string get_values_query_str;
 
     if (min_interval_ms > 0)
-        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, min, max  FROM data INDEXED BY data_topic_timestamp WHERE ";
+        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, min, max, \
+                                retained  FROM data INDEXED BY data_topic_timestamp WHERE ";
     else
-        get_values_query_str = "SELECT uid, device, channel, value, (timestamp - 2440587.5)*86400.0, min, max  FROM data INDEXED BY data_topic_timestamp WHERE ";
+        get_values_query_str = "SELECT uid, device, channel, value, (timestamp - 2440587.5)*86400.0, min, max, \
+                                retained FROM data INDEXED BY data_topic_timestamp WHERE ";
 
     if (!params["channels"].empty()) {
         get_values_query_str += "channel IN ( ";
@@ -211,6 +213,11 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         row[(req_ver == 1) ? "t" : "timestamp"] = static_cast<double>(get_values_query.getColumn(4));
         result["values"].append(row);
         row_count += 1;
+
+        // add retained flag if it is set
+        if (static_cast<int>(get_values_query.getColumn(7)) > 0) {
+            row["retained"] = true;
+        }
     }
 
 

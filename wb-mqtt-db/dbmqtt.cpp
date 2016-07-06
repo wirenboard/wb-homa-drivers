@@ -72,10 +72,6 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
     if (!message->payload)
         return;
 
-    // retained messages received on startup are ignored
-    // if (message->retain)
-        // return;
-
     string topic = message->topic;
     string payload = static_cast<const char*>(message->payload);
 
@@ -109,6 +105,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             UpdateAccumulator(channel_int_id, payload);
             channel_data.LastValue = payload;
             channel_data.LastProcessed = steady_clock::now();
+            channel_data.Retained = message->retain;
 
             group.ChannelIds.insert(channel_int_id);
 

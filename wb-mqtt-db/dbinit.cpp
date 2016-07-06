@@ -97,10 +97,6 @@ void TMQTTDBLogger::InitCaches()
 
         channel_data.LastProcessed = current_tp;
         channel_data.LastValue = static_cast<const char *>(last_value_query.getColumn(2));
-
-        channel_data.Accumulator.Reset();
-        channel_data.Accumulated = false;
-        channel_data.Changed = false;
     }
 }
 
@@ -220,9 +216,11 @@ void TMQTTDBLogger::UpdateDB(int prev_version)
 
         DB->exec("ALTER TABLE data ADD COLUMN max VARCHAR(255)");
         DB->exec("ALTER TABLE data ADD COLUMN min VARCHAR(255)");
+        DB->exec("ALTER TABLE data ADD COLUMN retained INTEGER");
 
         DB->exec("UPDATE data SET max = value");
         DB->exec("UPDATE data SET min = value");
+        DB->exec("UPDATE data SET retained = 0");
 
         DB->exec("UPDATE variables SET value=\"2\" WHERE name=\"db_version\"");
 

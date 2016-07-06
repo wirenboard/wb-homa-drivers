@@ -96,7 +96,8 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
 
     DVLOG(3) << "Resulting channel ID for this request is " << channel_int_id;
 
-    static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id, min, max) VALUES (?, ?, ?, ?, ?, ?)");
+    static SQLite::Statement insert_row_query(*DB, "INSERT INTO data (device, channel, value, group_id, min, max, \
+                                                    retained) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
     insert_row_query.reset();
     insert_row_query.bind(1, device_int_id);
@@ -116,6 +117,8 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
     } else {
         insert_row_query.bind(3, channel_data.LastValue); // avg == value
     }
+
+    insert_row_query.bind(7, channel_data.Retained ? 1 : 0);
 
     insert_row_query.exec();
     
