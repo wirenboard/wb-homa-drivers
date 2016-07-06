@@ -209,15 +209,16 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         } else {
             row[(req_ver == 1) ? "v" : "value"] = get_values_query.getColumn(3).getText();
         }
+        
+        // add retained flag if it is set
+        if (req_ver == 1 && static_cast<int>(get_values_query.getColumn(7)) > 0) {
+            row["retained"] = true;
+        }
 
         row[(req_ver == 1) ? "t" : "timestamp"] = static_cast<double>(get_values_query.getColumn(4));
         result["values"].append(row);
         row_count += 1;
 
-        // add retained flag if it is set
-        if (static_cast<int>(get_values_query.getColumn(7)) > 0) {
-            row["retained"] = true;
-        }
     }
 
 
