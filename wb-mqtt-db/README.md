@@ -18,22 +18,24 @@ root@wirenboard:~# cat /etc/wb-mqtt-db.conf
 
 ```
 {
-	"groups": {
-    	"w1": {
-        	"channels" : ["/devices/kvadro-1wire_69/controls/+", "/devices/wb-w1/controls/+"],
+	"groups": [
+    	{
+            "name": "w1",
+        	"channels" : ["kvadro-1wire_69/+", "wb-w1/+"],
         	"values" : 10000,
         	"values_total" : 100000,
-        	"min_interval" : 20,
-        	"min_unchanged_interval" : 600
+        	"min_interval" : 5000,
+        	"min_unchanged_interval" : 360000
     	}
-	},
-	"database" : "/var/lib/wirenboard/db/data.db"
+	],
+	"database" : "/var/lib/wirenboard/db/data.db",
+    "debug": false
 }
 ```
 
 
 
-300 - сохранять не чаще, чем раз в пять минут, 3600 - сохранять опорные значения раз в час.
+5000 - сохранять не чаще, чем раз в пять секунд, 360000 - сохранять опорные значения раз в час.
 
 
 Логи и подробный вывод
