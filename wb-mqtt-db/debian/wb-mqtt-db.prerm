@@ -1,0 +1,9 @@
+#!/bin/bash
+
+case "$1" in
+failed-upgrade)
+    if [ -f /etc/wb-mqtt-db.conf.old ]; then
+        echo "Restoring old configuration file..."
+        mv /etc/wb-mqtt-db.conf.old /etc/wb-mqtt-db.conf 
+    fi
+esac

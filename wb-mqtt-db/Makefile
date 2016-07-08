@@ -25,26 +25,23 @@ DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp
 SQLITECPP_OBJ := $(patsubst %.cpp,%.o,$(wildcard $(SQLITECPP_DIR)/*.cpp))
 
+OBJ=main.o dbinit.o dbmqtt.o db_rpc.o dbtimer.o
+DB_CONFCONVERT=wb-mqtt-db-confconvert
 
 .PHONY: all clean
 
 all : $(DB_BIN)
 
 
-$(DB_BIN): main.o $(SQLITECPP_OBJ)
+$(DB_BIN): $(OBJ) $(SQLITECPP_OBJ)
 	${CXX} $^ ${LDFLAGS} -o $@
 
-main.o: main.cpp
+%.o: %.cpp
 	${CXX} -c $< -o $@ ${CFLAGS};
-
-
-
 
 clean :
 	-rm -f *.o $(DB_BIN)
 	-rm -f $(SQLITECPP_DIR)/*.o
-
-
 
 install: all
 	install -d $(DESTDIR)
@@ -56,6 +53,7 @@ install: all
 	install -d $(DESTDIR)/usr/share/wb-mqtt-confed/schemas
 
 	install -m 0755  $(DB_BIN) $(DESTDIR)/usr/bin/$(DB_BIN)
+	install -m 0755  $(DB_CONFCONVERT) $(DESTDIR)/usr/bin/$(DB_CONFCONVERT)
 	install -m 0755  config.json $(DESTDIR)/etc/wb-mqtt-db.conf
 
 	install -m 0644  wb-mqtt-db.wbconfigs $(DESTDIR)/etc/wb-configs.d/16wb-mqtt-db

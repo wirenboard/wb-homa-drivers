@@ -1,0 +1,2 @@
+export GLOG_log_dir=/var/log/wirenboard
+export GLOG_logbuflevel=-1
