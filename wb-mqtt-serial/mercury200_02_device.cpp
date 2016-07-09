@@ -53,12 +53,12 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
     // durty hack
     uint8_t cmdBuf[3] = { 0x00, 0x00, 0x00 };
     uint8_t actualSlave = 0x00U;
-    uint8_t acutalCmd = (slave >> 16) & 0xffU;
+    uint8_t actualCmd = (slave >> 16) & 0xffU;
     cmdBuf[0] = (slave >> 8) & 0xffU;
     cmdBuf[1] = slave & 0xffU;
     cmdBuf[2] = 0x26U;
     uint8_t buf[MAX_LEN], *p = buf;
-    Talk(actualSlave, acutalCmd, cmdBuf, 3, -1, buf, 16);
+    Talk(actualSlave, actualCmd, cmdBuf, 3, -1, buf, 16);
     TEnergyValues a;
     for (int i = 0; i < 4; i++, p += 4) {
         a.values[i] = ((uint32_t)p[1] << 24) +
@@ -67,7 +67,7 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
                        (uint32_t)p[2];
     }
 
-    return EnergyCache.insert(std::make_pair(key, a)).first->second;
+    return EnergyCache.insert(std::make_pair(slave, a)).first->second;
 }
 
 const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave, uint32_t address)
@@ -80,19 +80,19 @@ const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(ui
     // durty hack
     uint8_t cmdBuf[3] = { 0x00, 0x00, 0x00 };
     uint8_t actualSlave = 0x00U;
-    uint8_t acutalCmd = (slave >> 16) & 0xffU;
+    uint8_t actualCmd = (slave >> 16) & 0xffU;
     cmdBuf[0] = (slave >> 8) & 0xffU;
     cmdBuf[1] = slave & 0xffU;
     cmdBuf[2] = 0x63U;
     uint8_t buf[MAX_LEN], *p = buf;
-    Talk(slave, 0x08, cmdBuf, 3, -1, buf, 7);
+    Talk(actualSlave, actualCmd, cmdBuf, 3, -1, buf, 7);
     TParamValues a;
     a.values[0] = ((uint32_t)buf[0] >> 8) + (uint32_t)buf[1];
     a.values[1] = ((uint32_t)buf[2] >> 8) + (uint32_t)buf[3];
     a.values[2] = ((uint32_t)p[5] << 16) +
                   ((uint32_t)p[4] << 8 ) +
                    (uint32_t)p[6];
-    return ParamCache.insert(std::make_pair(key, a)).first->second;
+    return ParamCache.insert(std::make_pair(slave, a)).first->second;
 }
 
 uint64_t TMercury20002Device::ReadRegister(PRegister reg)
