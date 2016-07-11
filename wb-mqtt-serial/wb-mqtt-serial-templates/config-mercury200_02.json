@@ -7,7 +7,7 @@
     "channels": [
       {
         "name": "RET1",
-        "reg_type": "enegry",
+        "reg_type": "energy",
         "address": "0x00",
         "format": "u32",
         "type": "power_consumption",
@@ -15,7 +15,7 @@
       },
       {
         "name": "RET2",
-        "reg_type": "enegry",
+        "reg_type": "energy",
         "address": "0x01",
         "format": "u32",
         "type": "power_consumption",
@@ -23,7 +23,7 @@
       },
       {
         "name": "RET3",
-        "reg_type": "enegry",
+        "reg_type": "energy",
         "address": "0x02",
         "format": "u32",
         "type": "power_consumption",
@@ -31,7 +31,7 @@
       },
       {
         "name": "RET4",
-        "reg_type": "enegry",
+        "reg_type": "energy",
         "address": "0x03",
         "format": "u32",
         "type": "power_consumption",

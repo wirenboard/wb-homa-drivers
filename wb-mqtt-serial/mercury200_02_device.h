@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <cstdint>
 
-#include "em_device.h"
+#include "serial_device.h"
 
-class TMercury20002Device: public TEMDevice {
+class TMercury20002Device: public TSerialDevice {
 public:
     static const int DefaultTimeoutMs = 1000;
     enum RegisterType {
@@ -19,12 +19,13 @@ public:
     };
 
     TMercury20002Device(PDeviceConfig, PAbstractSerialPort port);
-    uint64_t ReadRegister(PRegister reg);
+    virtual uint64_t ReadRegister(PRegister reg);
+    virtual void WriteRegister(PRegister reg, uint64_t value);
     virtual void EndPollCycle();
 
 protected:
-    virtual bool ConnectionSetup(uint8_t slave);
-    virtual ErrorType CheckForException(uint8_t* frame, int len, const char** message);
+    // virtual bool ConnectionSetup(uint8_t slave);
+    // virtual ErrorType CheckForException(uint8_t* frame, int len, const char** message);
 
 private:
     struct TEnergyValues {
@@ -36,7 +37,7 @@ private:
         uint32_t values[3];
     };
     const TParamValues& ReadParamValues(uint32_t slave, uint32_t address);
-
+    void Talk(uint8_t* cmd, uint8_t* response);
     std::unordered_map<uint32_t, TEnergyValues> EnergyCache;
     std::unordered_map<uint32_t, TParamValues> ParamCache;
 };
