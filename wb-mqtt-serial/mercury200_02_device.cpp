@@ -1,20 +1,26 @@
-#include <iostream>
+#include <arpa/inet.h>
 
-#include "serial_device.h"
-#include "serial_exc.h"
-#include "mercury200_02_device.h"
 #include "crc16.h"
+#include "serial_device.h"
+#include "mercury200_02_device.h"
 
 namespace {
-    const size_t MAX_LEN = 16;
+    const size_t MAX_RESPONSE_LEN = 16;
+    const size_t REQUEST_LEN = 7;
 }
-REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes({
-            { TMercury20002Device::REG_ENERGY_VALUE, "enegry", "power_consumption", U32, true },
+
+REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
+        {
+            { TMercury20002Device::REG_ENERGY_VALUE, "energy", "power_consumption", U32, true },
             { TMercury20002Device::REG_PARAM_VALUE, "param", "value", U32, true }
         }));
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractSerialPort port)
-    : TSerialDevice(device_config, port) {}
+        : TSerialDevice(device_config, port)
+{ }
+
+TMercury20002Device::~TMercury20002Device()
+{ }
 
 // bool TMercury20002Device::ConnectionSetup(uint8_t slave)
 // {
@@ -49,7 +55,7 @@ TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractS
 //     return TEMDevice::OTHER_ERROR;
 // }
 
-const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave, uint32_t address)
+const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(uint32_t slave, uint32_t address)
 {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
@@ -62,23 +68,23 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
     cmdBuf[2] = static_cast<uint8_t>((slave >> 8) & 0xffU);
     cmdBuf[3] = static_cast<uint8_t>(slave & 0xffU);
     cmdBuf[4] = 0x26U;
-    uint8_t buf[MAX_LEN];
-    Talk(cmdBuf, buf);
+    uint8_t buf[MAX_RESPONSE_LEN];
+    SendRequest(0, 0, nullptr);
     TEnergyValues a;
-    uint8_t * p = buf;
+    uint8_t *p = buf;
     for (int i = 0; i < 4; i++, p += 4) {
-        a.values[i] = ((uint32_t)p[1] << 24) +
-                      ((uint32_t)p[0] << 16) +
-                      ((uint32_t)p[3] << 8 ) +
-                       (uint32_t)p[2];
+        a.values[i] = ((uint32_t) p[1] << 24) +
+                      ((uint32_t) p[0] << 16) +
+                      ((uint32_t) p[3] << 8) +
+                      (uint32_t) p[2];
     }
-    return EnergyCache.insert(std::make_pair(slave, a)).first->second;
+    return EnergyCache.insert({slave, a}).first->second;
 }
 
-const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave, uint32_t address)
+const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(uint32_t slave, uint32_t address)
 {
     auto it = ParamCache.find(slave);
-    if(it != ParamCache.end()) {
+    if (it != ParamCache.end()) {
         return it->second;
     }
 
@@ -88,16 +94,16 @@ const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(ui
     cmdBuf[2] = static_cast<uint8_t>((slave >> 8) & 0xffU);
     cmdBuf[3] = static_cast<uint8_t>(slave & 0xffU);
     cmdBuf[4] = 0x63U;
-    uint8_t buf[MAX_LEN];
-    Talk(cmdBuf, buf);
+    uint8_t buf[MAX_RESPONSE_LEN] = {0x00};
+    SendRequest(0, 0, nullptr);
     TParamValues a;
-    a.values[0] = ((uint32_t)buf[0] >> 8) + (uint32_t)(buf[1]);
-    a.values[1] = ((uint32_t)buf[2] >> 8) + (uint32_t)buf[3];
-    a.values[2] = ((uint32_t)buf[5] << 16) +
-                  ((uint32_t)buf[4] << 8 ) +
-                   (uint32_t)buf[6];
+    a.values[0] = ((uint32_t) buf[0] >> 8) + (uint32_t) (buf[1]);
+    a.values[1] = ((uint32_t) buf[2] >> 8) + (uint32_t) buf[3];
+    a.values[2] = ((uint32_t) buf[5] << 16) +
+                  ((uint32_t) buf[4] << 8) +
+                  ((uint32_t) buf[6]);
 
-    return ParamCache.insert(std::make_pair(slave, a)).first->second;
+    return ParamCache.insert({slave, a}).first->second;
 }
 
 uint64_t TMercury20002Device::ReadRegister(PRegister reg)
@@ -105,12 +111,12 @@ uint64_t TMercury20002Device::ReadRegister(PRegister reg)
     uint32_t slv = static_cast<uint32_t>(reg->Slave->Id);
     uint32_t adr = static_cast<uint32_t>(reg->Address);
     switch (reg->Type) {
-    case REG_ENERGY_VALUE:
-        return ReadEnergyValues(slv, adr).values[reg->Address & 0x03];
-    case REG_PARAM_VALUE:
-        return ReadParamValues(slv, adr).values[reg->Address & 0x03];
-    default:
-        throw TSerialDeviceException("mercury200.02: invalid register type");
+        case REG_ENERGY_VALUE:
+            return ReadEnergyValues(slv, adr).values[reg->Address & 0x03];
+        case REG_PARAM_VALUE:
+            return ReadParamValues(slv, adr).values[reg->Address & 0x03];
+        default:
+            throw TSerialDeviceException("mercury200.02: invalid register type");
     }
 }
 
@@ -126,8 +132,24 @@ void TMercury20002Device::EndPollCycle()
     TSerialDevice::EndPollCycle();
 }
 
-void TMercury20002Device::Talk(uint8_t *cmd, uint8_t* response)
+int TMercury20002Device::SendRequest(uint32_t slave, uint8_t cmd, uint8_t *response)
 {
+    uint8_t request[REQUEST_LEN];
+    FillCommand(request, slave, cmd);
+    // TODO: loop send-delay-read until answered
+    // TODO: check crc, slave id and command
+    // TODO: fill in the payload and return the size of payload
+}
 
+void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd)
+{
+    buf[0] = 0x00;
+    buf[1] = static_cast<uint8_t>(id >> 16);
+    buf[2] = static_cast<uint8_t>(id >> 8);
+    buf[3] = static_cast<uint8_t>(id);
+    buf[4] = cmd;
+    uint16_t crc = CRC16::CalculateCRC16(buf, 5);
+    buf[5] = static_cast<uint8_t>(crc >> 8);
+    buf[6] = static_cast<uint8_t>(crc);
 }
 
