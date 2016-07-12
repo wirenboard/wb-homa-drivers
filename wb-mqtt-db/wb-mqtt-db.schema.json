@@ -12,7 +12,7 @@
       "propertyOrder": 1
     },
     "groups" : {
-        "type" : "object",
+        "type" : "array",
         "title" : "Groups",
         "propertyOrder" : 2,
 

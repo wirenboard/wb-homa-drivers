@@ -39,6 +39,10 @@ SCRIPTNAME=/etc/init.d/$NAME
 # and status_of_proc is working.
 . /lib/lsb/init-functions
 
+if test -f /etc/default/$NAME; then
+    . /etc/default/$NAME
+fi
+
 #
 # Function that starts the daemon/service
 #
