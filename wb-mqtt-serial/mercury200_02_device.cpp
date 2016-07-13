@@ -1,12 +1,17 @@
-#include <arpa/inet.h>
+#include <cassert>
+#include <chrono>
 
 #include "crc16.h"
 #include "serial_device.h"
 #include "mercury200_02_device.h"
 
 namespace {
-    const size_t MAX_RESPONSE_LEN = 16;
+    const size_t RESPONSE_BUF_LEN = 100;
     const size_t REQUEST_LEN = 7;
+    const int PAUSE_US = 100000; // delay of 100 ms in microseconds
+    const int EXPECTED_ENERGY_SZ = 18;
+    const int EXPECTED_PARAMS_SZ = 9;
+    const ptrdiff_t HEADER_SZ = 6;
 }
 
 REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
@@ -15,112 +20,82 @@ REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
             { TMercury20002Device::REG_PARAM_VALUE, "param", "value", U32, true }
         }));
 
-TMercury20002Device::TMercury20002Device(PDeviceConfig device_config, PAbstractSerialPort port)
-        : TSerialDevice(device_config, port)
+const std::vector<char> TMercury20002Device::DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+
+TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port)
+        : TSerialDevice(config, port)
 { }
 
 TMercury20002Device::~TMercury20002Device()
 { }
 
-// bool TMercury20002Device::ConnectionSetup(uint8_t slave)
-// {
-//     // there is nothing needed to be done in this method
-//     return true;
-// }
-
-// TEMDevice::ErrorType TMercury20002Device::CheckForException(uint8_t* frame, int len, const char** message)
-// {
-//     *message = 0;
-//     if (len != 4 || (frame[1] & 0x0f) == 0)
-//         return TEMDevice::NO_ERROR;
-//     switch (frame[1] & 0x0f) {
-//     case 1:
-//         *message = "Invalid command or parameter";
-//         break;
-//     case 2:
-//         *message = "Internal meter error";
-//         break;
-//     case 3:
-//         *message = "Insufficient access level";
-//         break;
-//     case 4:
-//         *message = "Can't correct the clock more than once per day";
-//         break;
-//     case 5:
-//         *message = "Connection closed";
-//         return TEMDevice::NO_OPEN_SESSION;
-//     default:
-//         *message = "Unknown error";
-//     }
-//     return TEMDevice::OTHER_ERROR;
-// }
-
-const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(uint32_t slave, uint32_t address)
+const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave)
 {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
         return it->second;
     }
 
-    uint8_t cmdBuf[7];
-    cmdBuf[0] = 0x00U;
-    cmdBuf[1] = static_cast<uint8_t>((slave >> 16) & 0xffU);
-    cmdBuf[2] = static_cast<uint8_t>((slave >> 8) & 0xffU);
-    cmdBuf[3] = static_cast<uint8_t>(slave & 0xffU);
-    cmdBuf[4] = 0x26U;
-    uint8_t buf[MAX_RESPONSE_LEN];
-    SendRequest(0, 0, nullptr);
-    TEnergyValues a;
-    uint8_t *p = buf;
-    for (int i = 0; i < 4; i++, p += 4) {
-        a.values[i] = ((uint32_t) p[1] << 24) +
-                      ((uint32_t) p[0] << 16) +
-                      ((uint32_t) p[3] << 8) +
-                      (uint32_t) p[2];
+    uint8_t buf[RESPONSE_BUF_LEN];
+    auto readn = RequestResponse(slave, 0x27, buf);
+    if (readn < EXPECTED_ENERGY_SZ) {
+        throw TSerialDeviceTransientErrorException("read frame too short for 0x63 command response");
+    }
+    if (BadResponse(slave, 0x27, buf)) {
+        throw TSerialDeviceTransientErrorException("bad response header for 0x63 command");
+    }
+    if (CRCInvalid(buf, EXPECTED_ENERGY_SZ)) {
+        throw TSerialDeviceTransientErrorException("bad CRC for 0x27 command");
+    }
+    uint8_t* payload = buf + HEADER_SZ;
+    TEnergyValues a{{0, 0, 0, 0}};
+    for (int i = 0; i < 4; ++i) {
+        a.values[i] = DecodeBCD(payload + i * 4, 4);
     }
     return EnergyCache.insert({slave, a}).first->second;
 }
 
-const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(uint32_t slave, uint32_t address)
+const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave)
 {
     auto it = ParamCache.find(slave);
     if (it != ParamCache.end()) {
         return it->second;
     }
 
-    uint8_t cmdBuf[7];
-    cmdBuf[0] = 0x00U;
-    cmdBuf[1] = static_cast<uint8_t>((slave >> 16) & 0xffU);
-    cmdBuf[2] = static_cast<uint8_t>((slave >> 8) & 0xffU);
-    cmdBuf[3] = static_cast<uint8_t>(slave & 0xffU);
-    cmdBuf[4] = 0x63U;
-    uint8_t buf[MAX_RESPONSE_LEN] = {0x00};
-    SendRequest(0, 0, nullptr);
-    TParamValues a;
-    a.values[0] = ((uint32_t) buf[0] >> 8) + (uint32_t) (buf[1]);
-    a.values[1] = ((uint32_t) buf[2] >> 8) + (uint32_t) buf[3];
-    a.values[2] = ((uint32_t) buf[5] << 16) +
-                  ((uint32_t) buf[4] << 8) +
-                  ((uint32_t) buf[6]);
-
+    uint8_t buf[RESPONSE_BUF_LEN] = {0x00};
+    auto readn = RequestResponse(slave, 0x63, buf);
+    if (readn < EXPECTED_PARAMS_SZ) {
+        throw TSerialDeviceTransientErrorException("read frame too short for 0x63 command response");
+    }
+    if (BadResponse(slave, 0x63, buf)) {
+        throw TSerialDeviceTransientErrorException("bad response header for 0x63 command");
+    }
+    if (CRCInvalid(buf, EXPECTED_PARAMS_SZ)) {
+        throw TSerialDeviceTransientErrorException("bad CRC for 0x63 command");
+    }
+    uint8_t* payload = buf + HEADER_SZ;
+    TParamValues a{{0, 0, 0}};
+    a.values[0] = DecodeBCD(payload, 2);
+    a.values[1] = DecodeBCD(payload + 2, 2);
+    a.values[2] = DecodeBCD(payload + 4, 3);
     return ParamCache.insert({slave, a}).first->second;
 }
 
 uint64_t TMercury20002Device::ReadRegister(PRegister reg)
 {
     uint32_t slv = static_cast<uint32_t>(reg->Slave->Id);
-    uint32_t adr = static_cast<uint32_t>(reg->Address);
+    uint32_t adr = static_cast<uint32_t>(reg->Address) & 0x03;
     switch (reg->Type) {
         case REG_ENERGY_VALUE:
-            return ReadEnergyValues(slv, adr).values[reg->Address & 0x03];
+            return ReadEnergyValues(slv).values[adr];
         case REG_PARAM_VALUE:
-            return ReadParamValues(slv, adr).values[reg->Address & 0x03];
+            return ReadParamValues(slv).values[adr];
         default:
             throw TSerialDeviceException("mercury200.02: invalid register type");
     }
 }
 
-void TMercury20002Device::WriteRegister(PRegister reg, uint64_t value)
+void TMercury20002Device::WriteRegister(PRegister, uint64_t)
 {
     throw TSerialDeviceException("Mercury 200.02 protocol: writing register is not supported");
 }
@@ -132,24 +107,57 @@ void TMercury20002Device::EndPollCycle()
     TSerialDevice::EndPollCycle();
 }
 
-int TMercury20002Device::SendRequest(uint32_t slave, uint8_t cmd, uint8_t *response)
+bool TMercury20002Device::CRCInvalid(uint8_t* buf, int sz) const
 {
-    uint8_t request[REQUEST_LEN];
-    FillCommand(request, slave, cmd);
-    // TODO: loop send-delay-read until answered
-    // TODO: check crc, slave id and command
-    // TODO: fill in the payload and return the size of payload
+    auto actual_crc = CRC16::CalculateCRC16(buf, sz - 2);
+    uint16_t sent_crc = (uint16_t) buf[sz - 1] << 8 | ((uint16_t) buf[EXPECTED_PARAMS_SZ - 2]);
+    return actual_crc != sent_crc;
 }
 
-void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd)
+
+int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const
+{
+    using namespace std::chrono;
+
+    uint8_t request[REQUEST_LEN];
+    FillCommand(request, slave, cmd);
+    Port()->WriteBytes(request, REQUEST_LEN);
+    Port()->Sleep(microseconds(PAUSE_US));
+    return Port()->ReadFrame(response, RESPONSE_BUF_LEN, microseconds(PAUSE_US));
+}
+
+void TMercury20002Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const
 {
     buf[0] = 0x00;
     buf[1] = static_cast<uint8_t>(id >> 16);
     buf[2] = static_cast<uint8_t>(id >> 8);
     buf[3] = static_cast<uint8_t>(id);
     buf[4] = cmd;
-    uint16_t crc = CRC16::CalculateCRC16(buf, 5);
+    auto crc = CRC16::CalculateCRC16(buf, 5);
     buf[5] = static_cast<uint8_t>(crc >> 8);
     buf[6] = static_cast<uint8_t>(crc);
 }
 
+bool TMercury20002Device::BadResponse(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const
+{
+    if (response[0] != 0x00) {
+        return true;
+    }
+    uint32_t actual_slave = ((uint32_t) response[1] << 8)
+                            | ((uint32_t) response[2] << 16)
+                            | ((uint32_t) response[3] << 24);
+    if (actual_slave != slave_expected) {
+        return true;
+    }
+    return response[5] != cmd_expected;
+}
+
+uint32_t TMercury20002Device::DecodeBCD(uint8_t* pb, ptrdiff_t how_many) const
+{
+    std::string s;
+    for (ptrdiff_t i = 0; i < how_many; ++i) {
+        s += DIGITS.at(((size_t) pb[i] & 0xf0) >> 4);
+        s += DIGITS.at((size_t) pb[i] & 0x0f);
+    }
+    return static_cast<uint32_t>(std::stoul(s));
+}
