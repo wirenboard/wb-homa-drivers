@@ -5,6 +5,10 @@ wb-mqtt-serial (1.16) stable; urgency=medium
 
  -- Nikita Maslov <n.maslov@contactless.ru>  Mon, 04 Jul 2016 15:08:58 +0300
 
+wb-mqtt-serial (1.15.3) stable; urgency=medium
+
+  * fixes incorrect Mercury 230 readings
+
 wb-mqtt-serial (1.15.2) stable; urgency=medium
 
   * adds schema for WB-MSGR
