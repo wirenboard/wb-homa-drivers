@@ -125,11 +125,18 @@ PRegister TConfigParser::LoadRegister(PDeviceConfig device_config,
     if (register_data.isMember("readonly"))
         force_readonly = register_data["readonly"].asBool();
 
+    bool has_error_value = false;
+    uint64_t error_value = 0;
+    if (register_data.isMember("error_value")) {
+        has_error_value = true;
+        error_value = register_data["error_value"].asInt();
+    }
+
     PRegister reg = TRegister::Intern(
         TSlaveEntry::Intern(device_config->Protocol, device_config->SlaveId),
         it->second.Index,
         address, format, scale, true, force_readonly || it->second.ReadOnly,
-        it->second.Name);
+        it->second.Name, has_error_value, error_value);
     if (register_data.isMember("poll_interval"))
         reg->PollInterval = std::chrono::milliseconds(GetInt(register_data, "poll_interval"));
     return reg;
