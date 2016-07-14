@@ -20,7 +20,7 @@ REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
             { TMercury20002Device::REG_PARAM_VALUE, "param", "value", U32, true }
         }));
 
-const std::vector<char> TMercury20002Device::DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+const std::array<char, 10> TMercury20002Device::DIGITS{{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}};
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port)
         : TSerialDevice(config, port)
@@ -29,7 +29,7 @@ TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPo
 TMercury20002Device::~TMercury20002Device()
 { }
 
-const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave)
+const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(uint32_t slave)
 {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
@@ -47,7 +47,7 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
     if (CRCInvalid(buf, EXPECTED_ENERGY_SZ)) {
         throw TSerialDeviceTransientErrorException("bad CRC for 0x27 command");
     }
-    uint8_t* payload = buf + HEADER_SZ;
+    uint8_t *payload = buf + HEADER_SZ;
     TEnergyValues a{{0, 0, 0, 0}};
     for (int i = 0; i < 4; ++i) {
         a.values[i] = DecodeBCD(payload + i * 4, 4);
@@ -55,7 +55,7 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
     return EnergyCache.insert({slave, a}).first->second;
 }
 
-const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave)
+const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(uint32_t slave)
 {
     auto it = ParamCache.find(slave);
     if (it != ParamCache.end()) {
@@ -73,7 +73,7 @@ const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(ui
     if (CRCInvalid(buf, EXPECTED_PARAMS_SZ)) {
         throw TSerialDeviceTransientErrorException("bad CRC for 0x63 command");
     }
-    uint8_t* payload = buf + HEADER_SZ;
+    uint8_t *payload = buf + HEADER_SZ;
     TParamValues a{{0, 0, 0}};
     a.values[0] = DecodeBCD(payload, 2);
     a.values[1] = DecodeBCD(payload + 2, 2);
@@ -107,15 +107,15 @@ void TMercury20002Device::EndPollCycle()
     TSerialDevice::EndPollCycle();
 }
 
-bool TMercury20002Device::CRCInvalid(uint8_t* buf, int sz) const
+bool TMercury20002Device::CRCInvalid(uint8_t *buf, int sz) const
 {
-    auto actual_crc = CRC16::CalculateCRC16(buf, sz - 2);
+    auto actual_crc = CRC16::CalculateCRC16(buf, static_cast<uint16_t >(sz - 2));
     uint16_t sent_crc = (uint16_t) buf[sz - 1] << 8 | ((uint16_t) buf[EXPECTED_PARAMS_SZ - 2]);
     return actual_crc != sent_crc;
 }
 
 
-int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const
+int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t *response) const
 {
     using namespace std::chrono;
 
@@ -126,7 +126,7 @@ int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* r
     return Port()->ReadFrame(response, RESPONSE_BUF_LEN, microseconds(PAUSE_US));
 }
 
-void TMercury20002Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const
+void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd) const
 {
     buf[0] = 0x00;
     buf[1] = static_cast<uint8_t>(id >> 16);
@@ -138,7 +138,7 @@ void TMercury20002Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) co
     buf[6] = static_cast<uint8_t>(crc);
 }
 
-bool TMercury20002Device::BadResponse(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const
+bool TMercury20002Device::BadResponse(uint32_t slave_expected, uint8_t cmd_expected, uint8_t *response) const
 {
     if (response[0] != 0x00) {
         return true;
@@ -152,7 +152,7 @@ bool TMercury20002Device::BadResponse(uint32_t slave_expected, uint8_t cmd_expec
     return response[5] != cmd_expected;
 }
 
-uint32_t TMercury20002Device::DecodeBCD(uint8_t* pb, ptrdiff_t how_many) const
+uint32_t TMercury20002Device::DecodeBCD(uint8_t *pb, int how_many) const
 {
     std::string s;
     for (ptrdiff_t i = 0; i < how_many; ++i) {

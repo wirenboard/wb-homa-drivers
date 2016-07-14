@@ -6,6 +6,7 @@
 namespace {
     PSlaveEntry MilurSlave = TSlaveEntry::Intern("milur", 0xff);
     PSlaveEntry Mercury230Slave = TSlaveEntry::Intern("mercury230", 0x00);
+    // TODO: add m200.02 slave entry
     PRegister MilurPhaseCVoltageReg = TRegister::Intern(MilurSlave, TMilurDevice::REG_PARAM, 102, U24);
     PRegister MilurTotalConsumptionReg = TRegister::Intern(MilurSlave, TMilurDevice::REG_ENERGY, 118, BCD32);
     PRegister Mercury230TotalConsumptionReg =
@@ -16,6 +17,13 @@ namespace {
     PRegister Mercury230I1Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1121, U24);
     PRegister Mercury230U2Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1112, U24);
     PRegister Mercury230PReg  = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1100, U24);
+    // TODO: add m200.02 total reactive energy tariff 1 register
+    // TODO: add m200.02 total reactive energy tariff 2 register
+    // TODO: add m200.02 total reactive energy tariff 3 register
+    // TODO: add m200.02 total reactive energy tariff 4 register
+    // TODO: add m200.02 voltage register
+    // TODO: add m200.02 current register
+    // TODO: add m200.02 power register
 };
 
 class TEMDeviceTest: public TSerialDeviceTest, public TEMDeviceExpectations
@@ -24,10 +32,13 @@ protected:
     void SetUp();
     void VerifyMilurQuery();
     void VerifyMercuryParamQuery();
+    // TODO: add M200.02 test method
     virtual PDeviceConfig MilurConfig();
     virtual PDeviceConfig Mercury230Config();
+    // TODO: add M200.02 config
     PMilurDevice MilurDev;
     PMercury230Device Mercury230Dev;
+    // TODO: add M200.02 device
 };
 
 PDeviceConfig TEMDeviceTest::MilurConfig()
@@ -45,6 +56,7 @@ void TEMDeviceTest::SetUp()
     TSerialDeviceTest::SetUp();
     MilurDev = std::make_shared<TMilurDevice>(MilurConfig(), SerialPort);
     Mercury230Dev = std::make_shared<TMercury230Device>(Mercury230Config(), SerialPort);
+    // TODO: add M200.02 device creation
     SerialPort->Open();
 }
 
