@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string>
+#include <cstdlib>
 
 #include "serial_config.h"
 
@@ -129,7 +130,7 @@ PRegister TConfigParser::LoadRegister(PDeviceConfig device_config,
     uint64_t error_value = 0;
     if (register_data.isMember("error_value")) {
         has_error_value = true;
-        error_value = register_data["error_value"].asInt();
+        error_value = strtoull(register_data["error_value"].asString().c_str(), NULL, 0);
     }
 
     PRegister reg = TRegister::Intern(
