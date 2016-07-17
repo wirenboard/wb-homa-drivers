@@ -51,7 +51,7 @@ private:
 
     int RequestResponse(uint32_t slave, uint8_t cmd, uint8_t *response) const;
 
-    bool BadResponse(uint32_t slave_expected, uint8_t cmd_expected, uint8_t *response) const;
+    bool BadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const;
 
     uint32_t DecodeBCD(uint8_t *pb, int how_many) const;
 

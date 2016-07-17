@@ -2,11 +2,12 @@
 #include "em_expectations.h"
 #include "milur_device.h"
 #include "mercury230_device.h"
+#include "mercury200_02_device.h"
 
 namespace {
     PSlaveEntry MilurSlave = TSlaveEntry::Intern("milur", 0xff);
     PSlaveEntry Mercury230Slave = TSlaveEntry::Intern("mercury230", 0x00);
-    // TODO: add m200.02 slave entry
+    PSlaveEntry Mercury200dot02Slave = TSlaveEntry::Intern("mercury200dot02", 123456);
     PRegister MilurPhaseCVoltageReg = TRegister::Intern(MilurSlave, TMilurDevice::REG_PARAM, 102, U24);
     PRegister MilurTotalConsumptionReg = TRegister::Intern(MilurSlave, TMilurDevice::REG_ENERGY, 118, BCD32);
     PRegister Mercury230TotalConsumptionReg =
@@ -16,29 +17,44 @@ namespace {
     PRegister Mercury230U1Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1111, U24);
     PRegister Mercury230I1Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1121, U24);
     PRegister Mercury230U2Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1112, U24);
-    PRegister Mercury230PReg  = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1100, U24);
-    // TODO: add m200.02 total reactive energy tariff 1 register
-    // TODO: add m200.02 total reactive energy tariff 2 register
-    // TODO: add m200.02 total reactive energy tariff 3 register
-    // TODO: add m200.02 total reactive energy tariff 4 register
-    // TODO: add m200.02 voltage register
-    // TODO: add m200.02 current register
-    // TODO: add m200.02 power register
+    PRegister Mercury230PReg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1100, U24);
+    PRegister M200dot02RET1Reg = TRegister::Intern(Mercury200dot02Slave,
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x00, U32);
+    PRegister M200dot02RET2Reg = TRegister::Intern(Mercury200dot02Slave,
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x01, U32);
+    PRegister M200dot02RET3Reg = TRegister::Intern(Mercury200dot02Slave,
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x02, U32);
+    PRegister M200dot02RET4Reg = TRegister::Intern(Mercury200dot02Slave,
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x03, U32);
+    PRegister M200dot02UReg
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x00, U32);
+    PRegister M200dot02IReg
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x01, U32);
+    PRegister M200dot02PReg
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x02, U32);
 };
 
-class TEMDeviceTest: public TSerialDeviceTest, public TEMDeviceExpectations
-{
+class TEMDeviceTest : public TSerialDeviceTest, public TEMDeviceExpectations {
 protected:
     void SetUp();
+
     void VerifyMilurQuery();
+
     void VerifyMercuryParamQuery();
-    // TODO: add M200.02 test method
+
+    void VerifyM200dot02EnergyQuery();
+
+    void VerifyM200dot02ParamQuery();
+
     virtual PDeviceConfig MilurConfig();
+
     virtual PDeviceConfig Mercury230Config();
-    // TODO: add M200.02 config
+
+    virtual PDeviceConfig M200dot02Config();
+
     PMilurDevice MilurDev;
     PMercury230Device Mercury230Dev;
-    // TODO: add M200.02 device
+    PMercury20002Device M200dot02Dev;
 };
 
 PDeviceConfig TEMDeviceTest::MilurConfig()
@@ -51,12 +67,17 @@ PDeviceConfig TEMDeviceTest::Mercury230Config()
     return std::make_shared<TDeviceConfig>("mercury230", 0x00, "mercury230");
 }
 
+PDeviceConfig TEMDeviceTest::M200dot02Config()
+{
+    return std::make_shared<TDeviceConfig>("mercury200dot02", 0x00112233, "mercury200dot02");
+}
+
 void TEMDeviceTest::SetUp()
 {
     TSerialDeviceTest::SetUp();
     MilurDev = std::make_shared<TMilurDevice>(MilurConfig(), SerialPort);
     Mercury230Dev = std::make_shared<TMercury230Device>(Mercury230Config(), SerialPort);
-    // TODO: add M200.02 device creation
+    M200dot02Dev = std::make_shared<TMercury20002Device>(M200dot02Config(), SerialPort);
     SerialPort->Open();
 }
 
@@ -153,6 +174,27 @@ void TEMDeviceTest::VerifyMercuryParamQuery()
     ASSERT_EQ(553095, Mercury230Dev->ReadRegister(Mercury230PReg));
 }
 
+void TEMDeviceTest::VerifyM200dot02EnergyQuery()
+{
+    EnqueueM200dot02EnergyResponse();
+    ASSERT_EQ(62142, M200dot02Dev->ReadRegister(M200dot02RET1Reg));
+    ASSERT_EQ(20834, M200dot02Dev->ReadRegister(M200dot02RET2Reg));
+    ASSERT_EQ(11111, M200dot02Dev->ReadRegister(M200dot02RET3Reg));
+    ASSERT_EQ(22222, M200dot02Dev->ReadRegister(M200dot02RET4Reg));
+    M200dot02Dev->EndPollCycle();
+//    SerialPort->Close();
+}
+
+void TEMDeviceTest::VerifyM200dot02ParamQuery()
+{
+    EnqueueM200dot02ParamResponse();
+    ASSERT_EQ(1234, M200dot02Dev->ReadRegister(M200dot02UReg));
+    ASSERT_EQ(5678, M200dot02Dev->ReadRegister(M200dot02IReg));
+    ASSERT_EQ(765432, M200dot02Dev->ReadRegister(M200dot02PReg));
+    M200dot02Dev->EndPollCycle();
+//    SerialPort->Close();
+}
+
 TEST_F(TEMDeviceTest, Mercury230ReadParams)
 {
     EnqueueMercury230SessionSetupResponse();
@@ -191,6 +233,34 @@ TEST_F(TEMDeviceTest, Mercury230Exception)
     }
 }
 
+TEST_F(TEMDeviceTest, Mercury200dot02Energy)
+{
+    try {
+        VerifyM200dot02EnergyQuery();
+    } catch(const TSerialDeviceException& e) {
+        SerialPort->Close();
+        FAIL() <<  e.what();
+    } catch(const std::exception& e) {
+        SerialPort->Close();
+        FAIL() << e.what();
+    }
+    SerialPort->Close();
+}
+
+TEST_F(TEMDeviceTest, Mercury200dot02Params)
+{
+    try {
+        VerifyM200dot02ParamQuery();
+    } catch(const TSerialDeviceException& e) {
+        SerialPort->Close();
+        FAIL() <<  e.what();
+    } catch(const std::exception& e) {
+        SerialPort->Close();
+        FAIL() << e.what();
+    }
+    SerialPort->Close();
+}
+
 TEST_F(TEMDeviceTest, Combined)
 {
     EnqueueMilurSessionSetupResponse();
@@ -201,7 +271,7 @@ TEST_F(TEMDeviceTest, Combined)
     VerifyMercuryParamQuery();
     Mercury230Dev->EndPollCycle();
 
-    for (int i = 0; i < 3; i ++) {
+    for (int i = 0; i < 3; i++) {
         VerifyMilurQuery();
         MilurDev->EndPollCycle();
 
@@ -212,16 +282,17 @@ TEST_F(TEMDeviceTest, Combined)
     SerialPort->Close();
 }
 
-class TEMCustomPasswordTest: public TEMDeviceTest {
+class TEMCustomPasswordTest : public TEMDeviceTest {
 public:
     PDeviceConfig MilurConfig();
+
     PDeviceConfig Mercury230Config();
 };
 
 PDeviceConfig TEMCustomPasswordTest::MilurConfig()
 {
     PDeviceConfig device_config = TEMDeviceTest::MilurConfig();
-    device_config->Password = { 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+    device_config->Password = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
     device_config->AccessLevel = 2;
     return device_config;
 }
@@ -229,7 +300,7 @@ PDeviceConfig TEMCustomPasswordTest::MilurConfig()
 PDeviceConfig TEMCustomPasswordTest::Mercury230Config()
 {
     PDeviceConfig device_config = TEMDeviceTest::Mercury230Config();
-    device_config->Password = { 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
+    device_config->Password = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
     device_config->AccessLevel = 2;
     return device_config;
 }

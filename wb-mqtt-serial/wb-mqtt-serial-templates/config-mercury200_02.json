@@ -3,7 +3,7 @@
   "device": {
     "name": "Mercury 200.02",
     "id": "mercury200dot02", 
-    "protocol": "mercury200",
+    "protocol": "mercury200dot02",
     "channels": [
       {
         "name": "RET1",
