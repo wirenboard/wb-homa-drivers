@@ -39,13 +39,13 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
 
             // check if current group is ready to process changed values
             // or ready to process unchanged values
-            if ((now >= group.LastSaved + milliseconds(group.MinInterval) && channel_data.Changed) || 
-                (now >= group.LastUSaved + milliseconds(group.MinUnchangedInterval) &&
+            if ((now >= group.LastSaved + seconds(group.MinInterval) && channel_data.Changed) || 
+                (now >= group.LastUSaved + seconds(group.MinUnchangedInterval) &&
                  !channel_data.Changed && channel_data.LastProcessed >= group.LastUSaved)) {
                 
                 if (!start_process) {
                     start_process = true;
-                    next_call = now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval));
+                    next_call = now + seconds(min(group.MinInterval, group.MinUnchangedInterval));
 
                     VLOG(1) << "Start bulk transaction";
                 }

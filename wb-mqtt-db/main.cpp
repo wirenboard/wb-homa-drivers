@@ -159,7 +159,6 @@ int main (int argc, char *argv[])
         FLAGS_v = verbose_level;
     }
 
-    ::google::InitGoogleLogging(argv[0]);
 
 
     if (config_fname.empty()) {
@@ -198,6 +197,7 @@ int main (int argc, char *argv[])
         FLAGS_v = 3;
     }
 
+    ::google::InitGoogleLogging(argv[0]);
 
     mosqpp::lib_init();
     std::shared_ptr<TMQTTDBLogger> mqtt_db_logger(new TMQTTDBLogger(mqtt_config, config));
