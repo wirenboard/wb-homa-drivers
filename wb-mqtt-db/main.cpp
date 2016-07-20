@@ -229,7 +229,7 @@ int main (int argc, char *argv[])
             break;
         default:
             break;
-        }
+    }
 
         log_root.setPriority(priority);
     } else if (config.Debug) {
