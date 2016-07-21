@@ -121,7 +121,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     string get_values_query_str;
 
     if (min_interval_ms > 0)
-        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, min, max, \
+        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, MIN(min), MAX(max), \
                                 retained  FROM data INDEXED BY data_topic_timestamp WHERE ";
     else
         get_values_query_str = "SELECT uid, device, channel, value, (timestamp - 2440587.5)*86400.0, min, max, \
@@ -202,17 +202,17 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
         
         // if there are min and max values, send'em too
-        if (get_values_query.getColumn(5).getType() != SQLITE_NULL && req_ver != 1) {
-            row["value"] = static_cast<double>(get_values_query.getColumn(3));
+        if (get_values_query.getColumn(5).getType() != SQLITE_NULL && req_ver == 1) {
             row["min"] = static_cast<double>(get_values_query.getColumn(5));
             row["max"] = static_cast<double>(get_values_query.getColumn(6));
-        } else {
+            row["v"] = static_cast<double>(get_values_query.getColumn(3));
+        } else { 
             row[(req_ver == 1) ? "v" : "value"] = get_values_query.getColumn(3).getText();
         }
         
         // add retained flag if it is set
         if (req_ver == 1 && static_cast<int>(get_values_query.getColumn(7)) > 0) {
-            row["retained"] = true;
+            row["retain"] = true;
         }
 
         row[(req_ver == 1) ? "t" : "timestamp"] = static_cast<double>(get_values_query.getColumn(4));
