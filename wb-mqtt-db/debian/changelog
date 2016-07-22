@@ -4,6 +4,7 @@ wb-mqtt-db (1.6.2) stable; urgency=medium
   * fix: add aggregation for min and max fields on average requests
   * fix: MinUnchangedInterval and MinInterval are in seconds now
   * fix: create log directory on daemon start
+  * fix: proper function of processing timer
 
  -- Nikita Maslov <n.maslov@contactless.ru>  Tue, 19 Jul 2016 19:03:42 +0300
 
