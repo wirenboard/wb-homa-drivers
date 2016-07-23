@@ -8,7 +8,7 @@
 
 #include "register.h"
 #include "portsettings.h"
-#include "jsoncpp/json/json.h"
+#include <json/json.h>
 
 struct TTemplate {
     TTemplate(const Json::Value& device_data);
