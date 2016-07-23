@@ -32,6 +32,7 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
     for (auto& group : LoggerConfig.Groups) {
     
         bool process_changed = true;
+        bool group_processed = false;
 
         for (auto channel_id : group.ChannelIds) {
 
@@ -50,26 +51,28 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
                     VLOG(1) << "Start bulk transaction";
                 }
                 
-                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id;
+                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id << (channel_data.Changed ? ", changed" : ", UNCHANGED");
                 DVLOG(3) << "Selected channel ID is " << channel_id;
 
-                WriteChannel(channel_data, group);
-
-                process_changed = channel_data.Changed;
+                process_changed = process_changed && channel_data.Changed;
+                group_processed = true;
                 
+                WriteChannel(channel_data, group);
             }
 
         }
-
-        if (process_changed) {
+        
+        if (group_processed) {
             group.LastSaved = now;
-        } else {
-            group.LastUSaved = now;
+            if (!process_changed) {
+                VLOG(1) << "Unchanged values processed!";
+                group.LastUSaved = now;
+            }
         }
 
         // select minimal next call time
-        if (next_call > now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval))) {
-            next_call = now + milliseconds(min(group.MinInterval, group.MinUnchangedInterval));
+        if (next_call > now + seconds(min(group.MinInterval, group.MinUnchangedInterval))) {
+            next_call = now + seconds(min(group.MinInterval, group.MinUnchangedInterval));
         }
 
     }
