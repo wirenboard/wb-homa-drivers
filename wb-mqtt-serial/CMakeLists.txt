@@ -10,7 +10,7 @@ include_directories(${PROJECT_SOURCE_DIR})
 link_directories(/Users/ssko/src/usr/lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMLINF)
+#set(CMLINF)
 file(GLOB MAIN_SOURCES ./*.cpp)
 file(GLOB MAIN_HEADERS ./*.h ./*.hpp)
 source_group(MAIN_SRC FILES ${MAIN_SOURCES} ${MAIN_HEADERS})
