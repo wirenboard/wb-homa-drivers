@@ -8,7 +8,12 @@
 
 #include "register.h"
 #include "portsettings.h"
-#include <json/json.h>
+
+#if defined(__APPLE__) || defined(__APPLE_CC__)
+#   include <json/json.h>
+#else
+#   include <jsoncpp/json/json.h>
+#endif
 
 struct TTemplate {
     TTemplate(const Json::Value& device_data);
