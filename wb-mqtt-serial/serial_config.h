@@ -72,7 +72,7 @@ struct TDeviceConfig {
           AccessLevel(access_level), FrameTimeout(frame_timeout),
           MaxRegHole(max_reg_hole), MaxBitHole(max_bit_hole),
           TypeMap(type_map) {}
-    int NextOrderValue() const { return DeviceChannels.size() + 1; }
+    int NextOrderValue() const { return static_cast<int>(DeviceChannels.size() + 1); }
     void AddChannel(PDeviceChannel channel) { DeviceChannels.push_back(channel); };
     void AddSetupItem(PDeviceSetupItem item) { SetupItems.push_back(item); }
     std::string Id;
