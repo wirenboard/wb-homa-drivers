@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+=======
+wb-mqtt-db (1.6.3) stable; urgency=medium
+
+  * change logging engine to log4cpp 
+  * fix value averaging
+  * fix daemon failures
+
+ -- Nikita Maslov <n.maslov@contactless.ru>  Wed, 24 Aug 2016 12:21:35 +0300
+
+>>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
 wb-mqtt-db (1.6.2) stable; urgency=medium
 
   * fix: RPC send min() and max() in RPCv1 and don't send in RPCv0
