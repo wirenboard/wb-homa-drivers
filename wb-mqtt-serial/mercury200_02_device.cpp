@@ -1,4 +1,4 @@
-#include <cassert>
+#include <cstdint>
 #include <chrono>
 
 #include "crc16.h"
