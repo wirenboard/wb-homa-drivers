@@ -27,7 +27,7 @@ else
 endif
 
 CPPFLAGS=$(CFLAGS)
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -lglog
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -llog4cpp
 
 DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp

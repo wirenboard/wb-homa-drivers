@@ -114,7 +114,7 @@ private:
     void InitCaches();
     int ReadDBVersion();
     void UpdateDB(int prev_version);
-    bool UpdateAccumulator(int channel_id, const string &payload);
+    bool UpdateAccumulator(int channel_id, const std::string &payload);
     void WriteChannel(TChannel &ch, TLoggingGroup &group);
     
     std::tuple<int, int> GetOrCreateIds(const std::string &device, const std::string &control);

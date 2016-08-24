@@ -6,8 +6,15 @@
 #include <unistd.h>
 #include <fstream>
 #include <signal.h>
+#include <cstdlib>
 
-#include <glog/logging.h>
+#include <log4cpp/Category.hh>
+#include <log4cpp/RollingFileAppender.hh>
+#include <log4cpp/SyslogAppender.hh>
+#include <log4cpp/PatternLayout.hh>
+#include <log4cpp/OstreamAppender.hh>
+
+#include "logging.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -99,8 +106,6 @@ TMQTTDBLoggerConfig ParseConfigFile(Json::Value &root)
         }
 
         config.Groups.push_back(group);
-
-        VLOG(1) << group;
     }
 
     return config;
@@ -114,31 +119,31 @@ int main (int argc, char *argv[])
     mqtt_config.Port = 1883;
     string config_fname;
     int c;
-    int verbose_level = -1;
+    int verbose_level = 0;
 
     while ((c = getopt(argc, argv, "hp:H:c:T:v")) != -1) {
         switch (c) {
         case 'p' :
-            VLOG(2) << "Option p with value " << optarg;
+            /* VLOG(2) << "Option p with value " << optarg; */
             mqtt_config.Port = stoi(optarg);
             break;
         case 'H' :
-            VLOG(2) << "Option H with value " << optarg;
+            /* VLOG(2) << "Option H with value " << optarg; */
             mqtt_config.Host = optarg;
             break;
 
         case 'c':
-            VLOG(2) << "Option c with value " << optarg;
+            /* VLOG(2) << "Option c with value " << optarg; */
             config_fname = optarg;
             break;
 
         case 'v':
-            VLOG(2) << "Option v" << optarg;
+            /* VLOG(2) << "Option v" << optarg; */
             verbose_level++;
             break;
 
         case '?':
-            LOG(WARNING) << "?? Getopt returned character code 0%o ??" << static_cast<char>(c);
+            /* LOG(WARNING) << "?? Getopt returned character code 0%o ??" << static_cast<char>(c); */
         case 'h':
             printf("help menu\n");
         default:
@@ -153,13 +158,6 @@ int main (int argc, char *argv[])
         }
     }
 
-    // configure logging
-    if (verbose_level >= 0) {
-        FLAGS_logtostderr = 1;
-        FLAGS_v = verbose_level;
-    }
-
-    ::google::InitGoogleLogging(argv[0]);
 
 
     if (config_fname.empty()) {
@@ -179,7 +177,7 @@ int main (int argc, char *argv[])
 
     if (not parsedSuccess)
     {
-        LOG(ERROR) << "Failed to parse JSON" << endl
+        cerr << "Failed to parse JSON" << endl
                    << reader.getFormatedErrorMessages();
 
         return 1;
@@ -188,16 +186,66 @@ int main (int argc, char *argv[])
     try {
         config = ParseConfigFile(root);
     } catch (TBaseException &e) {
-        LOG(ERROR) << "Failed to parse config file: " << e.what();
+        cerr << "Failed to parse config file: " << e.what();
 
         return 1;
     }
 
-    // Enable huge debug logging if required
-    if (config.Debug) {
-        FLAGS_v = 3;
-    }
+    // configure logging
+    log4cpp::Category &log_root = log4cpp::Category::getRoot();
 
+    const char* log_file = getenv("MQTT_DB_LOGFILE");
+    if (!log_file) 
+        log_file = "/var/log/wirenboard/wb-mqtt-db.log";
+
+    int max_file_size = 1; // in MBytes
+    const char *env_max_file_size = getenv("MQTT_DB_MAX_LOGFILE_SIZE");
+    if (env_max_file_size)
+        max_file_size = atoi(env_max_file_size);
+
+    if (verbose_level >= 0)
+        log_root.setPriority(log4cpp::Priority::INFO);
+    
+    log4cpp::PatternLayout *log_layout = new log4cpp::PatternLayout;
+    log_layout->setConversionPattern("%d{%Y-%m-%d %H:%M:%S.%l} %p: %m%n");
+
+    // Enable huge debug logging if required
+    if (verbose_level > 0) {
+        auto appender = new log4cpp::OstreamAppender("default", &cerr);
+
+        appender->setLayout(log_layout);
+        log_root.addAppender(appender);
+
+        auto priority = log4cpp::Priority::NOTICE;
+
+        switch (verbose_level) {
+        case 1:
+            break;
+        case 2:
+            priority = log4cpp::Priority::INFO;
+            break;
+        case 3:
+            priority = log4cpp::Priority::DEBUG;
+            break;
+        default:
+            break;
+        }
+
+        log_root.setPriority(priority);
+    } else if (config.Debug) {
+        auto appender = new log4cpp::RollingFileAppender("default", log_file, 
+                max_file_size * 1024 * 1024);
+        appender->setLayout(log_layout);
+        log_root.addAppender(appender);
+        log_root.setPriority(log4cpp::Priority::INFO);
+    } else {
+        // default appender is Syslog appender - not for debug use!
+        long pid = getpid();
+        auto appender = new log4cpp::SyslogAppender("syslog", "wb-mqtt-db[" + to_string(pid) + "]");
+        appender->setLayout(log_layout);
+        log_root.addAppender(appender);
+        log_root.setPriority(log4cpp::Priority::NOTICE);
+    }
 
     mosqpp::lib_init();
     std::shared_ptr<TMQTTDBLogger> mqtt_db_logger(new TMQTTDBLogger(mqtt_config, config));
@@ -218,6 +266,8 @@ int main (int argc, char *argv[])
 
     steady_clock::time_point next_call = steady_clock::now();
 
+    SYSLOG(NOTICE) << "DB logger started, go to main loop";
+
     while (running) {
         /* process MQTT events */
         rc = mqtt_db_logger->loop(duration_cast<milliseconds>(next_call - steady_clock::now()).count());
@@ -229,7 +279,7 @@ int main (int argc, char *argv[])
         next_call = mqtt_db_logger->ProcessTimer(next_call);
     }
 
-    VLOG(0) << "Exit signal received, stopping..." << endl;
+    SYSLOG(NOTICE) << "Exit signal received, stopping";
 
     mqtt_db_logger->disconnect();
 
