@@ -1,3 +1,9 @@
+wb-mqtt-timestamper (1.10.1) stable; urgency=medium
+
+  * update libwbmqtt version
+
+ -- Nikita webconn Maslov <n.maslov@contactless.ru>  Thu, 25 Aug 2016 20:00:58 +0300
+
 wb-mqtt-timestamper (1.10) stable; urgency=medium
 
   * minimal libwbmqtt version
