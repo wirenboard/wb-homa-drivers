@@ -428,16 +428,3 @@ void TEMDeviceExpectations::EnqueueM200dot02ParamResponse()
             0x8a, 0x8a //crc
         }, __func__);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

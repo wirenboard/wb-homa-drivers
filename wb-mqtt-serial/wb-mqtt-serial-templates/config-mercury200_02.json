@@ -2,7 +2,7 @@
   "device_type": "mercury200_02",
   "device": {
     "name": "Mercury 200.02",
-    "id": "mercury200dot02", 
+    "id": "mercury200.02",
     "protocol": "mercury200dot02",
     "channels": [
       {

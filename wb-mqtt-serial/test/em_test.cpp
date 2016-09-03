@@ -37,21 +37,13 @@ namespace {
 class TEMDeviceTest : public TSerialDeviceTest, public TEMDeviceExpectations {
 protected:
     void SetUp();
-
     void VerifyMilurQuery();
-
     void VerifyMercuryParamQuery();
-
     void VerifyM200dot02EnergyQuery();
-
     void VerifyM200dot02ParamQuery();
-
     virtual PDeviceConfig MilurConfig();
-
     virtual PDeviceConfig Mercury230Config();
-
     virtual PDeviceConfig M200dot02Config();
-
     PMilurDevice MilurDev;
     PMercury230Device Mercury230Dev;
     PMercury20002Device M200dot02Dev;
