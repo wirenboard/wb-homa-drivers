@@ -1,6 +1,6 @@
 #include "dblogger.h"
 
-#include <glog/logging.h>
+#include <logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -64,7 +64,7 @@ void TMQTTDBLogger::Init2()
 
 Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 {
-    VLOG(0) << "Run RPC get_values()";
+    VLOG(1) << "Run RPC get_values()";
 
 #ifndef NDEBUG
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -230,7 +230,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
     
-    DVLOG(0) << "get_values() took " << duration << "ms" << endl;
+    DVLOG(0) << "get_values() took " << duration << "ms";
 #endif
 
     
@@ -242,7 +242,7 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 
     Json::Value result;
     
-    VLOG(0) << "Run RPC get_channels()";
+    VLOG(1) << "Run RPC get_channels()";
 #ifndef NDEBUG
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 #endif
@@ -271,7 +271,7 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 
-    DVLOG(0) << "RPC request took " << duration << "ms" << endl;
+    DVLOG(0) << "RPC request took " << duration << "ms";
 #endif
 
     return result;

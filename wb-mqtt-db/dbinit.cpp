@@ -1,6 +1,6 @@
 #include "dblogger.h"
 
-#include <glog/logging.h>
+#include <logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -45,7 +45,8 @@ void TMQTTDBLogger::CreateTables()
              "timestamp REAL DEFAULT(julianday('now')),"
              "group_id INTEGER,"
              "max VARCHAR(255),"
-             "min VARCHAR(255)"
+             "min VARCHAR(255),"
+             "retained INTEGER"
              ")"
             );
 
@@ -247,7 +248,7 @@ void TMQTTDBLogger::InitDB()
         if (file_db_version > DBVersion) {
             throw TBaseException("Database file is created by newer version of wb-mqtt-db");
         } else if (file_db_version < DBVersion) {
-            LOG(WARNING) << "Old database format found, trying to update...";
+            LOG(WARN) << "Old database format found, trying to update...";
             UpdateDB(file_db_version);
         } else {
             LOG(INFO) << "Creating tables if necessary";
@@ -265,10 +266,10 @@ void TMQTTDBLogger::InitDB()
     VLOG(0) << "Getting and assigning group ids";
     InitGroupIds();
 
-    VLOG(0) << "Analyzing data table" << std::endl;
+    VLOG(0) << "Analyzing data table";
     DB->exec("ANALYZE data");
     DB->exec("ANALYZE sqlite_master");
 
-    VLOG(0) << "DB initialization is done" << std::endl;
+    VLOG(0) << "DB initialization is done";
 }
 
