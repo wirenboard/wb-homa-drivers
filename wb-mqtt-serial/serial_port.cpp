@@ -33,7 +33,11 @@ TLibModbusContext::TLibModbusContext(const TSerialPortSettings& settings)
         struct timeval tv;
         tv.tv_sec = response_timeout.count() / 1000;
         tv.tv_usec = (response_timeout.count() % 1000) * 1000;
+#ifdef __APPLE__
         modbus_set_response_timeout(Inner, tv.tv_sec, tv.tv_usec);
+#else
+        modbus_set_response_timeout(Inner, &tv);
+#endif
     }
 }
 
