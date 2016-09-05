@@ -126,7 +126,7 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
     insert_row_query.bind(4, group.IntId);
 
     // min, max and average
-    if (channel_data.Accumulated) {
+    if (channel_data.Accumulated && channel_data.Changed) {
         auto& accum = channel_data.Accumulator;
         double val = accum.ValueCount > 0 ? accum.Sum / accum.ValueCount : 0.0; // 0.0 - error value
 
@@ -135,8 +135,7 @@ void TMQTTDBLogger::WriteChannel(TChannel &channel_data, TLoggingGroup &group)
         insert_row_query.bind(5, accum.Min); // min
         insert_row_query.bind(6, accum.Max); // max
 
-        accum.Sum = accum.Min = accum.Max = val;
-        accum.ValueCount = 1;
+        accum.Reset();
     } else {
         insert_row_query.bind(3, channel_data.LastValue); // avg == value
         insert_row_query.bind(5); // bind NULL values

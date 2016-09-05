@@ -1,3 +1,15 @@
+wb-homa-gpio (1.15) stable; urgency=medium
+
+  * add definitions for WB5.8
+
+ -- Evgeny Boger <boger@contactless.ru>  Mon, 22 Aug 2016 18:48:36 +0300
+
+wb-homa-gpio (1.14.2) stable; urgency=medium
+
+  * update libwbmqtt version
+
+ -- Nikita webconn Maslov <n.maslov@contactless.ru>  Thu, 25 Aug 2016 19:52:59 +0300
+
 wb-homa-gpio (1.14.1) wheezy; urgency=low
 
   * fix deps

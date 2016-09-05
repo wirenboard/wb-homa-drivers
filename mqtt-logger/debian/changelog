@@ -1,3 +1,9 @@
+mqtt-logger (1.8.9) stable; urgency=medium
+
+  * update libwbmqtt version
+
+ -- Nikita webconn Maslov <n.maslov@contactless.ru>  Thu, 25 Aug 2016 19:49:53 +0300
+
 mqtt-logger (1.8.8) stable; urgency=medium
 
   * split libwbmqtt

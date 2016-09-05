@@ -1,3 +1,23 @@
+wb-mqtt-serial (1.17) stable; urgency=medium
+
+  * char8 register format has been added
+  * support for error_value (the register value which indicates error)
+  * templates for SDM120 and WP8028ADAM
+
+ -- Evgeny Boger <boger@contactless.ru>  Thu, 01 Sep 2016 15:56:26 +0300
+
+wb-mqtt-serial (1.16.3) stable; urgency=medium
+
+  * workaround for Milur 104 bug
+
+ -- Evgeny Boger <boger@contactless.ru>  Thu, 18 Aug 2016 18:41:09 +0300
+
+wb-mqtt-serial (1.16.2) stable; urgency=medium
+
+  * update libwbmqtt version
+
+ -- Nikita webconn Maslov <n.maslov@contactless.ru>  Thu, 25 Aug 2016 19:59:51 +0300
+
 wb-mqtt-serial (1.16.1) stable; urgency=medium
 
   * adds template for WB-MS/WB-MSW fw. 2.0+
