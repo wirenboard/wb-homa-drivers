@@ -6,8 +6,11 @@ project(wb_mqtt_serial)
 #        /Users/ssko/src/googletest/googlemock/include
 #        /Users/ssko/src/googletest/googletest/include)
 include_directories(SYSTEM /Users/ssko/src/usr/include)
-include_directories(${PROJECT_SOURCE_DIR})
-include_directories(/Users/ssko/src/googletest/googlemock/include
+include_directories(
+        ${PROJECT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/wb-mqtt-serial)
+include_directories(
+        /Users/ssko/src/googletest/googlemock/include
         /Users/ssko/src/googletest/googletest/include)
 link_directories(/Users/ssko/src/usr/lib)
 

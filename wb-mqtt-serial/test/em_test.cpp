@@ -19,19 +19,19 @@ namespace {
     PRegister Mercury230U2Reg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1112, U24);
     PRegister Mercury230PReg = TRegister::Intern(Mercury230Slave, TMercury230Device::REG_PARAM, 0x1100, U24);
     PRegister M200dot02RET1Reg = TRegister::Intern(Mercury200dot02Slave,
-                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x00, U32);
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x00, BCD32);
     PRegister M200dot02RET2Reg = TRegister::Intern(Mercury200dot02Slave,
-                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x01, U32);
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x01, BCD32);
     PRegister M200dot02RET3Reg = TRegister::Intern(Mercury200dot02Slave,
-                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x02, U32);
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x02, BCD32);
     PRegister M200dot02RET4Reg = TRegister::Intern(Mercury200dot02Slave,
-                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x03, U32);
+                                                   TMercury20002Device::REG_ENERGY_VALUE, 0x03, BCD32);
     PRegister M200dot02UReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x00, U32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x00, BCD32);
     PRegister M200dot02IReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x01, U32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x01, BCD32);
     PRegister M200dot02PReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x02, U32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x02, BCD32);
 };
 
 class TEMDeviceTest : public TSerialDeviceTest, public TEMDeviceExpectations {

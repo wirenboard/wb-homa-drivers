@@ -5,7 +5,8 @@
 #include "serial_device.h"
 #include "mercury200_02_device.h"
 
-namespace {
+namespace
+{
     const size_t RESPONSE_BUF_LEN = 100;
     const size_t REQUEST_LEN = 7;
     const int PAUSE_US = 100000; // delay of 100 ms in microseconds
@@ -15,19 +16,15 @@ namespace {
 }
 
 REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
-    {
-        { TMercury20002Device::REG_ENERGY_VALUE, "energy", "power_consumption", U32, true },
-        { TMercury20002Device::REG_PARAM_VALUE, "param", "value", U32, true }
-    }));
-
-const std::array<char, 10> TMercury20002Device::DIGITS{{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}};
+        {
+            { TMercury20002Device::REG_ENERGY_VALUE, "energy", "power_consumption", BCD32, true },
+            { TMercury20002Device::REG_PARAM_VALUE, "param", "value", BCD32, true }
+        }));
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port)
-    : TSerialDevice(config, port)
-{ }
+        : TSerialDevice(config, port) {}
 
-TMercury20002Device::~TMercury20002Device()
-{ }
+TMercury20002Device::~TMercury20002Device() {}
 
 const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave)
 {
@@ -152,12 +149,13 @@ bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expecte
     return response[4] != cmd_expected;
 }
 
-uint32_t TMercury20002Device::DecodeBCD(uint8_t* pb, int how_many) const
+uint32_t TMercury20002Device::DecodeBCD(uint8_t* ps, int how_many) const
 {
-    std::string s;
-    for (ptrdiff_t i = 0; i < how_many; ++i) {
-        s += DIGITS.at(((size_t) pb[i] & 0xf0) >> 4);
-        s += DIGITS.at((size_t) pb[i] & 0x0f);
+    int start = sizeof(uint32_t) - how_many;
+    uint32_t ret = 0U;
+    uint8_t* pd = reinterpret_cast<uint8_t*>(&ret);
+    for (int i = start; i < 4; ++i) {
+        pd[i] = ps[i];
     }
-    return static_cast<uint32_t>(std::stoul(s));
+    return ret;
 }
