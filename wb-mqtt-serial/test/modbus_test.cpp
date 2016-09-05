@@ -13,6 +13,8 @@
 #include "modbus_device.h"
 #include "pty_based_fake_serial.h"
 
+using namespace std;
+
 class TModbusTestBase: public TLoggedFixture
 {
 protected:
@@ -222,6 +224,30 @@ TEST_F(TModbusClientTest, S8)
     EXPECT_EQ(254, Slave->Holding[20]);
 }
 
+TEST_F(TModbusClientTest, Char8)
+{
+    PRegister holding20 = RegHolding(20, Char8);
+    PRegister input30 = RegInput(30, Char8);
+    SerialClient->AddRegister(holding20);
+    SerialClient->AddRegister(input30);
+
+    Note() << "server -> client: 65, 66";
+    Slave->Holding[20] = 65;
+    Slave->Input[30] = 66;
+    Note() << "Cycle()";
+    SerialClient->Cycle();
+    EXPECT_EQ("A", SerialClient->GetTextValue(holding20));
+    EXPECT_EQ("B", SerialClient->GetTextValue(input30));
+
+    FakeSerial->Flush();
+    Note() << "client -> server: '!'";
+    SerialClient->SetTextValue(holding20, "!");
+    Note() << "Cycle()";
+    SerialClient->Cycle();
+    EXPECT_EQ("!", SerialClient->GetTextValue(holding20));
+    EXPECT_EQ(33, Slave->Holding[20]);
+    FakeSerial->Flush();
+}
 
 TEST_F(TModbusClientTest, S64)
 {

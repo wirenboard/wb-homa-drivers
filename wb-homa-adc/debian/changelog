@@ -1,3 +1,9 @@
+wb-homa-adc (1.13.2) stable; urgency=medium
+
+  * update libwbmqtt version
+
+ -- Nikita webconn Maslov <n.maslov@contactless.ru>  Thu, 25 Aug 2016 19:51:15 +0300
+
 wb-homa-adc (1.13.1) stable; urgency=medium
 
   * fix memory memory issues on exceptions
