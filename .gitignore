@@ -34,3 +34,9 @@ wb-homa-ninja-bridge/debian/wb-homa-ninja-bridge/
 wb-mqtt-lirc/debian/wb-mqtt-lirc/
 wb-mqtt-db/debian/wb-mqtt-db/
 .d
+.idea/vcs.xml
+.idea/wb-homa-drivers.iml
+.idea/dictionaries/ssko.xml
+wb-mqtt-serial/.idea/wb-mqtt-serial.iml
+wb-mqtt-serial/.idea/workspace.xml
+wb-mqtt-serial/build/Debug/wb_mqtt_serial
