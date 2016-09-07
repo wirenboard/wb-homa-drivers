@@ -6,7 +6,7 @@
     "protocol": "mercury200dot02",
     "channels": [
       {
-        "name": "RET1",
+        "name": "Power consumption tariff 1",
         "reg_type": "energy",
         "address": "0x00",
         "format": "bcd32",
@@ -14,7 +14,7 @@
         "scale": 0.001
       },
       {
-        "name": "RET2",
+        "name": "Power consumption tariff 2",
         "reg_type": "energy",
         "address": "0x01",
         "format": "bcd32",
@@ -22,7 +22,7 @@
         "scale": 0.001
       },
       {
-        "name": "RET3",
+        "name": "Power consumption tariff 3",
         "reg_type": "energy",
         "address": "0x02",
         "format": "bcd32",
@@ -30,7 +30,7 @@
         "scale": 0.001
       },
       {
-        "name": "RET4",
+        "name": "Power consumption tariff 4",
         "reg_type": "energy",
         "address": "0x03",
         "format": "bcd32",
@@ -38,26 +38,26 @@
         "scale": 0.001
       },
       {
-        "name": "U",
-        "reg_type": "param",
+        "name": "Voltage",
+        "reg_type": "param16",
         "address": "0x00",
-        "format": "bcd32",
-        "type": "voltage",
+        "format": "bcd16",
+        "type": "value",
         "scale": 0.1
       },
       {
-        "name": "I",
-        "reg_type": "param",
+        "name": "Current",
+        "reg_type": "param16",
         "address": "0x01",
-        "format": "bcd32",
+        "format": "bcd16",
         "type": "value",
         "scale": 0.01
       },
       {
-        "name": "P",
-        "reg_type": "param",
+        "name": "Power",
+        "reg_type": "param24",
         "address": "0x02",
-        "format": "bcd32",
+        "format": "bcd24",
         "type": "power",
         "scale": 1.0
       }

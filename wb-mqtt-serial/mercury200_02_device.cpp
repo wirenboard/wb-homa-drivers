@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <chrono>
+#include <cassert>
 
 #include "crc16.h"
 #include "serial_device.h"
@@ -17,18 +18,16 @@ namespace {
 REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
         {
             { TMercury20002Device::REG_ENERGY_VALUE, "energy", "power_consumption", BCD32, true },
-            { TMercury20002Device::REG_PARAM_VALUE, "param", "value", BCD32, true }
+            { TMercury20002Device::REG_PARAM_VALUE16, "param16", "value", BCD16, true },
+            { TMercury20002Device::REG_PARAM_VALUE24, "param24", "value", BCD24, true }
         }));
 
 TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port)
-        : TSerialDevice(config, port)
-{}
+        : TSerialDevice(config, port) {}
 
-TMercury20002Device::~TMercury20002Device()
-{}
+TMercury20002Device::~TMercury20002Device() {}
 
-const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(uint32_t slave)
-{
+const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(uint32_t slave) {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
         return it->second;
@@ -53,8 +52,7 @@ const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(
     return EnergyCache.insert({slave, a}).first->second;
 }
 
-const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(uint32_t slave)
-{
+const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(uint32_t slave) {
     auto it = ParamCache.find(slave);
     if (it != ParamCache.end()) {
         return it->second;
@@ -74,47 +72,45 @@ const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(ui
     uint8_t *payload = buf + HEADER_SZ;
     TParamValues a{{0, 0, 0}};
     a.values[0] = DecodeBCD(payload, BCD16_SZ_);
-    a.values[1] = DecodeBCD(payload + 2, BCD16_SZ_);
-    a.values[2] = DecodeBCD(payload + 4, BCD24_SZ_);
+    a.values[1] = DecodeBCD(payload + BCD16_SZ_, BCD16_SZ_);
+    a.values[2] = DecodeBCD(payload + BCD32_SZ_, BCD24_SZ_);
     return ParamCache.insert({slave, a}).first->second;
 }
 
-uint64_t TMercury20002Device::ReadRegister(PRegister reg)
-{
+uint64_t TMercury20002Device::ReadRegister(PRegister reg) {
     uint32_t slv = static_cast<uint32_t>(reg->Slave->Id);
     uint32_t adr = static_cast<uint32_t>(reg->Address) & 0x03;
     switch (reg->Type) {
         case REG_ENERGY_VALUE:
             return ReadEnergyValues(slv).values[adr];
-        case REG_PARAM_VALUE:
+        case REG_PARAM_VALUE16:
+            assert(adr == 0x00 || adr == 0x01);
+        case REG_PARAM_VALUE24:
+            assert(adr==0x02);
             return ReadParamValues(slv).values[adr];
         default:
             throw TSerialDeviceException("mercury200.02: invalid register type");
     }
 }
 
-void TMercury20002Device::WriteRegister(PRegister, uint64_t)
-{
+void TMercury20002Device::WriteRegister(PRegister, uint64_t) {
     throw TSerialDeviceException("Mercury 200.02 protocol: writing register is not supported");
 }
 
-void TMercury20002Device::EndPollCycle()
-{
+void TMercury20002Device::EndPollCycle() {
     EnergyCache.clear();
     ParamCache.clear();
     TSerialDevice::EndPollCycle();
 }
 
-bool TMercury20002Device::CRCInvalid(uint8_t *buf, int sz) const
-{
+bool TMercury20002Device::CRCInvalid(uint8_t *buf, int sz) const {
     auto actual_crc = CRC16::CalculateCRC16(buf, static_cast<uint16_t >(sz));
     uint16_t sent_crc = ((uint16_t) buf[sz] << 8) | ((uint16_t) buf[sz + 1]);
     return actual_crc != sent_crc;
 }
 
 
-int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t *response) const
-{
+int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t *response) const {
     using namespace std::chrono;
 
     uint8_t request[REQUEST_LEN];
@@ -124,8 +120,7 @@ int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t *r
     return Port()->ReadFrame(response, RESPONSE_BUF_LEN, microseconds(PAUSE_US));
 }
 
-void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd) const
-{
+void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd) const {
     buf[0] = 0x00;
     buf[1] = static_cast<uint8_t>(id >> 16);
     buf[2] = static_cast<uint8_t>(id >> 8);
@@ -136,8 +131,7 @@ void TMercury20002Device::FillCommand(uint8_t *buf, uint32_t id, uint8_t cmd) co
     buf[6] = static_cast<uint8_t>(crc);
 }
 
-bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t *response) const
-{
+bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t *response) const {
     if (response[0] != 0x00) {
         return true;
     }
@@ -150,8 +144,7 @@ bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expecte
     return response[4] != cmd_expected;
 }
 
-uint32_t TMercury20002Device::DecodeBCD(uint8_t *ps, BCDSizes how_many) const
-{
+uint32_t TMercury20002Device::DecodeBCD(uint8_t *ps, BCDSizes how_many) const {
     uint32_t ret = 0U;
     auto start = sizeof(ret) - how_many;
     uint8_t *pd = reinterpret_cast<uint8_t *>(&ret);

@@ -27,11 +27,11 @@ namespace {
     PRegister M200dot02RET4Reg = TRegister::Intern(Mercury200dot02Slave,
                                                    TMercury20002Device::REG_ENERGY_VALUE, 0x03, BCD32);
     PRegister M200dot02UReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x00, BCD32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE16, 0x00, BCD16);
     PRegister M200dot02IReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x01, BCD32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE16, 0x01, BCD16);
     PRegister M200dot02PReg
-        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE, 0x02, BCD32);
+        = TRegister::Intern(Mercury200dot02Slave, TMercury20002Device::REG_PARAM_VALUE24, 0x02, BCD24);
 };
 
 class TEMDeviceTest : public TSerialDeviceTest, public TEMDeviceExpectations {

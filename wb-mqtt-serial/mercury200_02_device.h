@@ -18,7 +18,8 @@ public:
     enum RegisterType
     {
         REG_ENERGY_VALUE = 0,
-        REG_PARAM_VALUE = 1
+        REG_PARAM_VALUE16 = 1,
+        REG_PARAM_VALUE24 = 2,
     };
 
     TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port);
