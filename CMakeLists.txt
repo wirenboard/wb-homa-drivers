@@ -14,13 +14,13 @@ include_directories(
         /Users/ssko/src/googletest/googletest/include)
 link_directories(/Users/ssko/src/usr/lib)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 #set(CMLINF)
 file(GLOB MAIN_SOURCES wb-mqtt-serial/*.cpp)
 file(GLOB MAIN_HEADERS wb-mqtt-serial/*.h wb-mqtt-serial/*.hpp)
 source_group(MAIN_SRC FILES ${MAIN_SOURCES} ${MAIN_HEADERS})
 
-file(GLOB CONFIGS ./*.json)
+file(GLOB CONFIGS wb-mqtt-serial/*.json)
 source_group(CONFIGS_SRC FILES ${CONFIGS})
 
 file(GLOB SERIAL_TEMPLATES wb-mqtt-serial-templates/*.json)
