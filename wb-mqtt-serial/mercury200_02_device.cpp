@@ -48,7 +48,7 @@ const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(
     uint8_t *payload = buf + HEADER_SZ;
     TEnergyValues a{{0, 0, 0, 0}};
     for (int i = 0; i < 4; ++i) {
-        a.values[i] = DecodeBCD(payload + i * 4, BCD32_SZ_);
+        a.values[i] = DecodeBCD(payload + i * BCD32_SZ_, BCD32_SZ_);
     }
     return EnergyCache.insert({slave, a}).first->second;
 }
@@ -152,13 +152,11 @@ bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expecte
 
 uint32_t TMercury20002Device::DecodeBCD(uint8_t *ps, BCDSizes how_many) const
 {
-
-    int start = sizeof(uint32_t) - how_many;
-
     uint32_t ret = 0U;
+    auto start = sizeof(ret) - how_many;
     uint8_t *pd = reinterpret_cast<uint8_t *>(&ret);
-    for (int i = start; i < sizeof(ret); ++i) {
-        pd[i] = ps[i];
+    for (auto i = start, j = 0U; i < sizeof(ret); ++i, ++j) {
+        pd[i] = ps[j];
     }
     return ret;
 }
