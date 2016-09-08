@@ -51,6 +51,7 @@ wb-mqtt-serial/build
 **/.idea/gradle.xml
 **/.idea/libraries
 **/.idea/mongoSettings.xml
+**/.idea/codeStyleSettings.xml
 *.iws
 *.iml
 
