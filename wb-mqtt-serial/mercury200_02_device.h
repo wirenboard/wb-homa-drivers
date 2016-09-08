@@ -29,10 +29,6 @@ public:
     virtual void EndPollCycle();
 
 private:
-    enum BCDSizes
-    {
-        BCD32_SZ_ = 4, BCD24_SZ_ = 3, BCD16_SZ_ = 2
-    };
     struct TEnergyValues
     {
         uint32_t values[4];
@@ -48,8 +44,7 @@ private:
     void FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const;
     int RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const;
     bool BadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const;
-    // alignment independent cast of up to four BCD bytes to uint32_t
-    uint32_t DecodeBCD(uint8_t* ps, BCDSizes how_many) const;
+
     bool CRCInvalid(uint8_t* buf, int sz) const;
 
     std::unordered_map<uint32_t, TEnergyValues> EnergyCache;

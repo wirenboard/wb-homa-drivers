@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "register_handler.h"
+#include "bcd_utils.h"
 
 TRegisterHandler::TRegisterHandler(PSerialDevice dev, PRegister reg, PBinarySemaphore flush_needed, bool debug)
     : Dev(dev), Reg(reg), FlushNeeded(flush_needed), Debug(debug) {}
@@ -140,6 +141,12 @@ std::string TRegisterHandler::TextValue() const
         return ToScaledTextValue(int32_t(Value & 0xffffffff));
     case S64:
         return ToScaledTextValue(int64_t(Value));
+    case BCD8:
+        return PackedBCD2String(Value, BCD8_SZ);
+    case BCD16:
+        return PackedBCD2String(Value, BCD16_SZ);
+    case BCD32:
+        return PackedBCD2String(Value, BCD32_SZ);
 	case Float:
         {
             union {

@@ -2,6 +2,7 @@
 #include <cmath>
 #include <mutex>
 #include <memory>
+#include <string>
 #include <wbmqtt/utils.h>
 #include "register.h"
 #include "serial_device.h"

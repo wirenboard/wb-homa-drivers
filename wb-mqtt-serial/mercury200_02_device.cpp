@@ -1,10 +1,10 @@
 #include <cstdint>
 #include <chrono>
-#include <cassert>
 
 #include "crc16.h"
 #include "serial_device.h"
 #include "mercury200_02_device.h"
+#include "bcd_utils.h"
 
 namespace {
     const size_t RESPONSE_BUF_LEN = 100;
@@ -47,7 +47,7 @@ const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(
     uint8_t *payload = buf + HEADER_SZ;
     TEnergyValues a{{0, 0, 0, 0}};
     for (int i = 0; i < 4; ++i) {
-        a.values[i] = DecodeBCD(payload + i * BCD32_SZ_, BCD32_SZ_);
+        a.values[i] = PackBCD(payload + i * BCD32_SZ, BCD32_SZ);
     }
     return EnergyCache.insert({slave, a}).first->second;
 }
@@ -71,9 +71,9 @@ const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(ui
     }
     uint8_t *payload = buf + HEADER_SZ;
     TParamValues a{{0, 0, 0}};
-    a.values[0] = DecodeBCD(payload, BCD16_SZ_);
-    a.values[1] = DecodeBCD(payload + BCD16_SZ_, BCD16_SZ_);
-    a.values[2] = DecodeBCD(payload + BCD32_SZ_, BCD24_SZ_);
+    a.values[0] = PackBCD(payload, BCD16_SZ);
+    a.values[1] = PackBCD(payload + BCD16_SZ, BCD16_SZ);
+    a.values[2] = PackBCD(payload + BCD32_SZ, BCD24_SZ);
     return ParamCache.insert({slave, a}).first->second;
 }
 
@@ -84,9 +84,7 @@ uint64_t TMercury20002Device::ReadRegister(PRegister reg) {
         case REG_ENERGY_VALUE:
             return ReadEnergyValues(slv).values[adr];
         case REG_PARAM_VALUE16:
-            assert(adr == 0x00 || adr == 0x01);
         case REG_PARAM_VALUE24:
-            assert(adr==0x02);
             return ReadParamValues(slv).values[adr];
         default:
             throw TSerialDeviceException("mercury200.02: invalid register type");
@@ -144,12 +142,3 @@ bool TMercury20002Device::BadHeader(uint32_t slave_expected, uint8_t cmd_expecte
     return response[4] != cmd_expected;
 }
 
-uint32_t TMercury20002Device::DecodeBCD(uint8_t *ps, BCDSizes how_many) const {
-    uint32_t ret = 0U;
-    auto start = sizeof(ret) - how_many;
-    uint8_t *pd = reinterpret_cast<uint8_t *>(&ret);
-    for (auto i = start, j = 0U; i < sizeof(ret); ++i, ++j) {
-        pd[i] = ps[j];
-    }
-    return ret;
-}
