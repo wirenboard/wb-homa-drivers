@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <chrono>
-#include <cassert>
 
 #include "crc16.h"
 #include "serial_device.h"
@@ -84,9 +83,7 @@ uint64_t TMercury20002Device::ReadRegister(PRegister reg) {
         case REG_ENERGY_VALUE:
             return ReadEnergyValues(slv).values[adr];
         case REG_PARAM_VALUE16:
-            assert(adr == 0x00 || adr == 0x01);
         case REG_PARAM_VALUE24:
-            assert(adr==0x02);
             return ReadParamValues(slv).values[adr];
         default:
             throw TSerialDeviceException("mercury200.02: invalid register type");
@@ -148,7 +145,7 @@ uint32_t TMercury20002Device::DecodeBCD(uint8_t *ps, BCDSizes how_many) const {
     uint32_t ret = 0U;
     auto start = sizeof(ret) - how_many;
     uint8_t *pd = reinterpret_cast<uint8_t *>(&ret);
-    for (auto i = start, j = 0U; i < sizeof(ret); ++i, ++j) {
+    for (size_t i = start, j = 0UL; i < sizeof(ret); ++i, ++j) {
         pd[i] = ps[j];
     }
     return ret;
