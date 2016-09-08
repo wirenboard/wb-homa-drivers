@@ -3,9 +3,10 @@
 //
 
 #include <cstddef>
+#include <cassert>
 #include "bcd_utils.h"
 
-uint32_t pack_bcd(uint8_t *ps, BCDSizes how_many)
+uint32_t PackBCD(uint8_t *ps, BCDSizes how_many)
 {
     uint32_t ret = 0U;
     auto start = sizeof(ret) - how_many;
@@ -16,4 +17,19 @@ uint32_t pack_bcd(uint8_t *ps, BCDSizes how_many)
     return ret;
 }
 
-
+std::string PackedBCD2String(uint64_t packed, BCDSizes size)
+{
+    assert(size <= 4);
+    int coeff = 1;
+    uint32_t r = 0U;
+    uint8_t *p = reinterpret_cast<uint8_t *>(&packed) + sizeof(packed) - 1;
+    uint8_t *l = p - size;
+    while (p >= l) {
+        r += (*p & 0x0f) * coeff;
+        coeff *= 10;
+        r += ((*p >> 4) * coeff);
+        coeff *= 10;
+        --p;
+    }
+    return std::to_string(r);
+}

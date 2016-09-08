@@ -47,7 +47,7 @@ const TMercury20002Device::TEnergyValues &TMercury20002Device::ReadEnergyValues(
     uint8_t *payload = buf + HEADER_SZ;
     TEnergyValues a{{0, 0, 0, 0}};
     for (int i = 0; i < 4; ++i) {
-        a.values[i] = pack_bcd(payload + i * BCD32_SZ, BCD32_SZ);
+        a.values[i] = PackBCD(payload + i * BCD32_SZ, BCD32_SZ);
     }
     return EnergyCache.insert({slave, a}).first->second;
 }
@@ -71,9 +71,9 @@ const TMercury20002Device::TParamValues &TMercury20002Device::ReadParamValues(ui
     }
     uint8_t *payload = buf + HEADER_SZ;
     TParamValues a{{0, 0, 0}};
-    a.values[0] = pack_bcd(payload, BCD16_SZ);
-    a.values[1] = pack_bcd(payload + BCD16_SZ, BCD16_SZ);
-    a.values[2] = pack_bcd(payload + BCD32_SZ, BCD24_SZ);
+    a.values[0] = PackBCD(payload, BCD16_SZ);
+    a.values[1] = PackBCD(payload + BCD16_SZ, BCD16_SZ);
+    a.values[2] = PackBCD(payload + BCD32_SZ, BCD24_SZ);
     return ParamCache.insert({slave, a}).first->second;
 }
 
