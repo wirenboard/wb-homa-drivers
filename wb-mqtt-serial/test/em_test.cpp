@@ -79,7 +79,8 @@ void TEMDeviceTest::VerifyMilurQuery()
     ASSERT_EQ(0x03946f, MilurDev->ReadRegister(MilurPhaseCVoltageReg));
 
     EnqueueMilurTotalConsumptionResponse();
-    ASSERT_EQ(11144, MilurDev->ReadRegister(MilurTotalConsumptionReg));
+    // "milur BCD32" value 11144 packed as uint64_t
+    ASSERT_EQ(4904702568694808576, MilurDev->ReadRegister(MilurTotalConsumptionReg));
 }
 
 TEST_F(TEMDeviceTest, MilurQuery)

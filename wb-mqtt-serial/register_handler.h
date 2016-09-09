@@ -7,6 +7,7 @@
 #include "register.h"
 #include "serial_device.h"
 #include "binary_semaphore.h"
+#include "bcd_utils.h"
 
 class TRegisterHandler
 {
@@ -36,6 +37,7 @@ public:
 
 private:
 	template<typename T> std::string ToScaledTextValue(T val) const;
+    std::string ToScaledBCDValue(uint64_t v, BCDSizes size) const;
 	template<typename T> T FromScaledTextValue(const std::string& str) const;
 	uint64_t ConvertMasterValue(const std::string& v) const;
     TErrorState UpdateReadError(bool error);
