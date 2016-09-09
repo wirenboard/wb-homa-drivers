@@ -17,7 +17,7 @@ uint32_t PackBCD(uint8_t *ps, BCDSizes how_many)
     return ret;
 }
 
-std::string PackedBCD2String(uint64_t packed, BCDSizes size)
+uint64_t PackedBCD2Int(uint64_t packed, BCDSizes size)
 {
     assert(size <= 4);
     int coeff = 1;
@@ -31,5 +31,5 @@ std::string PackedBCD2String(uint64_t packed, BCDSizes size)
         coeff *= 10;
         --p;
     }
-    return std::to_string(r);
+    return r;
 }
