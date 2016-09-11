@@ -98,11 +98,7 @@ void TMQTTDBLogger::OnMessage(const struct mosquitto_message *message)
             DLOG(DEBUG) << "Channel ID for topic " << topic << " is " << channel_int_id;
 
             if (payload != channel_data.LastValue) {
-<<<<<<< HEAD
-                DVLOG(3) << "Data has changed!";
-=======
                 DLOG(DEBUG) << "Data has changed!";
->>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
                 channel_data.Changed = true;
             }
 

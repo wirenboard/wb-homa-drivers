@@ -2,7 +2,7 @@
 #include "em_expectations.h"
 #include "milur_device.h"
 #include "mercury230_device.h"
-#include "mercury200_02_device.h"
+#include "mercury200_device.h"
 
 namespace {
     PSlaveEntry MilurSlave = TSlaveEntry::Intern("milur", 0xff);

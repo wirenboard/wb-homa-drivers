@@ -3,7 +3,7 @@
 
 #include "crc16.h"
 #include "serial_device.h"
-#include "mercury200_02_device.h"
+#include "mercury200_device.h"
 #include "bcd_utils.h"
 
 namespace {
