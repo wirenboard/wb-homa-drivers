@@ -50,15 +50,6 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
 
                     LOG(INFO) << "Start bulk transaction";
                 }
-<<<<<<< HEAD
-                
-                VLOG(1) << "Processing channel " << channel_data.Name << " from group " << group.Id << (channel_data.Changed ? ", changed" : ", UNCHANGED");
-                DVLOG(3) << "Selected channel ID is " << channel_id;
-
-                process_changed = process_changed && channel_data.Changed;
-                group_processed = true;
-                
-=======
 
                 LOG(INFO) << "Processing channel " << channel_data.Name << " from group " << group.Id << (channel_data.Changed ? ", changed" : ", UNCHANGED");
                 DLOG(DEBUG) << "Selected channel ID is " << channel_id;
@@ -66,24 +57,15 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
                 process_changed = process_changed && channel_data.Changed;
                 group_processed = true;
 
->>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
                 WriteChannel(channel_data, group);
             }
 
         }
-<<<<<<< HEAD
-        
-        if (group_processed) {
-            group.LastSaved = now;
-            if (!process_changed) {
-                VLOG(1) << "Unchanged values processed!";
-=======
 
         if (group_processed) {
             group.LastSaved = now;
             if (!process_changed) {
                 LOG(INFO) << "Unchanged values processed!";
->>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
                 group.LastUSaved = now;
             }
         }

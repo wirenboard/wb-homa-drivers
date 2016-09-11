@@ -158,15 +158,6 @@ int main (int argc, char *argv[])
         }
     }
 
-<<<<<<< HEAD
-    // configure logging
-    if (verbose_level >= 0) {
-        FLAGS_logtostderr = 1;
-        FLAGS_v = verbose_level;
-    }
-
-=======
->>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
 
 
     if (config_fname.empty()) {
@@ -222,9 +213,6 @@ int main (int argc, char *argv[])
     if (verbose_level > 0) {
         auto appender = new log4cpp::OstreamAppender("default", &cerr);
 
-<<<<<<< HEAD
-    ::google::InitGoogleLogging(argv[0]);
-=======
         appender->setLayout(log_layout);
         log_root.addAppender(appender);
 
@@ -258,7 +246,6 @@ int main (int argc, char *argv[])
         log_root.addAppender(appender);
         log_root.setPriority(log4cpp::Priority::NOTICE);
     }
->>>>>>> 345ab1bcf5c4d581c055cb29a08c18b05d26bf77
 
     mosqpp::lib_init();
     std::shared_ptr<TMQTTDBLogger> mqtt_db_logger(new TMQTTDBLogger(mqtt_config, config));

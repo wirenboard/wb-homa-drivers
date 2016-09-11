@@ -1,12 +1,7 @@
-//
-// Created by Sergey Skorokhodov on 08.09.16.
-//
-
 #ifndef WB_MQTT_SERIAL_BCD_UTILS_H
 #define WB_MQTT_SERIAL_BCD_UTILS_H
 
 #include <cstdint>
-#include <string>
 
 enum BCDSizes
 {
@@ -14,9 +9,13 @@ enum BCDSizes
 };
 
 // Alignment independent cast of up to four BCD bytes to uint32_t.
-// Resulting uint32_t is zero padded image of the original BCD byte array.
-uint32_t PackBCD(uint8_t *ps, BCDSizes how_many);
-// Accepts uint64_t that is a zero padded byte image of original BCD byte array.
+// Resulting uint32_t is (potentially) zero padded image of the original BCD byte array.
+// For example, BCD32 {0x00, 0x12, 0x34, 0x56} converted to little endian integer
+// 0x00123456 (bytes {0x56, 0x34, 0x12, 0x00} or big endian integer 0x00123456
+// (bytes {0x00, 0x12, 0x34, 0x56}).
+uint32_t PackBCD(uint8_t* bytes, BCDSizes size);
+// Accepts uint64_t that is a (potentially) zero padded byte image of original BCD byte array
+// converted to uint32_t by previous function.
 uint64_t PackedBCD2Int(uint64_t packed, BCDSizes size);
 
 #endif //WB_MQTT_SERIAL_BCD_UTILS_H

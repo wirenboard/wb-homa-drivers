@@ -43,9 +43,9 @@ private:
     // buf expected to be 7 bytes long
     void FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const;
     int RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const;
-    bool BadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const;
+    bool IsBadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t *response) const;
 
-    bool CRCInvalid(uint8_t* buf, int sz) const;
+    bool IsCrcValid(uint8_t *buf, int sz) const;
 
     std::unordered_map<uint32_t, TEnergyValues> EnergyCache;
     std::unordered_map<uint32_t, TParamValues> ParamCache;

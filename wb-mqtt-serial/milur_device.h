@@ -28,8 +28,8 @@ protected:
     bool ConnectionSetup(uint8_t slave);
     ErrorType CheckForException(uint8_t* frame, int len, const char** message);
     uint64_t BuildIntVal(uint8_t *p, int sz) const;
-    uint64_t BuildBCB32(uint8_t* p) const;
-    int ExpectedSize(int type) const;
+    uint64_t BuildBCB32(uint8_t* psrc) const;
+    int GetExpectedSize(int type) const;
 };
 
 typedef std::shared_ptr<TMilurDevice> PMilurDevice;
