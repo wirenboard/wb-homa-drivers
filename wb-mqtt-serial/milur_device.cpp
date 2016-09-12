@@ -1,4 +1,5 @@
 #include "milur_device.h"
+#include "bcd_utils.h"
 
 namespace {
 
@@ -54,7 +55,7 @@ bool TMilurDevice::ConnectionSetup(uint8_t slave)
     }
 }
 
-TEMDevice::ErrorType TMilurDevice::CheckForException(uint8_t *frame, int len, const char **message)
+TEMDevice::ErrorType TMilurDevice::CheckForException(uint8_t* frame, int len, const char** message)
 {
     if (len != 6 || !(frame[1] & 0x80)) {
         *message = 0;
@@ -109,7 +110,7 @@ TEMDevice::ErrorType TMilurDevice::CheckForException(uint8_t *frame, int len, co
 
 uint64_t TMilurDevice::ReadRegister(PRegister reg)
 {
-    int size = ExpectedSize(reg->Type);
+    int size = GetExpectedSize(reg->Type);
     uint8_t addr = static_cast<uint8_t>(reg->Address);
     uint8_t buf[MAX_LEN], *p = buf;
     Talk(static_cast<uint8_t>(reg->Slave->Id), 0x01, &addr, 1, 0x01, buf, size + 2, ExpectNBytes(size + 6));
@@ -155,23 +156,22 @@ uint64_t TMilurDevice::BuildIntVal(uint8_t *p, int sz) const
     return r;
 }
 
-// We transfer BCD byte arrays as unsigned integers
-// that are zero-padded images of original BCD byte arrays.
-// Milur returns its own weired "BCD" as little endian (i.e. words and bytes swapped)
-// and swaps nibbles so we have to convert it to our standard transport BCD format.
-uint64_t TMilurDevice::BuildBCB32(uint8_t *p) const
+// We transfer BCD byte arrays as unsigned little endian integers with swapped nibbles.
+// To convert it to our standard transport BCD representation (ie. integer with hexadecimal
+// that reads exactly as original BCD if printed) we just have to swap nibbles of each byte
+// that is decimal value 87654321 comes as {0x12, 0x34, 0x56, 0x78} and becomes {0x21, 0x43, 0x65, 0x87}.
+uint64_t TMilurDevice::BuildBCB32(uint8_t *psrc) const
 {
     uint32_t r = 0;
-    uint8_t *d = reinterpret_cast<uint8_t *>(&r);
-    for (int i = 0, j = 3; i < 4; ++i, --j) {
-        auto t = p[i];
-        d[j] = (t >> 4) | (t << 4);
+    uint8_t *pdst = reinterpret_cast<uint8_t *>(&r);
+    for (int i = 0; i < 4; ++i) {
+        auto t = psrc[i];
+        pdst[i] = (t >> 4) | (t << 4);
     }
-
-    return static_cast<uint64_t>(r) << 32;
+    return r;
 }
 
-int TMilurDevice::ExpectedSize(int type) const
+int TMilurDevice::GetExpectedSize(int type) const
 {
     auto t = static_cast<TMilurDevice::RegisterType>(type);
     switch (t) {

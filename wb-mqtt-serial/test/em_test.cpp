@@ -80,7 +80,7 @@ void TEMDeviceTest::VerifyMilurQuery()
 
     EnqueueMilurTotalConsumptionResponse();
     // "milur BCD32" value 11144 packed as uint64_t
-    ASSERT_EQ(4904702568694808576, MilurDev->ReadRegister(MilurTotalConsumptionReg));
+    ASSERT_EQ(0x11144, MilurDev->ReadRegister(MilurTotalConsumptionReg));
 }
 
 TEST_F(TEMDeviceTest, MilurQuery)
@@ -170,29 +170,21 @@ void TEMDeviceTest::VerifyMercuryParamQuery()
 void TEMDeviceTest::VerifyM200dot02EnergyQuery()
 {
     EnqueueM200dot02EnergyResponse();
-    // BCD32 0x00062142
-    ASSERT_EQ(1109460480, M200dot02Dev->ReadRegister(M200dot02RET1Reg));
-    // BCD32 0x00020834
-    ASSERT_EQ(872940032, M200dot02Dev->ReadRegister(M200dot02RET2Reg));
-    // BCD32 0x00011111
-    ASSERT_EQ(286327040, M200dot02Dev->ReadRegister(M200dot02RET3Reg));
-    // BCD32 0x00022222
-    ASSERT_EQ(572654080, M200dot02Dev->ReadRegister(M200dot02RET4Reg));
+    // BCD32 62142
+    ASSERT_EQ(0x62142, M200dot02Dev->ReadRegister(M200dot02RET1Reg));
+    ASSERT_EQ(0x20834, M200dot02Dev->ReadRegister(M200dot02RET2Reg));
+    ASSERT_EQ(0x11111, M200dot02Dev->ReadRegister(M200dot02RET3Reg));
+    ASSERT_EQ(0x22222, M200dot02Dev->ReadRegister(M200dot02RET4Reg));
     M200dot02Dev->EndPollCycle();
-//    SerialPort->Close();
 }
 
 void TEMDeviceTest::VerifyM200dot02ParamQuery()
 {
     EnqueueM200dot02ParamResponse();
-    // BCB16 0x00001234
-    ASSERT_EQ(873594880, M200dot02Dev->ReadRegister(M200dot02UReg));
-    // BCB16 0x00005678
-    ASSERT_EQ(2018902016, M200dot02Dev->ReadRegister(M200dot02IReg));
-    // BCB24 0x00765432
-    ASSERT_EQ(844396032, M200dot02Dev->ReadRegister(M200dot02PReg));
+    ASSERT_EQ(0x1234, M200dot02Dev->ReadRegister(M200dot02UReg));
+    ASSERT_EQ(0x5678, M200dot02Dev->ReadRegister(M200dot02IReg));
+    ASSERT_EQ(0x765432, M200dot02Dev->ReadRegister(M200dot02PReg));
     M200dot02Dev->EndPollCycle();
-//    SerialPort->Close();
 }
 
 TEST_F(TEMDeviceTest, Mercury230ReadParams)
