@@ -36,10 +36,9 @@ public:
     void SetDebug(bool debug) { Debug = debug; }
 
 private:
-	template<typename T> std::string ToScaledTextValue(T val) const;
-    std::string ToScaledBCDValue(uint64_t v, BCDSizes size) const;
-	template<typename T> T FromScaledTextValue(const std::string& str) const;
-	uint64_t ConvertMasterValue(const std::string& v) const;
+    template<typename T> std::string ToScaledTextValue(T val) const;
+    template<typename T> T FromScaledTextValue(const std::string& str) const;
+    uint64_t ConvertMasterValue(const std::string& v) const;
     TErrorState UpdateReadError(bool error);
     TErrorState UpdateWriteError(bool error);
 
@@ -80,20 +79,20 @@ template<>
 inline uint64_t TRegisterHandler::FromScaledTextValue(const std::string& str) const
 {
     if (Reg->Scale == 1) {
-		return std::stoull(str);
+        return std::stoull(str);
     } else {
         return round(stod(str) / Reg->Scale);
-	}
+    }
 }
 
 template<>
 inline int64_t TRegisterHandler::FromScaledTextValue(const std::string& str) const
 {
     if (Reg->Scale == 1) {
-		return std::stoll(str);
+        return std::stoll(str);
     } else {
         return round(stod(str) / Reg->Scale);
-	}
+    }
 }
 
 template<>

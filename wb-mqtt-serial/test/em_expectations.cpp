@@ -401,7 +401,7 @@ void TEMDeviceExpectations::EnqueueMercury230InternalMeterErrorResponse()
         }, __func__);
 }
 
-void TEMDeviceExpectations::EnqueueM200dot02EnergyResponse()
+void TEMDeviceExpectations::EnqueueMercury200EnergyResponse()
 {
     Expector()->Expect(
         {
@@ -423,7 +423,7 @@ void TEMDeviceExpectations::EnqueueM200dot02EnergyResponse()
         }, __func__);
 }
 
-void TEMDeviceExpectations::EnqueueM200dot02ParamResponse()
+void TEMDeviceExpectations::EnqueueMercury200ParamResponse()
 {
     Expector()->Expect(
         {

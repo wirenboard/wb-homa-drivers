@@ -16,21 +16,21 @@ namespace
     const ptrdiff_t HEADER_SZ = 5;
 }
 
-REGISTER_PROTOCOL("mercury200", TMercury20002Device, TRegisterTypes(
+REGISTER_PROTOCOL("mercury200", TMercury200Device, TRegisterTypes(
         {
-            { TMercury20002Device::REG_ENERGY_VALUE, "energy", "power_consumption", BCD32, true },
-            { TMercury20002Device::REG_PARAM_VALUE16, "param16", "value", BCD16, true },
-            { TMercury20002Device::REG_PARAM_VALUE24, "param24", "value", BCD24, true }
+            { TMercury200Device::REG_ENERGY_VALUE, "energy", "power_consumption", BCD32, true },
+            { TMercury200Device::REG_PARAM_VALUE16, "param16", "value", BCD16, true },
+            { TMercury200Device::REG_PARAM_VALUE24, "param24", "value", BCD24, true }
         }));
 
-TMercury20002Device::TMercury20002Device(PDeviceConfig config, PAbstractSerialPort port)
+TMercury200Device::TMercury200Device(PDeviceConfig config, PAbstractSerialPort port)
         : TSerialDevice(config, port)
 {}
 
-TMercury20002Device::~TMercury20002Device()
+TMercury200Device::~TMercury200Device()
 {}
 
-const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(uint32_t slave)
+const TMercury200Device::TEnergyValues& TMercury200Device::ReadEnergyValues(uint32_t slave)
 {
     auto it = EnergyCache.find(slave);
     if (it != EnergyCache.end()) {
@@ -56,7 +56,7 @@ const TMercury20002Device::TEnergyValues& TMercury20002Device::ReadEnergyValues(
     return EnergyCache.insert({slave, a}).first->second;
 }
 
-const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(uint32_t slave)
+const TMercury200Device::TParamValues& TMercury200Device::ReadParamValues(uint32_t slave)
 {
     auto it = ParamCache.find(slave);
     if (it != ParamCache.end()) {
@@ -82,7 +82,7 @@ const TMercury20002Device::TParamValues& TMercury20002Device::ReadParamValues(ui
     return ParamCache.insert({slave, a}).first->second;
 }
 
-uint64_t TMercury20002Device::ReadRegister(PRegister reg)
+uint64_t TMercury200Device::ReadRegister(PRegister reg)
 {
     uint32_t slv = static_cast<uint32_t>(reg->Slave->Id);
     uint32_t adr = static_cast<uint32_t>(reg->Address) & 0x03;
@@ -97,19 +97,19 @@ uint64_t TMercury20002Device::ReadRegister(PRegister reg)
     }
 }
 
-void TMercury20002Device::WriteRegister(PRegister, uint64_t)
+void TMercury200Device::WriteRegister(PRegister, uint64_t)
 {
-    throw TSerialDeviceException("Mercury 200.02 protocol: writing register is not supported");
+    throw TSerialDeviceException("Mercury 200 protocol: writing register is not supported");
 }
 
-void TMercury20002Device::EndPollCycle()
+void TMercury200Device::EndPollCycle()
 {
     EnergyCache.clear();
     ParamCache.clear();
     TSerialDevice::EndPollCycle();
 }
 
-bool TMercury20002Device::IsCrcValid(uint8_t* buf, int sz) const
+bool TMercury200Device::IsCrcValid(uint8_t* buf, int sz) const
 {
     auto actual_crc = CRC16::CalculateCRC16(buf, static_cast<uint16_t >(sz));
     uint16_t sent_crc = ((uint16_t) buf[sz] << 8) | ((uint16_t) buf[sz + 1]);
@@ -117,7 +117,7 @@ bool TMercury20002Device::IsCrcValid(uint8_t* buf, int sz) const
 }
 
 
-int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const
+int TMercury200Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* response) const
 {
     using namespace std::chrono;
 
@@ -128,7 +128,7 @@ int TMercury20002Device::RequestResponse(uint32_t slave, uint8_t cmd, uint8_t* r
     return Port()->ReadFrame(response, RESPONSE_BUF_LEN, microseconds(PAUSE_US));
 }
 
-void TMercury20002Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const
+void TMercury200Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) const
 {
     buf[0] = 0x00;
     buf[1] = static_cast<uint8_t>(id >> 16);
@@ -140,7 +140,7 @@ void TMercury20002Device::FillCommand(uint8_t* buf, uint32_t id, uint8_t cmd) co
     buf[6] = static_cast<uint8_t>(crc);
 }
 
-bool TMercury20002Device::IsBadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const
+bool TMercury200Device::IsBadHeader(uint32_t slave_expected, uint8_t cmd_expected, uint8_t* response) const
 {
     if (response[0] != 0x00) {
         return true;
