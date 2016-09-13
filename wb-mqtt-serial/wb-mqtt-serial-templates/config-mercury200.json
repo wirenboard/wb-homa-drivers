@@ -1,9 +1,9 @@
 {
-  "device_type": "mercury200_02",
+  "device_type": "Mercury 200.02",
   "device": {
     "name": "Mercury 200.02",
     "id": "mercury200.02",
-    "protocol": "mercury200dot02",
+    "protocol": "mercury200",
     "channels": [
       {
         "name": "Power consumption tariff 1",
