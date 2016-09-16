@@ -210,7 +210,8 @@ void TConfigParser::LoadChannel(PDeviceConfig device_config, const Json::Value& 
         for(Json::ArrayIndex i = 0; i < reg_data.size(); ++i) {
             std::string def_type;
             auto reg = LoadRegister(device_config, reg_data[i], def_type);
-            if (poll_interval.count() >= 0)
+            /* the poll_interval specified for the specific register has a precedence over the one specified for the compound channel */
+            if ((reg->PollInterval.count() < 0) && (poll_interval.count() >= 0))
                 reg->PollInterval = poll_interval;
             registers.push_back(reg);
             if (!i)
@@ -314,6 +315,10 @@ void TConfigParser::LoadDeviceTemplatableConfigPart(PDeviceConfig device_config,
 
     if (device_data.isMember("frame_timeout_ms"))
         device_config->FrameTimeout = std::chrono::milliseconds(GetInt(device_data, "frame_timeout_ms"));
+    if (device_data.isMember("max_reg_hole"))
+        device_config->MaxRegHole = GetInt(device_data, "max_reg_hole");
+    if (device_data.isMember("max_bit_hole"))
+        device_config->MaxBitHole = GetInt(device_data, "max_bit_hole");
 }
 
 int TConfigParser::ToInt(const Json::Value& v, const std::string& title)
@@ -373,10 +378,12 @@ void TConfigParser::LoadDevice(PPortConfig port_config,
     device_config->Id = device_data.isMember("id") ? device_data["id"].asString() : default_id;
     device_config->Name = device_data.isMember("name") ? device_data["name"].asString() : "";
     device_config->SlaveId = GetInt(device_data, "slave_id");
-    if (device_data.isMember("max_reg_hole"))
-        device_config->MaxRegHole = GetInt(device_data, "max_reg_hole");
-    if (device_data.isMember("max_bit_hole"))
-        device_config->MaxRegHole = GetInt(device_data, "max_bit_hole");
+
+    auto device_poll_interval = std::chrono::milliseconds(-1);
+    if (device_data.isMember("poll_interval"))
+        device_poll_interval = std::chrono::milliseconds(
+            GetInt(device_data, "poll_interval"));
+
     if (device_data.isMember("device_type")){
         device_config->DeviceType = device_data["device_type"].asString();
         auto it = Templates->find(device_config->DeviceType);
@@ -410,9 +417,15 @@ void TConfigParser::LoadDevice(PPortConfig port_config,
 
     port_config->AddDeviceConfig(device_config);
     for (auto channel: device_config->DeviceChannels) {
-        for (auto reg: channel->Registers)
-            if (reg->PollInterval.count() < 0)
-                reg->PollInterval = port_config->PollInterval;
+        for (auto reg: channel->Registers) {
+            if (reg->PollInterval.count() < 0) {
+                if (device_poll_interval.count() >= 0) {
+                    reg->PollInterval = device_poll_interval;
+                } else {
+                    reg->PollInterval = port_config->PollInterval;
+                }
+            }
+        }
     }
 }
 
