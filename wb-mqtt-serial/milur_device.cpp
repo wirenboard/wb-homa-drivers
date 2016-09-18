@@ -26,7 +26,7 @@ TMilurDevice::TMilurDevice(PDeviceConfig device_config, PAbstractSerialPort port
         : TEMDevice(device_config, port)
 {}
 
-bool TMilurDevice::ConnectionSetup(uint8_t slave)
+bool TMilurDevice::ConnectionSetup(uint32_t slave)
 {
     uint8_t setupCmd[7] = {
             // full: 0xff, 0x08, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x5f, 0xed

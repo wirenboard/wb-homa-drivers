@@ -10,24 +10,27 @@
 
 #include "em_device.h"
 
-class TMercury230Device: public TEMDevice {
+class TMercury230Device : public TEMDevice
+{
 public:
     static const int DefaultTimeoutMs = 1000;
-    enum RegisterType {
+    enum RegisterType
+    {
         REG_VALUE_ARRAY = 0,
         REG_PARAM = 1
     };
 
     TMercury230Device(PDeviceConfig, PAbstractSerialPort port);
-    uint64_t ReadRegister(PRegister reg);
-    void EndPollCycle();
+    virtual uint64_t ReadRegister(PRegister reg) override;
+    virtual void EndPollCycle() override;
 
 protected:
-    bool ConnectionSetup(uint8_t slave);
-    ErrorType CheckForException(uint8_t* frame, int len, const char** message);
+    virtual bool ConnectionSetup(uint32_t slave) override;
+    virtual ErrorType CheckForException(uint8_t* frame, int len, const char** message) override;
 
 private:
-    struct TValueArray {
+    struct TValueArray
+    {
         uint32_t values[4];
     };
     const TValueArray& ReadValueArray(uint32_t slave, uint32_t address);

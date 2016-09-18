@@ -6,7 +6,7 @@
 TEMDevice::TEMDevice(PDeviceConfig device_config, PAbstractSerialPort port)
     : TSerialDevice(device_config, port), Config(device_config) {}
 
-void TEMDevice::EnsureSlaveConnected(uint8_t slave, bool force)
+void TEMDevice::EnsureSlaveConnected(uint32_t slave, bool force)
 {
     if (!force && ConnectedSlaves.find(slave) != ConnectedSlaves.end())
         return;

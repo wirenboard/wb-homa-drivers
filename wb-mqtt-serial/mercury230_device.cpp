@@ -10,7 +10,7 @@ REGISTER_PROTOCOL("mercury230", TMercury230Device, TRegisterTypes({
 TMercury230Device::TMercury230Device(PDeviceConfig device_config, PAbstractSerialPort port)
     : TEMDevice(device_config, port) {}
 
-bool TMercury230Device::ConnectionSetup(uint8_t slave)
+bool TMercury230Device::ConnectionSetup(uint32_t slave)
 {
     uint8_t setupCmd[7] = {
         uint8_t(DeviceConfig()->AccessLevel), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
@@ -24,9 +24,9 @@ bool TMercury230Device::ConnectionSetup(uint8_t slave)
     }
 
     uint8_t buf[1];
-    WriteCommand(slave, 0x01, setupCmd, 7);
+    WriteCommand(static_cast<uint8_t>(slave), 0x01, setupCmd, 7);
     try {
-        return ReadResponse(slave, 0x00, buf, 0);
+        return ReadResponse(static_cast<uint8_t>(slave), 0x00, buf, 0);
     } catch (TSerialDeviceTransientErrorException&) {
             // retry upon response from a wrong slave
         return false;
@@ -72,7 +72,7 @@ const TMercury230Device::TValueArray& TMercury230Device::ReadValueArray(uint32_t
     cmdBuf[1] = (uint8_t)((address >> 12) & 0x0f); // tariff
     uint8_t buf[MAX_LEN], *p = buf;
     TValueArray a;
-    Talk(slave, 0x05, cmdBuf, 2, -1, buf, 16);
+    Talk(static_cast<uint8_t>(slave), 0x05, cmdBuf, 2, -1, buf, 16);
     for (int i = 0; i < 4; i++, p += 4) {
         a.values[i] = ((uint32_t)p[1] << 24) +
                       ((uint32_t)p[0] << 16) +
@@ -86,12 +86,12 @@ const TMercury230Device::TValueArray& TMercury230Device::ReadValueArray(uint32_t
 uint32_t TMercury230Device::ReadParam(uint32_t slave, uint32_t address)
 {
     uint8_t cmdBuf[2];
-    cmdBuf[0] = (address >> 8) & 0xff; // param
-    cmdBuf[1] = address & 0xff; // subparam (BWRI)
-    uint8_t subparam = (address & 0xff) >> 4;
+    cmdBuf[0] = static_cast<uint8_t>((address >> 8) & 0xff); // param
+    cmdBuf[1] = static_cast<uint8_t>(address & 0xff); // subparam (BWRI)
+    uint8_t subparam = static_cast<uint8_t>((address & 0xff) >> 4);
     bool isPowerOrPowerCoef = subparam == 0x00 || subparam == 0x03;
     uint8_t buf[3];
-    Talk(slave, 0x08, cmdBuf, 2, -1, buf, 3);
+    Talk(static_cast<uint8_t>(slave), 0x08, cmdBuf, 2, -1, buf, 3);
     return (((uint32_t)buf[0] & (isPowerOrPowerCoef ? 0x3f : 0xff)) << 16) +
             ((uint32_t)buf[2] << 8) +
              (uint32_t)buf[1];
