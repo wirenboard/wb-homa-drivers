@@ -1,5 +1,4 @@
 #include "milur_device.h"
-#include "bcd_utils.h"
 
 namespace {
 
@@ -187,6 +186,9 @@ int TMilurDevice::GetExpectedSize(int type) const
         throw TSerialDeviceTransientErrorException("bad register type");
     }
 }
+
+TMilurDevice::~TMilurDevice()
+{}
 
 #if 0
 #include <iomanip>

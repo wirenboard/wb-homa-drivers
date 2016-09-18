@@ -23,10 +23,10 @@ public:
     };
 
     TMercury200Device(PDeviceConfig config, PAbstractSerialPort port);
-    virtual ~TMercury200Device();
-    virtual uint64_t ReadRegister(PRegister reg);
-    virtual void WriteRegister(PRegister reg, uint64_t value);
-    virtual void EndPollCycle();
+    virtual ~TMercury200Device() override;
+    virtual uint64_t ReadRegister(PRegister reg) override;
+    virtual void WriteRegister(PRegister reg, uint64_t value) override;
+    virtual void EndPollCycle() override;
 
 private:
     struct TEnergyValues

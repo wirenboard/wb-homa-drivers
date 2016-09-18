@@ -15,7 +15,7 @@ public:
     static const int DefaultTimeoutMs = 1000;
 
     TEMDevice(PDeviceConfig device_config, PAbstractSerialPort port);
-    void WriteRegister(PRegister reg, uint64_t value);
+    virtual void WriteRegister(PRegister reg, uint64_t value) override;
 
 protected:
     enum ErrorType {
