@@ -10,7 +10,7 @@ REGISTER_PROTOCOL("mercury230", TMercury230Device, TRegisterTypes({
 TMercury230Device::TMercury230Device(PDeviceConfig device_config, PAbstractSerialPort port)
     : TEMDevice(device_config, port) {}
 
-bool TMercury230Device::ConnectionSetup(uint32_t slave)
+bool TMercury230Device::ConnectionSetup(uint8_t slave)
 {
     uint8_t setupCmd[7] = {
         uint8_t(DeviceConfig()->AccessLevel), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
@@ -112,6 +112,11 @@ uint64_t TMercury230Device::ReadRegister(PRegister reg)
 void TMercury230Device::EndPollCycle()
 {
     CachedValues.clear();
+}
+
+bool TMercury230Device::ConnectionSetup32(uint32_t slave)
+{
+    throw TSerialDeviceException("Mercury 232 protocol: 32-bit addressing is not supported");
 }
 
 // TBD: custom password?

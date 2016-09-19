@@ -15,18 +15,23 @@ namespace {
 }
 
 REGISTER_PROTOCOL("milur", TMilurDevice, TRegisterTypes({
-                                                                {TMilurDevice::REG_PARAM,       "param",        "value",             U24,   true},
-                                                                {TMilurDevice::REG_POWER,       "power",        "power",             S32,   true},
-                                                                {TMilurDevice::REG_ENERGY,      "energy",       "power_consumption", BCD32, true},
-                                                                {TMilurDevice::REG_FREQ,        "freq",         "value",             BCD32, true},
-                                                                {TMilurDevice::REG_POWERFACTOR, "power_factor", "value",             S16,   true}
+                                                                {TMilurDevice::REG_PARAM,         "param",        "value",             U24,   true},
+                                                                {TMilurDevice::REG_POWER,         "power",        "power",             S32,   true},
+                                                                {TMilurDevice::REG_ENERGY,        "energy",       "power_consumption", BCD32, true},
+                                                                {TMilurDevice::REG_FREQ,          "freq",         "value",             BCD32, true},
+                                                                {TMilurDevice::REG_POWERFACTOR,   "power_factor", "value",             S16,   true},
+                                                                {TMilurDevice::REG32_PARAM,       "param",        "value",             U24,   true},
+                                                                {TMilurDevice::REG32_POWER,       "power",        "power",             S32,   true},
+                                                                {TMilurDevice::REG32_ENERGY,      "energy",       "power_consumption", BCD32, true},
+                                                                {TMilurDevice::REG32_FREQ,        "freq",         "value",             BCD32, true},
+                                                                {TMilurDevice::REG32_POWERFACTOR, "power_factor", "value",             S16,   true}
                                                         }));
 
 TMilurDevice::TMilurDevice(PDeviceConfig device_config, PAbstractSerialPort port)
         : TEMDevice(device_config, port)
 {}
 
-bool TMilurDevice::ConnectionSetup(uint32_t slave)
+bool TMilurDevice::ConnectionSetup(uint8_t slave)
 {
     uint8_t setupCmd[7] = {
             // full: 0xff, 0x08, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x5f, 0xed
@@ -112,21 +117,43 @@ uint64_t TMilurDevice::ReadRegister(PRegister reg)
     int size = GetExpectedSize(reg->Type);
     uint8_t addr = static_cast<uint8_t>(reg->Address);
     uint8_t buf[MAX_LEN], *p = buf;
-    Talk(static_cast<uint8_t>(reg->Slave->Id), 0x01, &addr, 1, 0x01, buf, size + 2, ExpectNBytes(size + 6));
-    if (*p++ != reg->Address)
-        throw TSerialDeviceTransientErrorException("bad register address in the response");
-    if (*p != size)
-        throw TSerialDeviceTransientErrorException("bad register size in the response");
+    switch (reg->Type){
+    case TMilurDevice::REG_PARAM:
+    case TMilurDevice::REG_POWER:
+    case TMilurDevice::REG_ENERGY:
+    case TMilurDevice::REG_FREQ:
+    case TMilurDevice::REG_POWERFACTOR:
+        Talk(static_cast<uint8_t>(reg->Slave->Id), 0x01, &addr, 1, 0x01, buf, size + 2, ExpectNBytes(size + 6));
+        if (*p++ != reg->Address)
+            throw TSerialDeviceTransientErrorException("bad register address in the response");
+        if (*p != size)
+            throw TSerialDeviceTransientErrorException("bad register size in the response");
+        break;
+        case TMilurDevice::REG32_PARAM:
+        case TMilurDevice::REG32_POWER:
+        case TMilurDevice::REG32_ENERGY:
+        case TMilurDevice::REG32_FREQ:
+        case TMilurDevice::REG32_POWERFACTOR:
+            Talk32(static_cast<uint32_t>(reg->Slave->Id), 0x01, &addr, 1, 0x01, buf, size + 2, ExpectNBytes(size + 6));
+            break;
+    default:
+        throw TSerialDeviceTransientErrorException("bad register type");
+    }
 
     switch (reg->Type) {
     case TMilurDevice::REG_PARAM:
+    case TMilurDevice::REG32_PARAM:
         return BuildIntVal(buf + 2, 3);
     case TMilurDevice::REG_POWER:
+    case TMilurDevice::REG32_POWER:
         return BuildIntVal(buf + 2, 4);
     case TMilurDevice::REG_ENERGY:
     case TMilurDevice::REG_FREQ:
+    case TMilurDevice::REG32_ENERGY:
+    case TMilurDevice::REG32_FREQ:
         return BuildBCB32(buf + 2);
     case TMilurDevice::REG_POWERFACTOR:
+    case TMilurDevice::REG32_POWERFACTOR:
         return BuildIntVal(buf + 2, 2);
     default:
         throw TSerialDeviceTransientErrorException("bad register type");
@@ -146,7 +173,7 @@ void TMilurDevice::Prepare()
     Port()->SkipNoise();
 }
 
-uint64_t TMilurDevice::BuildIntVal(uint8_t *p, int sz) const
+uint64_t TMilurDevice::BuildIntVal(uint8_t* p, int sz) const
 {
     uint64_t r = 0;
     for (int i = 0; i < sz; ++i) {
@@ -159,7 +186,7 @@ uint64_t TMilurDevice::BuildIntVal(uint8_t *p, int sz) const
 // To convert it to our standard transport BCD representation (ie. integer with hexadecimal
 // that reads exactly as original BCD if printed) we just have to swap nibbles of each byte
 // that is decimal value 87654321 comes as {0x12, 0x34, 0x56, 0x78} and becomes {0x21, 0x43, 0x65, 0x87}.
-uint64_t TMilurDevice::BuildBCB32(uint8_t *psrc) const
+uint64_t TMilurDevice::BuildBCB32(uint8_t* psrc) const
 {
     uint32_t r = 0;
     uint8_t *pdst = reinterpret_cast<uint8_t *>(&r);
@@ -182,6 +209,7 @@ int TMilurDevice::GetExpectedSize(int type) const
         return 4;
     case TMilurDevice::REG_POWERFACTOR:
         return 2;
+    // TODO: add 32-bit registers
     default:
         throw TSerialDeviceTransientErrorException("bad register type");
     }
@@ -189,6 +217,12 @@ int TMilurDevice::GetExpectedSize(int type) const
 
 TMilurDevice::~TMilurDevice()
 {}
+
+bool TMilurDevice::ConnectionSetup32(uint32_t slave)
+{
+    // TODO: implement
+    return false;
+}
 
 #if 0
 #include <iomanip>

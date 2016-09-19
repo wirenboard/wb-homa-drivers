@@ -25,8 +25,9 @@ public:
     virtual void EndPollCycle() override;
 
 protected:
-    virtual bool ConnectionSetup(uint32_t slave) override;
+    virtual bool ConnectionSetup(uint8_t slave) override;
     virtual ErrorType CheckForException(uint8_t* frame, int len, const char** message) override;
+    virtual bool ConnectionSetup32(uint32_t slave) override;
 
 private:
     struct TValueArray
