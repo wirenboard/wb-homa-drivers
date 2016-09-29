@@ -82,9 +82,9 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     Json::Value result;
     int limit = -1;
-    double timestamp_gt = 0;
+    long long timestamp_gt = 0;
     int64_t uid_gt = -1;
-    double timestamp_lt = 10675199167; // magic?
+    long long timestamp_lt = 10675199167; // magic?
     int req_ver = 0;
     int min_interval_ms = 0;
 
@@ -98,10 +98,10 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 
     if (params.isMember("timestamp")) {
         if (params["timestamp"].isMember("gt"))
-            timestamp_gt = params["timestamp"]["gt"].asDouble();
+            timestamp_gt = params["timestamp"]["gt"].asInt64();
 
         if (params["timestamp"].isMember("lt"))
-            timestamp_lt = params["timestamp"]["lt"].asDouble();
+            timestamp_lt = params["timestamp"]["lt"].asInt64();
     }
 
     if (params.isMember("uid")) {
@@ -131,10 +131,10 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     string get_values_query_str;
 
     if (min_interval_ms > 0)
-        get_values_query_str = "SELECT uid, device, channel, AVG(value), (timestamp - 2440587.5)*86400.0, MIN(min), MAX(max), \
+        get_values_query_str = "SELECT uid, device, channel, AVG(value), timestamp, MIN(min), MAX(max), \
                                 retained  FROM data INDEXED BY data_topic_timestamp WHERE ";
     else
-        get_values_query_str = "SELECT uid, device, channel, value, (timestamp - 2440587.5)*86400.0, min, max, \
+        get_values_query_str = "SELECT uid, device, channel, value, timestamp, min, max, \
                                 retained FROM data INDEXED BY data_topic_timestamp WHERE ";
 
     if (!params["channels"].empty()) {
@@ -148,11 +148,11 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         get_values_query_str += ") AND ";
     }
 
-    get_values_query_str += "timestamp > julianday(datetime(?,'unixepoch')) AND timestamp < julianday(datetime(?,'unixepoch')) AND uid > ? ";
+    get_values_query_str += "timestamp > ? AND timestamp < ? AND uid > ? ";
 
 
     if (min_interval_ms > 0) {
-        get_values_query_str +=  " GROUP BY ROUND( timestamp * ?) ";
+        get_values_query_str +=  " GROUP BY ROUND( timestamp * ? / 86400) ";
     }
 
     get_values_query_str += " ORDER BY uid ASC LIMIT ?";
@@ -183,7 +183,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     get_values_query.bind(++param_num, static_cast<sqlite3_int64>(uid_gt));
 
     if (min_interval_ms > 0) {
-        double day_fraction =   86400000. / min_interval_ms /* ms in day */;
+        int day_fraction =   86400000 / min_interval_ms /* ms in day */;
         cout << "day: fraction :" << day_fraction << endl;
         get_values_query.bind(++param_num, day_fraction);
     }
@@ -193,12 +193,7 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     int row_count = 0;
     bool has_more = false;
 
-    TIMEMARK("query preprocessing");
-
     while (1) {
-        #ifndef NBENCHMARK
-            high_resolution_clock::time_point t1 = high_resolution_clock::now();
-        #endif
 
         if (!get_values_query.executeStep())
             break;
@@ -238,8 +233,6 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         result["values"].append(row);
         row_count += 1;
 
-        TIMEMARK("execution step");
-        
     }
 
 

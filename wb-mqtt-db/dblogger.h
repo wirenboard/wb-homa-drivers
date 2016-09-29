@@ -145,8 +145,8 @@ private:
     std::unordered_map<TChannelName, int> ChannelIds;
     std::unordered_map<std::string, int> DeviceIds;
 
-    std::map<int, TChannel> ChannelDataCache;
-    std::map<int, int> GroupRowNumberCache;
+    std::unordered_map<int, TChannel> ChannelDataCache;
+    std::unordered_map<int, int> GroupRowNumberCache;
 
     const int DBVersion = WB_DB_VERSION;
 };
