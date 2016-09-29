@@ -5,6 +5,16 @@
 using namespace std;
 using namespace std::chrono;
 
+#ifndef NBENCHMARK
+#define TIMEMARK(msg) do { \
+    high_resolution_clock::time_point t2 = high_resolution_clock::now(); \
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count(); \
+    LOG(NOTICE) << msg << " took " << duration << "ms"; \
+} while (0)
+#else
+#define TIMEMARK() do {} while (0)
+#endif
+
 int TMQTTDBLogger::GetOrCreateChannelId(const TChannelName & channel)
 {
     auto it = ChannelIds.find(channel);
@@ -64,9 +74,9 @@ void TMQTTDBLogger::Init2()
 
 Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
 {
-    VLOG(1) << "Run RPC get_values()";
+    LOG(NOTICE) << "Run RPC get_values()";
 
-#ifndef NDEBUG
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 #endif
 
@@ -183,7 +193,16 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
     int row_count = 0;
     bool has_more = false;
 
-    while (get_values_query.executeStep()) {
+    TIMEMARK("query preprocessing");
+
+    while (1) {
+        #ifndef NBENCHMARK
+            high_resolution_clock::time_point t1 = high_resolution_clock::now();
+        #endif
+
+        if (!get_values_query.executeStep())
+            break;
+
         if (row_count >= limit) {
             has_more = true;
             break;
@@ -219,6 +238,8 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         result["values"].append(row);
         row_count += 1;
 
+        TIMEMARK("execution step");
+        
     }
 
 
@@ -226,11 +247,11 @@ Json::Value TMQTTDBLogger::GetValues(const Json::Value& params)
         result["has_more"] = true;
     }
 
-#ifndef NDEBUG   
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
     
-    LOG(INFO) << "get_values() took " << duration << "ms";
+    LOG(NOTICE) << "get_values() took " << duration << "ms";
 #endif
 
     
@@ -242,8 +263,8 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
 
     Json::Value result;
     
-    VLOG(1) << "Run RPC get_channels()";
-#ifndef NDEBUG
+    LOG(NOTICE) << "Run RPC get_channels()";
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 #endif
 
@@ -267,11 +288,11 @@ Json::Value TMQTTDBLogger::GetChannels(const Json::Value& params)
         result["channels"][device_name] = values;
     }
 
-#ifndef NDEBUG
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 
-    LOG(INFO) << "RPC request took " << duration << "ms";
+    LOG(NOTICE) << "RPC request took " << duration << "ms";
 #endif
 
     return result;

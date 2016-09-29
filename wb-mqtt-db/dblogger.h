@@ -6,6 +6,7 @@
 #include <chrono>
 #include <string>
 #include <set>
+#include <unordered_map>
 #include "jsoncpp/json/json.h"
 #include  "SQLiteCpp/SQLiteCpp.h"
 
@@ -24,10 +25,26 @@ struct TChannelName
     std::string Device;
     std::string Control;
 
-    bool operator<(const TChannelName& rhs) const {
-        return std::tie(this->Device, this->Control) < std::tie(rhs.Device, rhs.Control);
+    bool operator==(const TChannelName& rhs) const {
+        return std::tie(this->Device, this->Control) == std::tie(rhs.Device, rhs.Control);
     }
 
+};
+
+// hasher for TChannelName
+namespace std {
+    template<>
+    struct hash<TChannelName> 
+    {
+        typedef TChannelName argument_type;
+        typedef std::size_t result_type;
+
+        result_type operator()(const argument_type &s) const
+        {
+            return std::hash<std::string>()(s.Device) ^
+                   std::hash<std::string>()(s.Control);
+        }
+    };
 };
 
 std::ostream& operator<<(std::ostream& out, const struct TChannelName &name);
@@ -125,8 +142,8 @@ private:
     std::unique_ptr<SQLite::Database> DB;
     TMQTTDBLoggerConfig LoggerConfig;
     std::shared_ptr<TMQTTRPCServer> RPCServer;
-    std::map<TChannelName, int> ChannelIds;
-    std::map<std::string, int> DeviceIds;
+    std::unordered_map<TChannelName, int> ChannelIds;
+    std::unordered_map<std::string, int> DeviceIds;
 
     std::map<int, TChannel> ChannelDataCache;
     std::map<int, int> GroupRowNumberCache;

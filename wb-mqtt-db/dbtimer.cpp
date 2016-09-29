@@ -21,7 +21,7 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
         return next_call; // there is some time to wait
     }
 
-#ifndef NDEBUG
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 #endif
 
@@ -80,12 +80,12 @@ steady_clock::time_point TMQTTDBLogger::ProcessTimer(steady_clock::time_point ne
     if (start_process)
         transaction.commit();
  
-#ifndef NDEBUG
+#ifndef NBENCHMARK
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
 
     if (start_process)
-        DLOG(INFO) << "Bulk processing took " << duration << "ms";
+        LOG(NOTICE) << "Bulk processing took " << duration << "ms";
 #endif
 
     return next_call;
