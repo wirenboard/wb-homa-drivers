@@ -20,23 +20,26 @@ TMQTTDBLogger::~TMQTTDBLogger()
 
 void TMQTTDBLogger::CreateTables()
 {
+    DLOG(DEBUG) << "Creating 'devices' table...";
     DB->exec("CREATE TABLE IF NOT EXISTS devices ( "
              "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
              "device VARCHAR(255) UNIQUE "
              " )  ");
 
+    DLOG(DEBUG) << "Creating 'channels' table...";
     DB->exec("CREATE TABLE IF NOT EXISTS channels ( "
              "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
              "device VARCHAR(255), "
              "control VARCHAR(255) "
              ")  ");
 
+    DLOG(DEBUG) << "Creating 'groups' table...";
     DB->exec("CREATE TABLE IF NOT EXISTS groups ( "
              "int_id INTEGER PRIMARY KEY AUTOINCREMENT, "
              "group_id VARCHAR(255) "
              ")  ");
 
-
+    DLOG(DEBUG) << "Creating 'data' table...";
     DB->exec("CREATE TABLE IF NOT EXISTS data ("
              "uid INTEGER PRIMARY KEY AUTOINCREMENT, "
              "device INTEGER,"
@@ -50,21 +53,27 @@ void TMQTTDBLogger::CreateTables()
              ")"
             );
 
+    DLOG(DEBUG) << "Creating 'variables' table...";
     DB->exec("CREATE TABLE IF NOT EXISTS variables ("
              "name VARCHAR(255) PRIMARY KEY, "
              "value VARCHAR(255) )"
             );
 
-
+    DLOG(DEBUG) << "Creating 'data_topic' index on 'data' ('channel')";
     DB->exec("CREATE INDEX IF NOT EXISTS data_topic ON data (channel)");
 
     // NOTE: the following index is a "low quality" one according to sqlite documentation. However, reversing the order of columns results in factor of two decrease in SELECT performance. So we leave it here as it is. 
+    DLOG(DEBUG) << "Creating 'data_topic_timestamp' index on 'data' ('channel', 'timestamp')";
     DB->exec("CREATE INDEX IF NOT EXISTS data_topic_timestamp ON data (channel, timestamp)");
 
+    DLOG(DEBUG) << "Creating 'data_gid' index on 'data' ('group_id')";
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid ON data (group_id)");
+
+    DLOG(DEBUG) << "Creating 'data_gid_timestamp' index on 'data' ('group_id', 'timestamp')";
     DB->exec("CREATE INDEX IF NOT EXISTS data_gid_timestamp ON data (group_id, timestamp)");
 
     {
+        DLOG(DEBUG) << "Updating database version variable...";
         SQLite::Statement query(*DB, "INSERT OR REPLACE INTO variables (name, value) VALUES ('db_version', ?)");
         query.bind(1, DBVersion);
         query.exec();
@@ -75,21 +84,23 @@ void TMQTTDBLogger::CreateTables()
 void TMQTTDBLogger::InitCaches()
 {
     // init group counter cache
+    DLOG(DEBUG) << "Fill GroupRowNumberCache...";
     SQLite::Statement count_group_query(*DB, "SELECT COUNT(*) as cnt, group_id FROM data GROUP BY group_id ");
     while (count_group_query.executeStep()) {
         GroupRowNumberCache[count_group_query.getColumn(1)] = count_group_query.getColumn(0);
     }
 
     // init channel counter cache
+    DLOG(DEBUG) << "Fill ChannelDataCache.RowCount...";
     SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, channel FROM data GROUP BY channel ");
     while (count_channel_query.executeStep()) {
         ChannelDataCache[count_channel_query.getColumn(1)].RowCount = count_channel_query.getColumn(0);
     }
 
     // init channel last state values
+    DLOG(DEBUG) << "Fill ChannelDataCache.LastProcessed and ChannelDataCache.LastValue...";
     SQLite::Statement last_value_query(*DB, "SELECT (MAX(timestamp) - 2440587.5) * 86400.0 AS ts, channel, value \
             FROM data GROUP BY channel ORDER BY timestamp DESC");
-
     while (last_value_query.executeStep()) {
         auto d = milliseconds(static_cast<long long>(last_value_query.getColumn(0)) * 1000);
         auto current_tp = steady_clock::time_point(d);

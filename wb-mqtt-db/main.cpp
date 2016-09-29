@@ -113,6 +113,12 @@ TMQTTDBLoggerConfig ParseConfigFile(Json::Value &root)
 
 int main (int argc, char *argv[])
 {
+    if (sqlite3_threadsafe()) {
+        cout << "SQLite3 is threadsafe although it's not necessary and make us slower, think about it..." << endl;
+    } else {
+        cout << "SQLite3 is not threadsafe, congrats :)" << endl;
+    }
+
     int rc;
     TMQTTDBLogger::TConfig mqtt_config;
     mqtt_config.Host = "localhost";

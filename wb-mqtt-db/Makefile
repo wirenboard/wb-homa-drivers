@@ -19,15 +19,16 @@ endif
 DEBUG?=1
 
 CFLAGS=-Wall -std=c++0x -I.
+LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -llog4cpp
 
 ifeq ($(DEBUG), 1)
-	CFLAGS+=-ggdb -O0
+	CFLAGS+=-ggdb -O0 -pg
+	LDFLAGS+=-pg
 else
 	CFLAGS+=-Os -DNDEBUG
 endif
 
 CPPFLAGS=$(CFLAGS)
-LDFLAGS= -lmosquittopp -lmosquitto -ljsoncpp -lwbmqtt -lsqlite3 -llog4cpp
 
 DB_BIN=wb-mqtt-db
 SQLITECPP_DIR=SQLiteCpp

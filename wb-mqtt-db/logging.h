@@ -18,6 +18,6 @@ public:
     #define DVLOG(x) VLOG(x)
     #define DLOG(x) LOG(x)
 #else
-    #define DVLOG(x) (true) ? (void) 0 : LogMessageVoidify() & LOG(INFO)
+    #define DVLOG(x) (true) ? (void) 0 : LogMessageVoidify() & LOG(DEBUG)
     #define DLOG(x) (true) ? (void) 0 : LogMessageVoidify() & LOG(x)
 #endif
