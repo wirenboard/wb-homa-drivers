@@ -91,24 +91,38 @@ void TMQTTDBLogger::InitCaches()
     }
 
     // init channel counter cache
-    LOG(INFO) << "Fill ChannelDataCache.RowCount...";
-    SQLite::Statement count_channel_query(*DB, "SELECT COUNT(*) as cnt, channel FROM data GROUP BY channel ");
-    while (count_channel_query.executeStep()) {
-        ChannelDataCache[count_channel_query.getColumn(1)].RowCount = count_channel_query.getColumn(0);
-    }
-
     // init channel last state values
-    LOG(INFO) << "Fill ChannelDataCache.LastProcessed and ChannelDataCache.LastValue...";
-    SQLite::Statement last_value_query(*DB, "SELECT MAX(timestamp) AS ts, channel, value \
-            FROM data GROUP BY channel ORDER BY timestamp DESC");
-    while (last_value_query.executeStep()) {
-        auto d = milliseconds(static_cast<long long>(last_value_query.getColumn(0)) * 1000);
-        auto current_tp = steady_clock::time_point(d);
+    
+    LOG(INFO) << "Fill ChannelDataCache.RowCount, ChannelDataCache.LastProcessed, ChanneldDataCache.LastValue...";
+    /* SQLite::Statement count_channel_query(*DB, "SELECT COUNT(rowid) as cnt, MAX(timestamp) AS ts, value, channel \ */
+    /*                                             FROM data GROUP BY channel ORDER BY timestamp DESC"); */
+    /* while (count_channel_query.executeStep()) { */
+    /*     auto& channel_data = ChannelDataCache[count_channel_query.getColumn(3)]; */
         
-        auto& channel_data = ChannelDataCache[last_value_query.getColumn(1)];
+    /*     auto d = milliseconds(static_cast<long long>(count_channel_query.getColumn(1)) * 1000); */
+    /*     auto current_tp = steady_clock::time_point(d); */
+        
+    /*     channel_data.RowCount = count_channel_query.getColumn(0); */
+    /*     channel_data.LastProcessed = current_tp; */
+    /*     channel_data.LastValue = static_cast<const char *>(count_channel_query.getColumn(2)); */
+    /* } */
 
-        channel_data.LastProcessed = current_tp;
-        channel_data.LastValue = static_cast<const char *>(last_value_query.getColumn(2));
+    SQLite::Statement count_channel_query(*DB, "SELECT timestamp, value, channel FROM data");
+
+    while (count_channel_query.executeStep()) {
+        auto& channel_data = ChannelDataCache[count_channel_query.getColumn(2)];
+
+        // increment RowCount
+        channel_data.RowCount++;
+
+        // prepare timestamps
+        auto d = milliseconds(static_cast<long long>(count_channel_query.getColumn(1)) * 1000);
+        auto current_tp = steady_clock::time_point(d);
+
+        if (current_tp > channel_data.LastProcessed) {
+            channel_data.LastProcessed = current_tp;
+            channel_data.LastValue = static_cast<const char *>(count_channel_query.getColumn(1));
+        }
     }
 }
 
@@ -121,6 +135,10 @@ void TMQTTDBLogger::InitChannelIds()
 
         ChannelIds[name] = channel_id;
         ChannelDataCache[channel_id].Name = name;
+
+        // reset values before init caches
+        ChannelDataCache[channel_id].LastProcessed = steady_clock::time_point(milliseconds(0));
+        ChannelDataCache[channel_id].RowCount = 0;
     }
 }
 
@@ -267,12 +285,12 @@ void TMQTTDBLogger::InitDB()
         }
     }
 
-    VLOG(0) << "Initializing counter caches";
-    InitCaches();
-
     VLOG(0) << "Getting internal ids for devices and channels";
     InitDeviceIds();
     InitChannelIds();
+
+    VLOG(0) << "Initializing counter caches";
+    InitCaches();
 
     VLOG(0) << "Getting and assigning group ids";
     InitGroupIds();
