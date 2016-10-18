@@ -136,7 +136,7 @@ TMQTTGpioHandler::~TMQTTGpioHandler() {}
 void TMQTTGpioHandler::OnConnect(int rc)
 {
     printf("Connected with code %d.\n", rc);
-    if(rc == 0) {
+    if (rc == 0) {
         /* Only attempt to Subscribe on a successful connect. */
         string prefix = string("/devices/") + MQTTConfig.Id + "/";
 
@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
                                           root,
                                           false);
 
-        if(not parsedSuccess) {
+        if (not parsedSuccess) {
             // Report failures and their locations
             // in the document.
             cerr << "Failed to parse JSON" << endl
