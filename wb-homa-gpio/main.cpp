@@ -219,13 +219,18 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
 
             if (tokens[4] == gpio_desc.Name) {
                 auto &gpio_handler = *channel_desc.second;
-
+                string channel_topic = GetChannelTopic(gpio_desc);
+                string meta_error = channel_topic + "/meta/error";
                 if (gpio_handler.SetValue(val) == 0) {
                     // echo, retained
-                    Publish(NULL, GetChannelTopic(gpio_desc), to_string(val), 0, true);
+                    Publish(NULL, channel_topic, to_string(val), 0, true);
+                    Publish(NULL, meta_error, "", 0, true);
                 } else {
-                    cerr << "DEBUG : couldn't set value" << endl;
-                    //Publish(NULL,
+                    // Write error to meta/error
+                    string error_str = string("Can't write value to gpio #") + to_string(gpio_handler.GetGpio()) +
+                                       "(" + gpio_desc.Name + ")";
+                    cerr << "ERROR: " << error_str << endl;
+                    Publish(NULL, meta_error, error_str.c_str(), 0, true);
                 }
             }
         }
