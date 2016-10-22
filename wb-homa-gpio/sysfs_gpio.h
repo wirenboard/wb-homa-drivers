@@ -17,6 +17,7 @@
 using namespace std;
 
 typedef pair<string, string> TPublishPair;
+
 class TSysfsGpio
 {
   public:
@@ -24,6 +25,7 @@ class TSysfsGpio
     TSysfsGpio(const TSysfsGpio &other) = delete;
     TSysfsGpio(TSysfsGpio &&tmp);
     ~TSysfsGpio();
+    
     int Export();
     int Unexport();
     int SetDirection(bool input = true, bool output_state = false); // Set GPIO Direction
@@ -37,20 +39,20 @@ class TSysfsGpio
     };
 
     int SetValue(int val);
-    // returns GPIO value (0 or 1), or negative number in case of error
+    // returns GPIO value (0 or 1), or -1 if error has happened
     int GetValue();
 
     virtual int InterruptUp();// trying to write to edge file and checking is it input gpio
 
     //returns true if gpio support interruption
-    bool GetInterruptSupport() ;
+    bool GetInterruptSupport();
     //returns gpio value file description
     int GetFileDes();
-    struct epoll_event &GetEpollStruct() ;
+    struct epoll_event &GetEpollStruct();
     // returns GPIO value (0 or 1) or default in case of error
     inline int GetValueOrDefault(int def = 0)
     {
-        int val =  GetValue();
+        int val = GetValue();
         return (val < 0) ? def : val;
     }
 
@@ -98,13 +100,17 @@ class TSysfsGpio
     virtual void SetInitialValues(float total);
     virtual TPublishPair CheckTimeInterval(); // check if metter is alive
   protected:
-    // invert value if needed
+	int OpenValueFile();
+    int Reload();
+    // invert value if needed and return 0 or 1 value
     inline int PrepareValue(int value)
     {
-        return value ^ Inverted;
+		// Make inversion and return 0 or 1 value
+		if (Inverted)
+			return int(value == 0);
+		else
+			return int(value != 0);
     };
-
-  private:
   private:
     int Gpio;
     bool Inverted;
