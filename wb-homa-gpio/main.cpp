@@ -225,7 +225,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                     Publish(NULL, GetChannelTopic(gpio_desc), to_string(val), 0, true);
                 } else {
                     cerr << "DEBUG : couldn't set value" << endl;
-                    //Publish(NULL, 
+                    //Publish(NULL,
                 }
             }
         }
@@ -253,21 +253,20 @@ void TMQTTGpioHandler::UpdateValue(const TGpioDesc &gpio_desc,
         // Buggy GPIO driver may yield any non-zero number instead of 1,
         // so make sure it's either 1 or 0 here.
         // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
-		// Upd: checked in sysfs_gpio.cpp
+        // Upd: checked in sysfs_gpio.cpp
         //value = !!value;
         if ((cached < 0) || (cached != value)) {
             gpio_handler->SetCachedValue(cached);
             PublishValue(gpio_desc, gpio_handler);
         }
-    }
-    else {
-		// Write error to meta/error
+    } else {
+        // Write error to meta/error
         string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
-        string error_str = string("Can't read value from gpio #") + to_string(gpio_handler->GetGpio()) + 
-									"(" + gpio_desc.Name + ")";
-		cerr << "ERROR: " << error_str << endl;
+        string error_str = string("Can't read value from gpio #") + to_string(gpio_handler->GetGpio()) +
+                           "(" + gpio_desc.Name + ")";
+        cerr << "ERROR: " << error_str << endl;
         Publish(NULL, meta_error, error_str.c_str(), 0, true);
-	}
+    }
 }
 void TMQTTGpioHandler::PublishValue(const TGpioDesc &gpio_desc,
                                     std::shared_ptr<TSysfsGpio> gpio_handler)
