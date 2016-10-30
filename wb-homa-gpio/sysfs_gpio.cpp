@@ -176,36 +176,27 @@ int TSysfsGpio::SetValue(int value)
     int prep_value = PrepareValue(value);
 
     char buf = '0' + prep_value;
-
-    for (int attempt = 0; attempt < 2; attempt++) {
-        {
-            std::lock_guard<std::mutex> lock(G_mutex);
-            if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
-                cerr << "lseek returned -1" << endl;
-            }
-            if (write(FileDes, &buf, sizeof(char)) <= 0 ) {
-                //write value to value file, FileDes has been initialized in Export
-                cerr << strerror(errno);
-                cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
-                     "filedis is " << FileDes <<  endl;
-                //setvalgpio.close();
-                return -1;
-            }
-        }
-        CachedValue = prep_value;
-        // Break if all is good
-        if (GetValue() == prep_value)
-            break;
-        cerr << "DEBUG: Second attempt. gpio=" << Gpio << " SetValue()  value= " << value << " pid is " <<
-             getpid() <<
-             " filedis is " << FileDes << endl;
-        // If it is not first attempt
-        if (attempt != 0)
-            return -1;
-        // If value is not correctly set
-        // Reload gpio (new export, set direction..)
-        Reload();
-    }
+	
+	// there is lock_guard inside block
+	{
+		std::lock_guard<std::mutex> lock(G_mutex);
+		if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
+			cerr << "lseek returned -1" << endl;
+		}
+		if (write(FileDes, &buf, sizeof(char)) <= 0 ) {
+			//write value to value file, FileDes has been initialized in Export
+			cerr << strerror(errno);
+			cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
+				 "filedis is " << FileDes <<  endl;
+			//setvalgpio.close();
+			return -1;
+		}
+	}  
+    CachedValue = prep_value;
+	// Check whether device is connected
+	// Error when disconnected is raising only when reading from /value
+    if (GetValue() < 0)
+        return -1;
 
     return 0;
 }
@@ -315,13 +306,13 @@ vector<TPublishPair>  TSysfsGpio::GpioPublish()
     } else
         GetInterval(); // remember interval
     int output_value = GetValue();
-    if (output_value != -1) {
+    if (output_value >= 0) {
         output_vector.push_back(make_pair("", to_string(output_value))); // output saved value
-        output_vector.push_back(make_pair("/meta/error", "")); // no error
+        //output_vector.push_back(make_pair("/meta/error", "")); // no error
     } else {
-        string error_str = string("Can't read value from gpio #") + to_string(Gpio);
-        cerr << "ERROR: GpioPublish: " << error_str << endl;
-        output_vector.push_back(make_pair("/meta/error", error_str)); // output error
+        //string error_str = string("Can't read value from gpio #") + to_string(Gpio);
+        //cerr << "ERROR: GpioPublish: " << error_str << endl;
+        //output_vector.push_back(make_pair("/meta/error", error_str)); // output error
     }
     return output_vector;
 }

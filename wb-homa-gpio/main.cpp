@@ -41,6 +41,7 @@ struct TGpioDesc {
     int DecimalPlacesTotal = -1;
     int DecimalPlacesCurrent = -1;
     bool InitialState = false;
+    bool ErrorState = false;
 };
 
 
@@ -87,7 +88,7 @@ class TMQTTGpioHandler : public TMQTTWrapper
     THandlerConfig Config;
     vector<TChannelDesc> Channels;
 
-    void UpdateValue(const TGpioDesc &gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
+    void UpdateValue(TGpioDesc &gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
 };
 
 
@@ -213,7 +214,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
         }
 
         for (TChannelDesc &channel_desc : Channels) {
-            const auto &gpio_desc = channel_desc.first;
+            auto &gpio_desc = channel_desc.first;
             if (gpio_desc.Direction != TGpioDirection::Output)
                 continue;
 
@@ -224,13 +225,17 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                 if (gpio_handler.SetValue(val) == 0) {
                     // echo, retained
                     Publish(NULL, channel_topic, to_string(val), 0, true);
-                    Publish(NULL, meta_error, "", 0, true);
+                    if (gpio_desc.ErrorState) {
+						Publish(NULL, meta_error, "", 0, true);
+						gpio_desc.ErrorState = false;
+					}
                 } else {
                     // Write error to meta/error
                     string error_str = string("Can't write value to gpio #") + to_string(gpio_handler.GetGpio()) +
                                        "(" + gpio_desc.Name + ")";
                     cerr << "ERROR: " << error_str << endl;
                     Publish(NULL, meta_error, error_str.c_str(), 0, true);
+                    gpio_desc.ErrorState = true;
                 }
             }
         }
@@ -248,29 +253,36 @@ string TMQTTGpioHandler::GetChannelTopic(const TGpioDesc &gpio_desc)
     return (controls_prefix + gpio_desc.Name);
 }
 
-void TMQTTGpioHandler::UpdateValue(const TGpioDesc &gpio_desc,
+void TMQTTGpioHandler::UpdateValue(TGpioDesc &gpio_desc,
                                    std::shared_ptr<TSysfsGpio> gpio_handler)
 {
     // look at previous value and compare it with current
     int cached = gpio_handler->GetCachedValue();
-    int value = gpio_handler->GetValue();
+    int value = gpio_handler->GetValue();  
+	// Buggy GPIO driver may yield any non-zero number instead of 1,
+	// so make sure it's either 1 or 0 here.
+	// See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
+	// Upd: checked in sysfs_gpio.cpp
+	// value can be < 0 if device is disconnected
+	// value = !!value;
+
+    string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
     if (value >= 0) {
-        // Buggy GPIO driver may yield any non-zero number instead of 1,
-        // so make sure it's either 1 or 0 here.
-        // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
-        // Upd: checked in sysfs_gpio.cpp
-        //value = !!value;
         if ((cached < 0) || (cached != value)) {
             gpio_handler->SetCachedValue(cached);
             PublishValue(gpio_desc, gpio_handler);
         }
+        if (gpio_desc.ErrorState) {
+			Publish(NULL, meta_error, "", 0, true);
+    		gpio_desc.ErrorState = false;
+		}
     } else {
         // Write error to meta/error
-        string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
         string error_str = string("Can't read value from gpio #") + to_string(gpio_handler->GetGpio()) +
                            "(" + gpio_desc.Name + ")";
         cerr << "ERROR: " << error_str << endl;
         Publish(NULL, meta_error, error_str.c_str(), 0, true);
+        gpio_desc.ErrorState = true;
     }
 }
 void TMQTTGpioHandler::PublishValue(const TGpioDesc &gpio_desc,
@@ -288,7 +300,7 @@ void TMQTTGpioHandler::PublishValue(const TGpioDesc &gpio_desc,
 void TMQTTGpioHandler::UpdateChannelValues()
 {
     for (TChannelDesc &channel_desc : Channels) {
-        const auto &gpio_desc = channel_desc.first;
+        auto &gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
         UpdateValue(gpio_desc, gpio_handler);
         if (gpio_desc.Type != "") {
