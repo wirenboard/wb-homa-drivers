@@ -274,7 +274,7 @@ void TMQTTGpioHandler::UpdateValue(TGpioDesc &gpio_desc,
 
     string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
     if (value >= 0) {
-        if ((cached < 0) || (cached != value)) {
+        if ((cached < 0) || (cached != value) || gpio_desc.ErrorState) {
             gpio_handler->SetCachedValue(cached);
             PublishValue(gpio_desc, gpio_handler);
         }

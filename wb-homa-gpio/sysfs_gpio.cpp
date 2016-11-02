@@ -208,7 +208,7 @@ int TSysfsGpio::CheckIfConnected()
 int TSysfsGpio::SetDirection(bool input, bool output_state)
 {
     std::lock_guard<std::mutex> lock(G_mutex);
-    cerr << "DEBUG:: gpio=" << Gpio << " SetDirection() input= " << input << endl;
+    cerr << "DEBUG: gpio=" << Gpio << " SetDirection() input= " << input << endl;
     In = input;
     const char *out_str = NULL;
     if (input)
@@ -229,19 +229,23 @@ int TSysfsGpio::SetValue(int value)
 {
     std::lock_guard<std::mutex> lock(G_mutex);
 
-    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << endl;
+    cerr << "DEBUG: gpio=" << Gpio << " SetValue()  value= " << value << endl;
 
     int prep_value = PrepareValue(value);
 
+    // make it before writing
+    CachedValue = prep_value;
     if (force_write(DirectionFd, (prep_value == 0 ? "low" : "high")) < 0) {
         cerr << strerror(errno);
         cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
              "filedis is " << ValueFd <<  endl;
-        //setvalgpio.close();
+        // Can't write to gpio, but try to save value to sysfs driver
+        // so value on pin will change when it will be connected
+        // upd: it is not needed!
+        //force_write(ValueFd, (prep_value == 0 ? "0" : "1"));
         return -1;
     }
 
-    CachedValue = prep_value;
     return 0;
 }
 
