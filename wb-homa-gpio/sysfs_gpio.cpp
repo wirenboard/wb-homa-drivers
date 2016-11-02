@@ -129,7 +129,7 @@ int TSysfsGpio::OpenFiles()
     if (value_fd <= 0 || direction_fd <= 0) {
         cerr << strerror(errno) << endl;
         cerr << "cannot open value for GPIO" << Gpio << endl;
-		CloseFiles();
+        CloseFiles();
         return -1;
     }
     ValueFd = value_fd;
@@ -138,27 +138,28 @@ int TSysfsGpio::OpenFiles()
     // Get initial value for CachedValue
     // Read it from sysfs
     if ((CachedValue = GetValueUnsafe()) < 0)
-		CachedValue = 0;
-    cerr << "gpio value-file " << Gpio << " filedes is " << ValueFd 
-		 << " initial value is " << CachedValue << endl;
+        CachedValue = 0;
+    cerr << "gpio value-file " << Gpio << " filedes is " << ValueFd
+         << " initial value is " << CachedValue << endl;
     return 0;
 }
 
 int TSysfsGpio::CloseFiles()
 {
-	if (ValueFd >= 0)
-		close(ValueFd);
-	if (DirectionFd >= 0)
-		close(DirectionFd);
-	return 0;
+    if (ValueFd >= 0)
+        close(ValueFd);
+    if (DirectionFd >= 0)
+        close(DirectionFd);
+    return 0;
 }
 
 // Function does "lseek(fd, 0, SEEK_SET)" and then "write"
 // and continues it if it was interrupted
-static int force_write(int fd, const char *str) {
+static int force_write(int fd, const char *str)
+{
     if (lseek(fd, 0, SEEK_SET) < 0)
-		return -1;
-	const char *s = str, *s_end = str + strlen(str);
+        return -1;
+    const char *s = str, *s_end = str + strlen(str);
     do {
         int ret = write(fd, s, s_end - s);
         if (ret < 0) {
@@ -168,13 +169,14 @@ static int force_write(int fd, const char *str) {
         }
         s += ret;
     } while(s != s_end);
-	return 0;
+    return 0;
 }
 
 // Like a force_write
-static int force_read_byte(int fd, char *c) {
+static int force_read_byte(int fd, char *c)
+{
     if (lseek(fd, 0, SEEK_SET) < 0)
-		return -1;
+        return -1;
     while (true) {
         int ret = read(fd, c, 1);
         if (ret < 0) {
@@ -185,7 +187,7 @@ static int force_read_byte(int fd, char *c) {
         if (ret > 0)
             break;
     }
-	return 0;
+    return 0;
 }
 
 // Returns zero if all is ok
@@ -196,10 +198,10 @@ int TSysfsGpio::CheckIfConnected()
     // because it is the only way to understand whether the microcontroller is connected
     const char *out_str = NULL;
     if (In)
-		out_str = "in";
+        out_str = "in";
     else
-		out_str = (CachedValue == 0 ? "low" : "high");
-	return force_write(DirectionFd, out_str);
+        out_str = (CachedValue == 0 ? "low" : "high");
+    return force_write(DirectionFd, out_str);
 }
 
 
@@ -210,44 +212,44 @@ int TSysfsGpio::SetDirection(bool input, bool output_state)
     In = input;
     const char *out_str = NULL;
     if (input)
-		out_str = "in";
+        out_str = "in";
     else {
-		out_str = (output_state ? "high" : "low");	
-		CachedValue = output_state;
-	}
+        out_str = (output_state ? "high" : "low");
+        CachedValue = output_state;
+    }
     // write direction to direction file
-	if (force_write(DirectionFd, out_str) < 0) {
-		cerr << " OPERATION FAILED: Unable to write direction" << Gpio << " ." << endl;
-		return -1;
-	}
+    if (force_write(DirectionFd, out_str) < 0) {
+        cerr << " OPERATION FAILED: Unable to write direction" << Gpio << " ." << endl;
+        return -1;
+    }
     return 0;
 }
 
 int TSysfsGpio::SetValue(int value)
 {
     std::lock_guard<std::mutex> lock(G_mutex);
-    
+
     cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << endl;
-	
+
     int prep_value = PrepareValue(value);
-    
-	if (force_write(DirectionFd, (prep_value == 0 ? "low" : "high")) < 0) {
-		cerr << strerror(errno);
-		cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
-			 "filedis is " << ValueFd <<  endl;
-		//setvalgpio.close();
-		return -1;
-	}
+
+    if (force_write(DirectionFd, (prep_value == 0 ? "low" : "high")) < 0) {
+        cerr << strerror(errno);
+        cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
+             "filedis is " << ValueFd <<  endl;
+        //setvalgpio.close();
+        return -1;
+    }
 
     CachedValue = prep_value;
     return 0;
 }
 
-int TSysfsGpio::GetValueUnsafe() 
+int TSysfsGpio::GetValueUnsafe()
 {
-	char buf = '0';
+    char buf = '0';
     if (force_read_byte(ValueFd, &buf) < 0) { //read gpio value
-		// Error is almost impossible
+        // Error is almost impossible
         cerr << " OPERATION GetValue FAILED: Unable to Get value of GPIO" << Gpio << " filedes is " <<
              ValueFd << "pid is " << getpid() << "." << endl;
         perror("error is ");
@@ -259,12 +261,12 @@ int TSysfsGpio::GetValueUnsafe()
 }
 
 int TSysfsGpio::GetValue()
-{	
+{
     lock_guard<mutex> lock(G_mutex);
-	if (CheckIfConnected() < 0) {
+    if (CheckIfConnected() < 0) {
         cerr << " OPERATION GetValue FAILED: can't write to /direction" << endl;
-		return -1;
-	}
+        return -1;
+    }
     return GetValueUnsafe();
 }
 

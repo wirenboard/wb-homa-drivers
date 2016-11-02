@@ -37,7 +37,7 @@ class TSysfsGpio
     {
         return SetDirection(false, state);
     };
-    inline int SetOutputNoChange() 
+    inline int SetOutputNoChange()
     {
         return SetDirection(false, CachedValue);
     };
@@ -51,7 +51,8 @@ class TSysfsGpio
     //returns true if gpio support interruption
     bool GetInterruptSupport();
     //returns gpio value file description
-    inline int GetValueFd() {
+    inline int GetValueFd()
+    {
         return ValueFd;
     }
     struct epoll_event &GetEpollStruct();

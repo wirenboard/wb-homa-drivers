@@ -121,10 +121,10 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig &mqtt_config,
             if (gpio_desc.Direction == TGpioDirection::Input) {
                 gpio_handler->SetInput();
             } else {
-				if (gpio_desc.InitialState < 0)
-					gpio_handler->SetOutputNoChange();
-				else
-					gpio_handler->SetOutput(gpio_desc.InitialState);
+                if (gpio_desc.InitialState < 0)
+                    gpio_handler->SetOutputNoChange();
+                else
+                    gpio_handler->SetOutput(gpio_desc.InitialState);
             }
             Channels.emplace_back(gpio_desc, gpio_handler);
         } else {
@@ -173,7 +173,7 @@ void TMQTTGpioHandler::OnConnect(int rc)
             // Do not rely on UpdateValue because it sends value only when it changes
             PublishValue(gpio_desc, gpio_handler);
             // Erase errors from meta/error
-			Publish(NULL, control_prefix + "/meta/error", "", 0, true);
+            Publish(NULL, control_prefix + "/meta/error", "", 0, true);
         }
         //~ /devices/293723-demo/controls/Demo-Switch 0
         //~ /devices/293723-demo/controls/Demo-Switch/on 1
@@ -232,9 +232,9 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                     // echo, retained
                     Publish(NULL, channel_topic, to_string(val), 0, true);
                     if (gpio_desc.ErrorState) {
-						Publish(NULL, meta_error, "", 0, true);
-						gpio_desc.ErrorState = false;
-					}
+                        Publish(NULL, meta_error, "", 0, true);
+                        gpio_desc.ErrorState = false;
+                    }
                 } else {
                     // Write error to meta/error
                     string error_str = string("Can't write value to gpio #") + to_string(gpio_handler.GetGpio()) +
@@ -264,13 +264,13 @@ void TMQTTGpioHandler::UpdateValue(TGpioDesc &gpio_desc,
 {
     // look at previous value and compare it with current
     int cached = gpio_handler->GetCachedValue();
-    int value = gpio_handler->GetValue();  
-	// Buggy GPIO driver may yield any non-zero number instead of 1,
-	// so make sure it's either 1 or 0 here.
-	// See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
-	// Upd: checked in sysfs_gpio.cpp
-	// value can be < 0 if device is disconnected
-	// value = !!value;
+    int value = gpio_handler->GetValue();
+    // Buggy GPIO driver may yield any non-zero number instead of 1,
+    // so make sure it's either 1 or 0 here.
+    // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
+    // Upd: checked in sysfs_gpio.cpp
+    // value can be < 0 if device is disconnected
+    // value = !!value;
 
     string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
     if (value >= 0) {
@@ -279,9 +279,9 @@ void TMQTTGpioHandler::UpdateValue(TGpioDesc &gpio_desc,
             PublishValue(gpio_desc, gpio_handler);
         }
         if (gpio_desc.ErrorState) {
-			Publish(NULL, meta_error, "", 0, true);
-    		gpio_desc.ErrorState = false;
-		}
+            Publish(NULL, meta_error, "", 0, true);
+            gpio_desc.ErrorState = false;
+        }
     } else {
         // Write error to meta/error
         string error_str = string("Can't read value from gpio #") + to_string(gpio_handler->GetGpio()) +
@@ -458,10 +458,10 @@ int main(int argc, char *argv[])
                 gpio_desc.DecimalPlacesTotal = item["decimal_points_total"].asInt();
 
             gpio_desc.InitialState = item.get("initial_state", false).asBool();
-			// One raw feature - allows to read initital state right from sysfs
-			if (item.get("initial_state_as_was", false).asBool())
-				gpio_desc.InitialState = -1;
-			
+            // One raw feature - allows to read initital state right from sysfs
+            if (item.get("initial_state_as_was", false).asBool())
+                gpio_desc.InitialState = -1;
+
             gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
