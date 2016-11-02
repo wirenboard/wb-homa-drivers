@@ -40,7 +40,8 @@ struct TGpioDesc {
     int Order;
     int DecimalPlacesTotal = -1;
     int DecimalPlacesCurrent = -1;
-    bool InitialState = false;
+    // 1 for HIGH, 0 for LOW, -1 - read from sysfs
+    int InitialState = 0;
     bool ErrorState = false;
 };
 
@@ -120,7 +121,10 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig &mqtt_config,
             if (gpio_desc.Direction == TGpioDirection::Input) {
                 gpio_handler->SetInput();
             } else {
-                gpio_handler->SetOutput(gpio_desc.InitialState);
+				if (gpio_desc.InitialState < 0)
+					gpio_handler->SetOutputNoChange();
+				else
+					gpio_handler->SetOutput(gpio_desc.InitialState);
             }
             Channels.emplace_back(gpio_desc, gpio_handler);
         } else {
@@ -165,13 +169,15 @@ void TMQTTGpioHandler::OnConnect(int rc)
                 Publish(NULL, control_prefix + "/meta/readonly", "", 0, true);
                 Subscribe(NULL, control_prefix + "/on");
             }
+            // Set real value
+            // Do not rely on UpdateValue because it sends value only when it changes
+            PublishValue(gpio_desc, gpio_handler);
+            // Erase errors from meta/error
+			Publish(NULL, control_prefix + "/meta/error", "", 0, true);
         }
         //~ /devices/293723-demo/controls/Demo-Switch 0
         //~ /devices/293723-demo/controls/Demo-Switch/on 1
         //~ /devices/293723-demo/controls/Demo-Switch/meta/type switch
-
-
-
     }
 }
 
@@ -321,7 +327,7 @@ void TMQTTGpioHandler::InitInterrupts(int epfd)
         // check if file edge exists and is direction input
         gpio_handler.InterruptUp();
         if (gpio_handler.GetInterruptSupport()) {
-            n = epoll_ctl(epfd, EPOLL_CTL_ADD, gpio_handler.GetFileDes(),
+            n = epoll_ctl(epfd, EPOLL_CTL_ADD, gpio_handler.GetValueFd(),
                           &gpio_handler.GetEpollStruct()); // adding new instance to epoll
             if (n != 0 ) {
                 cerr << "epoll_ctl gained error with GPIO" << gpio_desc.Gpio << endl;
@@ -338,7 +344,7 @@ void TMQTTGpioHandler::CatchInterrupts(int count, struct epoll_event *events)
         const auto &gpio_desc = channel_desc.first;
         std::shared_ptr<TSysfsGpio> gpio_handler = channel_desc.second;
         for (i = 0; i < count; i++) {
-            if (gpio_handler->GetFileDes() == events[i].data.fd) {
+            if (gpio_handler->GetValueFd() == events[i].data.fd) {
                 if (!gpio_handler->IsDebouncing()) {
                     PublishValue(gpio_desc, gpio_handler);
                 }
@@ -452,14 +458,15 @@ int main(int argc, char *argv[])
                 gpio_desc.DecimalPlacesTotal = item["decimal_points_total"].asInt();
 
             gpio_desc.InitialState = item.get("initial_state", false).asBool();
-
+			// One raw feature - allows to read initital state right from sysfs
+			if (item.get("initial_state_as_was", false).asBool())
+				gpio_desc.InitialState = -1;
+			
             gpio_desc.Order = index;
             handler_config.AddGpio(gpio_desc);
 
         }
     }
-
-
 
     mosqpp::lib_init();
 
@@ -479,7 +486,7 @@ int main(int argc, char *argv[])
         while(1) {
             n = epoll_wait(epfd, events, 20, 500);
             interval = duration_cast<milliseconds>(steady_clock::now() - start).count() ;
-            if (interval >= 500 ) {  //checking is it time to look through all gpios
+            if (interval >= 500) {  //checking is it time to look through all gpios
                 mqtt_handler->UpdateChannelValues();
                 start = steady_clock::now();
             } else {

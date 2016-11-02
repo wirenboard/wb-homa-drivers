@@ -77,8 +77,14 @@
                     "default": false,
                     "_format": "checkbox",
                     "propertyOrder": 9
+                },
+                "initial_state_as_was": {
+                    "type": "boolean",
+                    "title": "Read initial output state from GPIO (when it is set the 'initial_state' is ignored)",
+                    "default": false,
+                    "_format": "checkbox",
+                    "propertyOrder": 9
                 }
-
             },
             "defaultProperties": [
                 "name",

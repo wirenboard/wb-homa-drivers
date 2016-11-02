@@ -17,8 +17,9 @@ TSysfsGpio::TSysfsGpio(int gpio, bool inverted, string interrupt_edge)
     , Inverted(inverted)
     , Exported(false)
     , InterruptSupport(false)
-    , CachedValue(-1)
-    , FileDes(-1)
+    , CachedValue(0)
+    , ValueFd(-1)
+    , DirectionFd(-1)
     , G_mutex()
     , In(false)
     , Debouncing(true)
@@ -59,7 +60,8 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio &&tmp)
     , Exported(tmp.Exported)
     , InterruptSupport(tmp.InterruptSupport)
     , CachedValue(tmp.CachedValue)
-    , FileDes(tmp.FileDes)
+    , ValueFd(tmp.ValueFd)
+    , DirectionFd(tmp.DirectionFd)
     , G_mutex()
     , In(tmp.In)
     , Debouncing(true)
@@ -70,7 +72,8 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio &&tmp)
 {
     Ev_d.events = EPOLLET;
     Ev_d.data.fd = tmp.Ev_d.data.fd;
-    tmp.FileDes = -1;
+    tmp.ValueFd = -1;
+    tmp.DirectionFd = -1;
     tmp.Ev_d.data.fd = -1;
 }
 
@@ -90,7 +93,7 @@ int TSysfsGpio::Export()
         exportgpio.close(); //close export file
     }
     // Open value file
-    OpenValueFile();
+    OpenFiles();
     Exported = true;
     return 0;
 }
@@ -106,119 +109,163 @@ int TSysfsGpio::Unexport()
     unexportgpio << Gpio ; //write GPIO number to unexport
     unexportgpio.close(); //close unexport file
 
-    if (FileDes >= 0) {
-        close (FileDes) ;
-    }
+    CloseFiles();
     Exported = false;
     cerr << "unexported " << Gpio << endl;
     return 0;
 }
 
-int TSysfsGpio::OpenValueFile()
+
+
+int TSysfsGpio::OpenFiles()
 {
-    // close file descriptor if it is open
-    if (FileDes >= 0)
-        close(FileDes);
-    string path_to_value = "/sys/class/gpio/gpio" + to_string(Gpio) + "/value";
+    // close file descriptors if those is open
+    CloseFiles();
+    string path = "/sys/class/gpio/gpio" + to_string(Gpio) + "/";
+    string path_to_value = path + "value", path_to_direction = path + "direction";
     // open file descriptro of value file and keep it in FileDes and ev_data.fd
-    int fd = open(path_to_value.c_str(), O_RDWR | O_NONBLOCK);
-    if (fd <= 0) {
+    int value_fd = open(path_to_value.c_str(), O_RDWR | O_NONBLOCK);
+    int direction_fd = open(path_to_direction.c_str(), O_RDWR | O_NONBLOCK);
+    if (value_fd <= 0 || direction_fd <= 0) {
         cerr << strerror(errno) << endl;
         cerr << "cannot open value for GPIO" << Gpio << endl;
+		CloseFiles();
         return -1;
     }
-    FileDes = fd;
-    Ev_d.data.fd = fd;
-    cerr << "gpio value-file " << Gpio << " filedes is " << FileDes << endl;
+    ValueFd = value_fd;
+    DirectionFd = direction_fd;
+    Ev_d.data.fd = value_fd;
+    // Get initial value for CachedValue
+    // Read it from sysfs
+    if ((CachedValue = GetValueUnsafe()) < 0)
+		CachedValue = 0;
+    cerr << "gpio value-file " << Gpio << " filedes is " << ValueFd 
+		 << " initial value is " << CachedValue << endl;
     return 0;
 }
 
-int TSysfsGpio::Reload()
+int TSysfsGpio::CloseFiles()
 {
-    OpenValueFile();
-    // Mean that Cached value may be equal to -1
-    // If it is so, 0 will be written
-    SetDirection(In, (CachedValue == 1 ? 1 : 0));
-    return 0;
+	if (ValueFd >= 0)
+		close(ValueFd);
+	if (DirectionFd >= 0)
+		close(DirectionFd);
+	return 0;
+}
+
+// Function does "lseek(fd, 0, SEEK_SET)" and then "write"
+// and continues it if it was interrupted
+static int force_write(int fd, const char *str) {
+    if (lseek(fd, 0, SEEK_SET) < 0)
+		return -1;
+	const char *s = str, *s_end = str + strlen(str);
+    do {
+        int ret = write(fd, s, s_end - s);
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            return -EINVAL;
+        }
+        s += ret;
+    } while(s != s_end);
+	return 0;
+}
+
+// Like a force_write
+static int force_read_byte(int fd, char *c) {
+    if (lseek(fd, 0, SEEK_SET) < 0)
+		return -1;
+    while (true) {
+        int ret = read(fd, c, 1);
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            return -EINVAL;
+        }
+        if (ret > 0)
+            break;
+    }
+	return 0;
+}
+
+// Returns zero if all is ok
+// And negative number in other case
+int TSysfsGpio::CheckIfConnected()
+{
+    // rewrite direction (and value) to direction file
+    // because it is the only way to understand whether the microcontroller is connected
+    const char *out_str = NULL;
+    if (In)
+		out_str = "in";
+    else
+		out_str = (CachedValue == 0 ? "low" : "high");
+	return force_write(DirectionFd, out_str);
 }
 
 
 int TSysfsGpio::SetDirection(bool input, bool output_state)
 {
+    std::lock_guard<std::mutex> lock(G_mutex);
     cerr << "DEBUG:: gpio=" << Gpio << " SetDirection() input= " << input << endl;
-
-    string setdir_str = "/sys/class/gpio/gpio";
-    setdir_str += to_string(Gpio) + "/direction";
-
-    ofstream setdirgpio(setdir_str.c_str()); // open direction file for gpio
-    if (!setdirgpio.is_open()) {
-        cerr << " OPERATION FAILED: Unable to set direction of GPIO" << Gpio << " ." << endl;
-        setdirgpio.close();
-        return -1;
-    }
-
-    //write direction to direction file
     In = input;
+    const char *out_str = NULL;
     if (input)
-        setdirgpio << "in";
-    else
-        setdirgpio << (output_state ? "high" : "low");
-
-    setdirgpio.close(); // close direction file
+		out_str = "in";
+    else {
+		out_str = (output_state ? "high" : "low");	
+		CachedValue = output_state;
+	}
+    // write direction to direction file
+	if (force_write(DirectionFd, out_str) < 0) {
+		cerr << " OPERATION FAILED: Unable to write direction" << Gpio << " ." << endl;
+		return -1;
+	}
     return 0;
 }
 
 int TSysfsGpio::SetValue(int value)
 {
-    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << " pid is " << getpid() <<
-         " filedis is " << FileDes << endl;
-
-    int prep_value = PrepareValue(value);
-
-    char buf = '0' + prep_value;
+    std::lock_guard<std::mutex> lock(G_mutex);
+    
+    cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << endl;
 	
-	// there is lock_guard inside block
-	{
-		std::lock_guard<std::mutex> lock(G_mutex);
-		if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
-			cerr << "lseek returned -1" << endl;
-		}
-		if (write(FileDes, &buf, sizeof(char)) <= 0 ) {
-			//write value to value file, FileDes has been initialized in Export
-			cerr << strerror(errno);
-			cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
-				 "filedis is " << FileDes <<  endl;
-			//setvalgpio.close();
-			return -1;
-		}
-	}  
-    CachedValue = prep_value;
-	// Check whether device is connected
-	// Error when disconnected is raising only when reading from /value
-    if (GetValue() < 0)
-        return -1;
+    int prep_value = PrepareValue(value);
+    
+	if (force_write(DirectionFd, (prep_value == 0 ? "low" : "high")) < 0) {
+		cerr << strerror(errno);
+		cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
+			 "filedis is " << ValueFd <<  endl;
+		//setvalgpio.close();
+		return -1;
+	}
 
+    CachedValue = prep_value;
     return 0;
 }
 
-int TSysfsGpio::GetValue()
+int TSysfsGpio::GetValueUnsafe() 
 {
-    lock_guard<mutex> lock(G_mutex);
-    char buf = '0';
-
-    if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
-        cerr << "lseek returned -1 " << endl;
-        return -1;
-    }
-    if (read(FileDes, &buf, sizeof(char)) <= 0) { //read gpio value
+	char buf = '0';
+    if (force_read_byte(ValueFd, &buf) < 0) { //read gpio value
+		// Error is almost impossible
         cerr << " OPERATION GetValue FAILED: Unable to Get value of GPIO" << Gpio << " filedes is " <<
-             FileDes << "pid is " << getpid() << "." << endl;
+             ValueFd << "pid is " << getpid() << "." << endl;
         perror("error is ");
         return -1;
     }
     // CachedValue will be 1 or 0
     CachedValue = PrepareValue(buf - '0');
     return CachedValue;
+}
+
+int TSysfsGpio::GetValue()
+{	
+    lock_guard<mutex> lock(G_mutex);
+	if (CheckIfConnected() < 0) {
+        cerr << " OPERATION GetValue FAILED: can't write to /direction" << endl;
+		return -1;
+	}
+    return GetValueUnsafe();
 }
 
 int TSysfsGpio::InterruptUp()
@@ -247,11 +294,6 @@ int TSysfsGpio::InterruptUp()
 bool TSysfsGpio::GetInterruptSupport()
 {
     return InterruptSupport;
-}
-
-int TSysfsGpio::GetFileDes()
-{
-    return FileDes;
 }
 
 struct epoll_event &TSysfsGpio::GetEpollStruct()
@@ -341,7 +383,5 @@ TPublishPair TSysfsGpio::CheckTimeInterval()
 
 TSysfsGpio::~TSysfsGpio()
 {
-    if (FileDes >= 0) {
-        close(FileDes);
-    }
+    CloseFiles();
 }

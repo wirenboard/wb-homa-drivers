@@ -37,6 +37,10 @@ class TSysfsGpio
     {
         return SetDirection(false, state);
     };
+    inline int SetOutputNoChange() 
+    {
+        return SetDirection(false, CachedValue);
+    };
 
     int SetValue(int val);
     // returns GPIO value (0 or 1), or -1 if error has happened
@@ -47,7 +51,9 @@ class TSysfsGpio
     //returns true if gpio support interruption
     bool GetInterruptSupport();
     //returns gpio value file description
-    int GetFileDes();
+    inline int GetValueFd() {
+        return ValueFd;
+    }
     struct epoll_event &GetEpollStruct();
     // returns GPIO value (0 or 1) or default in case of error
     inline int GetValueOrDefault(int def = 0)
@@ -100,8 +106,14 @@ class TSysfsGpio
     virtual void SetInitialValues(float total);
     virtual TPublishPair CheckTimeInterval(); // check if metter is alive
   protected:
-    int OpenValueFile();
-    int Reload();
+    int OpenFiles();
+    int CloseFiles();
+    // Check if gpio is connected ( = good for using )
+    // by writing to /direction
+    int CheckIfConnected();
+    // Get value without checking that gpio is in good state
+    // without using mutexes
+    int GetValueUnsafe();
     // invert value if needed and return 0 or 1 value
     inline int PrepareValue(int value)
     {
@@ -119,7 +131,7 @@ class TSysfsGpio
     struct epoll_event Ev_d;
 
     int CachedValue;
-    int FileDes;
+    int ValueFd, DirectionFd;
     mutable mutex G_mutex;
     bool In;//direction true = in false = out
     bool Debouncing;
