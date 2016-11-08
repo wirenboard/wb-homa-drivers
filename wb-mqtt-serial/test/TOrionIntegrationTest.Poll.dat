@@ -38,8 +38,6 @@ EnqueueSetRelay2On()
 << 01 05 16 02 01 18
 EnqueueSetRelay3On2()
 >> 01 06 00 15 03 02 3D
-Publish: /devices/pseudo_orion/controls/Relay 1: '0' (QoS 0, retained)
-Publish: /devices/pseudo_orion/controls/Relay 2: '0' (QoS 0, retained)
 Publish: /devices/pseudo_orion/controls/Relay 3: '0' (QoS 0, retained)
 << 01 05 16 03 02 3E
 Close()

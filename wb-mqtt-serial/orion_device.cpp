@@ -14,17 +14,24 @@
 
 REGISTER_BASIC_INT_PROTOCOL("orion", TOrionDevice, TRegisterTypes({
             { TOrionDevice::REG_RELAY, "relay", "switch", U8 },
+            { TOrionDevice::REG_RELAY_MULTI, "relay_multi", "direct", U8 },
+            { TOrionDevice::REG_RELAY_DEFAULT, "relay_default", "direct", U8 },
+            { TOrionDevice::REG_RELAY_DELAY, "relay_delay", "direct", U8 },
+            { TOrionDevice::REG_ADDRESS, "address", "direct", U8 },
+            { TOrionDevice::REG_CASE, "case", "holding", U8, 1},
+            { TOrionDevice::REG_VOLTAGE, "voltage", "holding", U8, 1},
         }));
 
 TOrionDevice::TOrionDevice(PDeviceConfig config, PAbstractSerialPort port, PProtocol protocol)
     : TBasicProtocolSerialDevice<TBasicProtocol<TOrionDevice>>(config, port, protocol)
-{}
-
-uint64_t TOrionDevice::ReadRegister(PRegister reg)
 {
-    std::cerr << "Orion: Reading is not yet supported\n";
-    return 0;
+    relay_state[0] = 0;
+    relay_state[1] = 0;
+    relay_state[2] = 0;
+    relay_state[3] = 0;
+    relay_state[4] = 0;
 }
+
 
 uint8_t TOrionDevice::crc_table[] = { 0x00,0x5E,0xBC,0xE2,0x61,0x3F,0xDD,0x83,0xC2,
 0x9C,0x7E,0x20,0xA3,0xFD,0x1F,0x41,0x9D,0xC3,0x21,0x7F,0xFC,0xA2,0x40,
@@ -57,10 +64,112 @@ uint8_t TOrionDevice::OrionCrc(const uint8_t *array, int size){
 }
 void TOrionDevice::WriteRegister(PRegister reg, uint64_t value)
 {
-    Port()->CheckPortOpen();
-    uint8_t command[7] = {/*device address=*/(uint8_t)SlaveId, /*command size=*/0x06, /*key=*/0x00, /*command=*/ 0x15, /*relay index=*/(uint8_t)reg->Address, /*state=*/(uint8_t)value, /*crc=*/0x0/*to be filled*/};
-    command[6] = OrionCrc(command, 6);
-    Port()->WriteBytes(command, 7);
-    uint8_t response[256];
-    int size = Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+    switch(reg->Type){
+      case REG_RELAY:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x15, (uint8_t)reg->Address, (uint8_t)value, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+	  relay_state[reg->Address] = value;
+	  return;
+      }
+      case REG_RELAY_MULTI:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x15, (uint8_t)reg->Address, (uint8_t)value, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+	  relay_state[reg->Address] = value;
+	  return;
+      }
+      case REG_RELAY_DEFAULT:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x09, (uint8_t)reg->Address, (uint8_t)value, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+	  return;
+      }
+      case REG_RELAY_DELAY:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x09, (uint8_t)reg->Address+0x4, (uint8_t)value, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+	  return;
+      }
+      case REG_ADDRESS:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x0F, (uint8_t)value, (uint8_t)value, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+	  return;
+      }
+      case REG_CASE:
+      {
+          return;
+      }
+      case REG_VOLTAGE:
+      {
+          return;
+      }
+      default:
+      {}
+    }
+}
+uint64_t TOrionDevice::ReadRegister(PRegister reg)
+{
+    switch(reg->Type){
+      case REG_RELAY:
+          return relay_state[reg->Address] != 0 && relay_state[reg->Address] !=2;
+      case REG_RELAY_MULTI:
+          return relay_state[reg->Address];
+      case REG_RELAY_DEFAULT:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x05, (uint8_t)reg->Address, 0x0, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+          return response[4];
+      }
+      case REG_RELAY_DELAY:
+      {
+          Port()->CheckPortOpen();
+          uint8_t command[7] = {(uint8_t)SlaveId, 0x06, 0x00, 0x05, (uint8_t)reg->Address+0x4, 0x0, 0x0};
+          command[6] = OrionCrc(command, 6);
+          Port()->WriteBytes(command, 7);
+          uint8_t response[256];
+          Port()->ReadFrame(response, 256, std::chrono::microseconds(100000));
+          return response[4];
+      }
+      case REG_ADDRESS:
+      {
+          return (uint8_t)SlaveId;
+      }
+      case REG_CASE:
+      {
+          return 0;
+      }
+      case REG_VOLTAGE:
+      {
+          return 0;
+      }
+      default:
+      {}
+    }
+    return 0;
 }
