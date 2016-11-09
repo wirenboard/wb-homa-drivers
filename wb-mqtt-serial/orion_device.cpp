@@ -65,6 +65,8 @@ uint8_t TOrionDevice::CrcOrion(const uint8_t *array, int size)
     return crc;
 }
 
+// TODO: refactor this when more registers are writable, move writing
+// and error handling into separate function
 void TOrionDevice::WriteRegister(PRegister reg, uint64_t value)
 {
     if (reg->Type != REG_RELAY) {
@@ -102,8 +104,12 @@ void TOrionDevice::WriteRegister(PRegister reg, uint64_t value)
     RelayState[response[3]] = response[4];
 }
 
+// TODO: refactor this when more registers are actually readable, move reading
+// and error handling into separate function
 uint64_t TOrionDevice::ReadRegister(PRegister reg)
 {
+    /* We have no way to get current relay state from device. Thats why we save last
+       successful write to relay register and return it when regiter is read */
     switch (reg->Type) {
     case REG_RELAY:
         return RelayState[reg->Address] != 0 && RelayState[reg->Address] != 2;
