@@ -201,7 +201,7 @@ int TSysfsGpio::SetValue(int value)
              " filedis is " << FileDes << endl;
         // If it is not first attempt
         if (attempt != 0)
-            return -1;
+            return 0;
         // If value is not correctly set
         // Reload gpio (new export, set direction..)
         Reload();
