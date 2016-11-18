@@ -63,7 +63,6 @@ bool FuncComp( const TChannelDesc &a, const TChannelDesc &b)
 {
     return (a.first.Order < b.first.Order);
 }
-
 class TMQTTGpioHandler : public TMQTTWrapper
 {
 
@@ -77,7 +76,7 @@ class TMQTTGpioHandler : public TMQTTWrapper
     void OnSubscribe(int mid, int qos_count, const int *granted_qos);
 
     void UpdateChannelValues();
-    void InitInterrupts(int epfd); // look through all gpios and select Interrupt supporting ones
+    void InitInterrupts(int epfd);// look through all gpios and select Interrupt supporting ones
     string GetChannelTopic(const TGpioDesc &gpio_desc);
     void CatchInterrupts(int count, struct epoll_event *events);
     void PublishValue(const TGpioDesc &gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
@@ -88,6 +87,7 @@ class TMQTTGpioHandler : public TMQTTWrapper
     vector<TChannelDesc> Channels;
 
     void UpdateValue(const TGpioDesc &gpio_desc, std::shared_ptr<TSysfsGpio> gpio_handler);
+
 };
 
 
@@ -121,6 +121,7 @@ TMQTTGpioHandler::TMQTTGpioHandler(const TMQTTGpioHandler::TConfig &mqtt_config,
             } else {
                 gpio_handler->SetOutput(gpio_desc.InitialState);
             }
+
             Channels.emplace_back(gpio_desc, gpio_handler);
         } else {
             cerr << "ERROR: unable to export gpio " << gpio_desc.Gpio << endl;
@@ -182,10 +183,10 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
 
     const vector<string> &tokens = StringSplit(topic, '/');
 
-    if (    (tokens.size() == 5) &&
+    if (  (tokens.size() == 5) &&
             (tokens[0] == "") && (tokens[1] == "devices") &&
             (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
-            (tokens[4].find("_total") == (tokens[4].size() - 6))    ) {
+            (tokens[4].find("_total") == (tokens[4].size() - 6)) ) {
         int pos = tokens[4].find("_total");
         string gpio_name = tokens[4].substr(0, pos);
         for (TChannelDesc &channel_desc : Channels) {
@@ -198,7 +199,7 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
             }
         }
     }
-    if (    (tokens.size() == 6) &&
+    if (  (tokens.size() == 6) &&
             (tokens[0] == "") && (tokens[1] == "devices") &&
             (tokens[2] == MQTTConfig.Id) && (tokens[3] == "controls") &&
             (tokens[5] == "on") ) {
@@ -225,7 +226,6 @@ void TMQTTGpioHandler::OnMessage(const struct mosquitto_message *message)
                     Publish(NULL, GetChannelTopic(gpio_desc), to_string(val), 0, true);
                 } else {
                     cerr << "DEBUG : couldn't set value" << endl;
-                    //Publish(NULL, 
                 }
             }
         }
@@ -253,21 +253,12 @@ void TMQTTGpioHandler::UpdateValue(const TGpioDesc &gpio_desc,
         // Buggy GPIO driver may yield any non-zero number instead of 1,
         // so make sure it's either 1 or 0 here.
         // See https://github.com/torvalds/linux/commit/25b35da7f4cce82271859f1b6eabd9f3bd41a2bb
-		// Upd: checked in sysfs_gpio.cpp
-        //value = !!value;
+        value = !!value;
         if ((cached < 0) || (cached != value)) {
             gpio_handler->SetCachedValue(cached);
             PublishValue(gpio_desc, gpio_handler);
         }
     }
-    else {
-		// Write error to meta/error
-        string meta_error = GetChannelTopic(gpio_desc) + "/meta/error";
-        string error_str = string("Can't read value from gpio #") + to_string(gpio_handler->GetGpio()) + 
-									"(" + gpio_desc.Name + ")";
-		cerr << "ERROR: " << error_str << endl;
-        Publish(NULL, meta_error, error_str.c_str(), 0, true);
-	}
 }
 void TMQTTGpioHandler::PublishValue(const TGpioDesc &gpio_desc,
                                     std::shared_ptr<TSysfsGpio> gpio_handler)
@@ -415,7 +406,8 @@ int main(int argc, char *argv[])
 
         // Iterate over sequence elements and
         // print its values
-        for(unsigned int index = 0; index < array.size(); ++index) {
+        for(unsigned int index = 0; index < array.size();
+                ++index) {
             const auto &item = array[index];
             TGpioDesc gpio_desc;
             gpio_desc.Gpio = item["gpio"].asInt();
@@ -430,10 +422,12 @@ int main(int argc, char *argv[])
                 gpio_desc.Multiplier = item["multiplier"].asInt();
             if (item.isMember("edge"))
                 gpio_desc.InterruptEdge = item["edge"].asString();
-            if (item.isMember("decimal_points_current"))
+            if (item.isMember("decimal_points_current")) {
                 gpio_desc.DecimalPlacesCurrent = item["decimal_points_current"].asInt();
-            if (item.isMember("decimal_points_total"))
+            }
+            if (item.isMember("decimal_points_total")) {
                 gpio_desc.DecimalPlacesTotal = item["decimal_points_total"].asInt();
+            }
 
             gpio_desc.InitialState = item.get("initial_state", false).asBool();
 
@@ -471,7 +465,7 @@ int main(int argc, char *argv[])
                     mqtt_handler->FirstTime = false;
                     continue;
                 }
-                mqtt_handler->CatchInterrupts(n, events);
+                mqtt_handler->CatchInterrupts( n, events );
             }
         }
     }
