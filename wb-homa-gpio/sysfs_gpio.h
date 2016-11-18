@@ -25,7 +25,7 @@ class TSysfsGpio
     TSysfsGpio(const TSysfsGpio &other) = delete;
     TSysfsGpio(TSysfsGpio &&tmp);
     ~TSysfsGpio();
-
+    
     int Export();
     int Unexport();
     int SetDirection(bool input = true, bool output_state = false); // Set GPIO Direction
@@ -100,16 +100,16 @@ class TSysfsGpio
     virtual void SetInitialValues(float total);
     virtual TPublishPair CheckTimeInterval(); // check if metter is alive
   protected:
-    int OpenValueFile();
+	int OpenValueFile();
     int Reload();
     // invert value if needed and return 0 or 1 value
     inline int PrepareValue(int value)
     {
-        // Make inversion and return 0 or 1 value
-        if (Inverted)
-            return int(value == 0);
-        else
-            return int(value != 0);
+		// Make inversion and return 0 or 1 value
+		if (Inverted)
+			return int(value == 0);
+		else
+			return int(value != 0);
     };
   private:
     int Gpio;

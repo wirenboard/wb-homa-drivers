@@ -77,20 +77,20 @@ TSysfsGpio::TSysfsGpio( TSysfsGpio &&tmp)
 
 int TSysfsGpio::Export()
 {
-    // Do export
+	// Do export
     {
-        string export_str = "/sys/class/gpio/export";
-        ofstream exportgpio(export_str.c_str());
-        if (!exportgpio.is_open()) {
-            cerr << " OPERATION FAILED: Unable to export GPIO" << Gpio << " ." << endl;
-            return -1;
-        }
-        exportgpio << Gpio; //write GPIO number to export
-        exportgpio << "\n";
-        exportgpio.close(); //close export file
-    }
-    // Open value file
-    OpenValueFile();
+		string export_str = "/sys/class/gpio/export";
+		ofstream exportgpio(export_str.c_str());
+		if (!exportgpio.is_open()) {
+			cerr << " OPERATION FAILED: Unable to export GPIO" << Gpio << " ." << endl;
+			return -1;
+		}
+		exportgpio << Gpio; //write GPIO number to export
+		exportgpio << "\n";
+		exportgpio.close(); //close export file
+	}
+	// Open value file
+	OpenValueFile();
     Exported = true;
     return 0;
 }
@@ -105,7 +105,7 @@ int TSysfsGpio::Unexport()
     }
     unexportgpio << Gpio ; //write GPIO number to unexport
     unexportgpio.close(); //close unexport file
-
+    
     if (FileDes >= 0) {
         close (FileDes) ;
     }
@@ -114,32 +114,32 @@ int TSysfsGpio::Unexport()
     return 0;
 }
 
-int TSysfsGpio::OpenValueFile()
+int TSysfsGpio::OpenValueFile() 
 {
-    // close file descriptor if it is open
-    if (FileDes >= 0)
-        close(FileDes);
-    string path_to_value = "/sys/class/gpio/gpio" + to_string(Gpio) + "/value";
-    // open file descriptro of value file and keep it in FileDes and ev_data.fd
-    int fd = open(path_to_value.c_str(), O_RDWR | O_NONBLOCK);
-    if (fd <= 0) {
-        cerr << strerror(errno) << endl;
-        cerr << "cannot open value for GPIO" << Gpio << endl;
-        return -1;
-    }
-    FileDes = fd;
-    Ev_d.data.fd = fd;
-    cerr << "gpio value-file " << Gpio << " filedes is " << FileDes << endl;
-    return 0;
+	// close file descriptor if it is open
+	if (FileDes >= 0)
+		close(FileDes);
+	string path_to_value = "/sys/class/gpio/gpio" + to_string(Gpio) + "/value";
+	// open file descriptro of value file and keep it in FileDes and ev_data.fd
+	int fd = open(path_to_value.c_str(), O_RDWR | O_NONBLOCK);
+	if (fd <= 0) {
+		cerr << strerror(errno) << endl;
+		cerr << "cannot open value for GPIO" << Gpio << endl;
+		return -1;
+	}
+	FileDes = fd;
+	Ev_d.data.fd = fd;
+	cerr << "gpio value-file " << Gpio << " filedes is " << FileDes << endl;
+	return 0;
 }
 
-int TSysfsGpio::Reload()
+int TSysfsGpio::Reload() 
 {
-    OpenValueFile();
-    // Mean that Cached value may be equal to -1
-    // If it is so, 0 will be written
-    SetDirection(In, (CachedValue == 1 ? 1 : 0));
-    return 0;
+	OpenValueFile();
+	// Mean that Cached value may be equal to -1
+	// If it is so, 0 will be written
+	SetDirection(In, (CachedValue == 1 ? 1 : 0));
+	return 0;
 }
 
 
@@ -172,40 +172,39 @@ int TSysfsGpio::SetValue(int value)
 {
     cerr << "DEBUG:: gpio=" << Gpio << " SetValue()  value= " << value << " pid is " << getpid() <<
          " filedis is " << FileDes << endl;
-
+    
     int prep_value = PrepareValue(value);
-
+    
     char buf = '0' + prep_value;
-
+    
     for (int attempt = 0; attempt < 2; attempt++) {
-        {
-            std::lock_guard<std::mutex> lock(G_mutex);
-            if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
-                cerr << "lseek returned -1" << endl;
-            }
-            if (write(FileDes, &buf, sizeof(char)) <= 0 ) {
-                //write value to value file, FileDes has been initialized in Export
-                cerr << strerror(errno);
-                cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
-                     "filedis is " << FileDes <<  endl;
-                //setvalgpio.close();
-                return -1;
-            }
-        }
-        CachedValue = prep_value;
-        // Break if all is good
-        if (GetValue() == prep_value)
-            break;
-        cerr << "DEBUG: Second attempt. gpio=" << Gpio << " SetValue()  value= " << value << " pid is " <<
-             getpid() <<
-             " filedis is " << FileDes << endl;
-        // If it is not first attempt
-        if (attempt != 0)
-            return 0;
-        // If value is not correctly set
-        // Reload gpio (new export, set direction..)
-        Reload();
-    }
+		{
+			std::lock_guard<std::mutex> lock(G_mutex);
+			if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
+				cerr << "lseek returned -1" << endl;
+			}
+			if (write(FileDes, &buf, sizeof(char)) <= 0 ) {
+				//write value to value file, FileDes has been initialized in Export
+				cerr << strerror(errno);
+				cerr << " OPERATION SetValue FAILED: Unable to set the value of GPIO" << Gpio << " ." <<
+					 "filedis is " << FileDes <<  endl;
+				//setvalgpio.close();
+				return -1;
+			}
+		}
+		CachedValue = prep_value;
+		// Break if all is good
+		if (GetValue() == prep_value)
+			break;
+		cerr << "DEBUG: Second attempt. gpio=" << Gpio << " SetValue()  value= " << value << " pid is " << getpid() <<
+         " filedis is " << FileDes << endl;
+		// If it is not first attempt
+		if (attempt != 0)
+			return 0;
+		// If value is not correctly set
+		// Reload gpio (new export, set direction..)
+		Reload();
+	}
 
     return 0;
 }
@@ -214,7 +213,7 @@ int TSysfsGpio::GetValue()
 {
     lock_guard<mutex> lock(G_mutex);
     char buf = '0';
-
+    
     if (lseek(FileDes, 0, SEEK_SET) == -1 ) {
         cerr << "lseek returned -1 " << endl;
         return -1;
@@ -226,7 +225,7 @@ int TSysfsGpio::GetValue()
         return -1;
     }
     // CachedValue will be 1 or 0
-    CachedValue = PrepareValue(buf - '0');
+	CachedValue = PrepareValue(buf - '0');
     return CachedValue;
 }
 
@@ -235,8 +234,8 @@ int TSysfsGpio::InterruptUp()
     string path = "/sys/class/gpio/gpio";
     string path_to_edge = path + to_string(Gpio) + "/edge";
     string path_to_value = path + to_string(Gpio) + "/value";
-    if ( access( path_to_edge.c_str(), F_OK) == -1 )
-        return -1;
+    if ( access( path_to_edge.c_str(), F_OK) == -1 ) 
+		return -1;
     if (In) {// if direction is input we will write to edge file
         ofstream setInterrupt(path_to_edge.c_str());
         if (!setInterrupt.is_open()) {
@@ -274,7 +273,7 @@ bool TSysfsGpio::IsDebouncing()
     std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
     long long debouncing_interval = std::chrono::duration_cast<std::chrono::microseconds>
                                     (time_now - Previous_Interrupt_Time).count();
-    if (debouncing_interval > 1000)
+    if (debouncing_interval > 1000) 
         // if interval of impulses is bigger than 1000 microseconds we consider it is not a debounnce
         Debouncing = false;
     else
@@ -316,14 +315,15 @@ vector<TPublishPair>  TSysfsGpio::GpioPublish()
         GetInterval(); // remember interval
     int output_value = GetValue();
     if (output_value != -1) {
-        output_vector.push_back(make_pair("", to_string(output_value))); // output saved value
-        output_vector.push_back(make_pair("/meta/error", "")); // no error
-    } else {
+		output_vector.push_back(make_pair("", to_string(output_value))); // output saved value
+    	output_vector.push_back(make_pair("/meta/error", "")); // no error
+	}
+	else {
         string error_str = string("Can't read value from gpio #") + to_string(Gpio);
-        cerr << "ERROR: GpioPublish: " << error_str << endl;
-        output_vector.push_back(make_pair("/meta/error", error_str)); // output error
-    }
-    return output_vector;
+		cerr << "ERROR: GpioPublish: " << error_str << endl;
+    	output_vector.push_back(make_pair("/meta/error", error_str)); // output error
+	}
+	return output_vector;
 }
 
 string TSysfsGpio::GetInterruptEdge()
