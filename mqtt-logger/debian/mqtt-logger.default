@@ -1,9 +1,0 @@
-#uncomment and set your parameter instead of YOUR_PARAMETER if you want add option
-#size in KB 
-SIZE="-s 10000"
-#FILE="-f YOUR_PARAMETER"
-#NUMBER="-n YOUR_PARAMETER"
-#PORT="-p YOUR_PARAMETER"
-#HOST="-h YOUR_PARAMETER"
-# default "/#" - all messages from broker
-MASK="/#"
