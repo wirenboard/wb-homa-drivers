@@ -1,2 +1,0 @@
-export MQTT_DB_LOGFILE=/var/log/wirenboard/wb-mqtt-db.log
-export MQTT_DB_MAX_LOGFILE_SIZE=1  # means 1 MB
